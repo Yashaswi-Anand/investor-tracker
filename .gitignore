@@ -1,0 +1,31 @@
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+
+# Android / TWA — signing keys must never be committed
+app/android.keystore
+app/*.keystore
+app/*.jks
+app/app-release-*.apk
+app/app-release-*.aab
+app/.gradle/
+app/build/
+app/app/
+
+# OS
+.DS_Store
+Thumbs.db

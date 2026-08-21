@@ -1,0 +1,54 @@
+# ===========================================================================
+# Scraper cron — runs scraper/run_once.py every 30 minutes on GitHub's
+# servers, so IPO data stays fresh without your PC being on.
+#
+# Setup (one time):
+#   Repo -> Settings -> Secrets and variables -> Actions -> New repository secret
+#     SUPABASE_URL          = https://YOUR-PROJECT-REF.supabase.co
+#     SUPABASE_SERVICE_KEY  = eyJ... (service_role key)
+#
+# Test it: Actions tab -> "scrape" -> "Run workflow" button.
+#
+# NOTE: scheduled workflows only run on the DEFAULT branch, and GitHub may
+# delay cron by a few minutes under load — that is normal.
+#
+# If NSE ever blocks GitHub's datacenter IPs (runs start failing with
+# 403/empty), see DEPLOYMENT.md -> "Agar GitHub Actions se NSE block ho".
+# ===========================================================================
+
+name: scrape
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"    # every 30 minutes (UTC)
+  workflow_dispatch: {}        # manual run button, for testing
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false    # never kill a run that is mid-write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scraper/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scraper/requirements.txt
+
+      - name: Run scraper
+        working-directory: scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # 'none' = manual GMP (default). Change to a supported source only
+          # after checking that site's terms — see scraper/config.py.
+          GMP_SOURCE: none
+        run: python run_once.py

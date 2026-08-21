@@ -1,0 +1,47 @@
+{
+  "packageId": "com.socialriser.investor",
+  "host": "investor.socialriser.com",
+  "name": "Investor — IPO GMP Tracker",
+  "launcherName": "Investor",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#1f4fd8",
+  "themeColorDark": "#0d1220",
+  "navigationColor": "#1f4fd8",
+  "navigationColorDark": "#0d1220",
+  "navigationDividerColor": "#1f4fd8",
+  "navigationDividerColorDark": "#0d1220",
+  "backgroundColor": "#f5f7fb",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://investor.socialriser.com/icons/icon-512.png",
+  "maskableIconUrl": "https://investor.socialriser.com/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "investor"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Open IPOs",
+      "shortName": "Open",
+      "url": "/",
+      "chosenIconUrl": "https://investor.socialriser.com/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://investor.socialriser.com/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://investor.socialriser.com/",
+  "minSdkVersion": 21,
+  "appVersion": "1.0.0"
+}

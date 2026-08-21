@@ -1,0 +1,39 @@
+# ===========================================================================
+# OPTIONAL fallback for Hostinger — only enable if needed.
+#
+# Hostinger's Node.js Web App import connects to a Git repository. If its
+# import screen lets you set the app's root directory to `web/`, you do NOT
+# need this workflow — delete it.
+#
+# If it insists on the repository root, this workflow publishes the web/
+# folder to a separate branch (`web-deploy`) whose root IS the Next.js app.
+# Connect the Hostinger app to that branch and every push to main
+# automatically updates it.
+# ===========================================================================
+
+name: publish-web-branch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Publish web/ as the web-deploy branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git subtree split --prefix web -b web-deploy
+          git push -f origin web-deploy
