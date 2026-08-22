@@ -77,9 +77,10 @@ that matter — the rest can be accepted as default:
 | Status bar colour | `#1f4fd8` |
 | Include support for Play Billing | `No` |
 
-[`twa-manifest.json`](twa-manifest.json) in this folder holds the exact
-settings this project expects — if you want to skip the prompts, copy it over
-the generated file and run `bubblewrap update`.
+[`twa-manifest.reference.json`](twa-manifest.reference.json) holds the exact
+answers this project expects. `bubblewrap init` generates its own
+`twa-manifest.json` from your answers — use the reference to answer the
+prompts (or ask Claude to merge it in afterwards and run `bubblewrap update`).
 
 Bubblewrap creates the signing keystore during `init`. **Back up
 `android.keystore` and its passwords immediately** — lose them and you can
@@ -176,7 +177,7 @@ You only rebuild for shell changes:
 
 ```bash
 bubblewrap update      # pull new settings from the web manifest
-bubblewrap build       # bump appVersionCode in twa-manifest.json first
+bubblewrap build       # bump appVersionCode in app/twa-manifest.json first
 ```
 
 Increment `appVersionCode` on every Play Store upload — Play rejects a

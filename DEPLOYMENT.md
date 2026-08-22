@@ -25,7 +25,7 @@ a subdomain of socialriser.com, which you already own.)
 Everything is pre-configured for `investor.socialriser.com` with package id
 `com.socialriser.investor`:
 
-- `app/twa-manifest.json` — host, icon URLs, package id ✅
+- `app/twa-manifest.reference.json` — host, icon URLs, package id ✅
 - `web/public/.well-known/assetlinks.json` — package name ✅
 - `web/lib/config.js` — brand name "Investor" ✅
 
