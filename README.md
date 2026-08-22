@@ -102,14 +102,21 @@ QIB / NII / Retail / total subscription.
 ### GMP
 
 GMP is unofficial — no exchange publishes it, so it cannot come from NSE.
-Two options, set with `GMP_SOURCE` in `scraper/.env`:
+Two options, set with `GMP_SOURCE` (production uses `ipowatch`):
 
-- **`none` (default)** — enter GMP yourself in the Supabase table editor.
-- **`investorgain`** — scrape a public GMP table. `sources/gmp.py` fetches and
-  honours `robots.txt`, identifies itself with a real User-Agent, and makes
-  one request per run. **Check the target site's terms before enabling this**
-  — robots.txt permitting crawling is not the same as permission to
-  republish.
+- **`ipowatch`** — reads the public, server-rendered GMP tables on
+  ipowatch.in once per run. `sources/gmp.py` honours `robots.txt`, identifies
+  itself with a real User-Agent, and parses tables by their header row (so a
+  "Name | Price | GMP" history table can never be mistaken for the live one).
+  Sites that serve GMP only through JavaScript / reCAPTCHA-gated requests are
+  deliberately not supported. GMP is shown with an "unofficial" disclaimer —
+  check the source site's terms before relying on it commercially.
+- **`none`** — enter GMP yourself in the Supabase table editor (lock it with
+  `locked = '{gmp}'` so the scraper never overwrites it).
+
+The website shows the latest GMP with day-over-day change on the dashboard,
+and a per-IPO **GMP History** table (one row per day) plus trend bars on every
+detail page.
 
 ### Nothing you type by hand is ever overwritten
 

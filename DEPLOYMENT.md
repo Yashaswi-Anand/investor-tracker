@@ -190,12 +190,14 @@ Full walkthrough with screenshots-level detail:
 
 ## Phase 5 — Day-2 operations (roz ka kaam)
 
-- **GMP daalna** (roz 2 min, Supabase → SQL Editor):
+- **GMP is automatic** (`GMP_SOURCE=ipowatch` in the scrape workflow) and
+  refreshes every 30 minutes; the site shows it with a day-over-day change and
+  a per-IPO history table. To override one IPO by hand:
   ```sql
   update ipos set gmp = 62, locked = '{gmp}' where slug = 'company-slug';
   ```
   `locked` guarantees the scraper never overwrites your value, and the
-  trend chart keeps building from it automatically.
+  history keeps building from it automatically.
 - **Editorial content** (about/strengths/risks/financials): see the
   `manual` examples in [`README.md`](README.md).
 - **Health check** — is the scraper alive?
