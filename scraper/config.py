@@ -52,22 +52,27 @@ NSE_HEADERS = {
 # GMP source — grey market premium is unofficial, so no exchange publishes it.
 # This block is deliberately isolated and swappable.
 #
-#   GMP_SOURCE = "none"      -> skip GMP entirely; enter it by hand instead
-#                               (values you type are protected by `locked`)
-#   GMP_SOURCE = "investorgain" -> scrape the public GMP table
+#   GMP_SOURCE = "none"     -> skip GMP; enter it by hand (protected by `locked`)
+#   GMP_SOURCE = "ipowatch" -> read the public GMP tables on ipowatch.in
 #
-# Scraping etiquette enforced by scraper/sources/gmp.py:
+# Why ipowatch: its GMP page is server-rendered HTML (parseable without
+# running JavaScript), robots.txt allows crawling, and its tables carry a
+# header row naming the GMP column. Sites that load GMP via JavaScript or
+# reCAPTCHA-gated XHR (e.g. investorgain) are deliberately NOT supported —
+# we do not work around bot protection.
+#
+# Etiquette enforced by scraper/sources/gmp.py:
 #   * robots.txt is fetched and honoured before any request
-#   * one request per run, with a descriptive User-Agent
-#   * DELAY_SECONDS between requests
-# Check the target site's terms before enabling in production.
+#   * one request per run (every 30 min), descriptive User-Agent
+# GMP is unofficial and is shown with a disclaimer. Check the source site's
+# terms before enabling in production.
 # ---------------------------------------------------------------------------
 GMP_SOURCE = os.environ.get("GMP_SOURCE", "none").lower()
 
 GMP_SOURCES = {
-    "investorgain": {
-        "base_url": "https://www.investorgain.com",
-        "path": "/report/live-ipo-gmp/331/ipo/",
+    "ipowatch": {
+        "base_url": "https://ipowatch.in",
+        "path": "/ipo-grey-market-premium-latest-ipo-gmp/",
     },
 }
 

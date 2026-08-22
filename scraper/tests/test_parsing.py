@@ -5,6 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import config  # noqa: E402
 import db  # noqa: E402
 import util  # noqa: E402
 from sources import gmp, nse  # noqa: E402
@@ -493,3 +494,44 @@ def test_status_promotion_noop_without_listing_date():
     row = {"slug": "a", "status": "closed"}
     pipeline.apply_listing_status(row, None, today="2026-08-20")
     assert row["status"] == "closed"
+
+
+# --------------------------------------------------------------------------
+# Real-world page shape (ipowatch): td-based headers, and a history table
+# whose column order is Name | PRICE | GMP — the price must not be taken as GMP
+# --------------------------------------------------------------------------
+IPOWATCH_LIKE = """
+<table>
+  <tr><td>IPO Name</td><td>IPO GMP*</td><td>Trend</td><td>Price Band</td><td>Est. Listing</td></tr>
+  <tr><td>Tempsens Instruments</td><td>\u20b9290</td><td>\U0001f534</td><td>\u20b9300</td><td>\u20b9590 (96.67%)</td></tr>
+  <tr><td>Madhur Knit Crafts</td><td>\u20b90</td><td>\U0001f7e1</td><td>\u20b9100</td><td>\u20b9- (0.00%)</td></tr>
+</table>
+<table>
+  <tr><td>IPO Name</td><td>IPO Price</td><td>IPO GMP</td><td>Listing Price</td></tr>
+  <tr><td></td><td></td><td></td><td></td></tr>
+  <tr><td>Ardee Industries</td><td>\u20b953</td><td>\u20b917</td><td>\u20b972</td></tr>
+  <tr><td>Tempsens Instruments</td><td>\u20b9300</td><td>\u20b9999</td><td>\u20b91</td></tr>
+</table>
+"""
+
+
+def test_td_header_rows_are_recognised():
+    result = gmp.parse_gmp_table(IPOWATCH_LIKE)
+    assert result["tempsens-instruments"] == 290.0
+    assert result["madhur-knit-crafts"] == 0.0
+
+
+def test_history_table_uses_gmp_column_not_price():
+    result = gmp.parse_gmp_table(IPOWATCH_LIKE)
+    assert result["ardee-industries"] == 17.0          # not 53 (the price)
+
+
+def test_first_table_wins_on_duplicate_company():
+    """Live table precedes history table; the live value must be kept."""
+    result = gmp.parse_gmp_table(IPOWATCH_LIKE)
+    assert result["tempsens-instruments"] == 290.0     # not 999 from table 2
+
+
+def test_ipowatch_is_a_configured_source():
+    assert "ipowatch" in config.GMP_SOURCES
+    assert config.GMP_SOURCES["ipowatch"]["base_url"].startswith("https://ipowatch.in")

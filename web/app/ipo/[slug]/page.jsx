@@ -7,8 +7,10 @@ import {
   getIpoBySlug,
 } from "../../../lib/data";
 import {
+  dailySeries,
   fmtDate,
   fmtDateTime,
+  fmtDelta,
   fmtShortDate,
   inr,
   istToday,
@@ -69,37 +71,94 @@ export async function generateMetadata({ params }) {
   };
 }
 
-function GmpTrend({ history }) {
-  if (!history || history.length < 2) {
+/**
+ * GMP history: one bar + one table row per IST day (the day's last value).
+ * Readers check this every visit, so the table leads with the most recent
+ * day and shows the day-over-day change and the implied listing price.
+ */
+function GmpHistory({ history, ipo }) {
+  const days = dailySeries(history);
+
+  if (!days.length) {
     return (
       <p className="subtitle" style={{ margin: 0 }}>
-        The trend appears once a few snapshots have been recorded.
+        No GMP recorded yet. History builds up from the first snapshot.
       </p>
     );
   }
 
-  const recent = history.slice(-40);
-  const peak = Math.max(...recent.map((h) => Math.abs(Number(h.gmp))), 1);
+  const recent = days.slice(-30);
+  const peak = Math.max(...recent.map((d) => Math.abs(d.gmp)), 1);
+  const high = ipo.price_band_high != null ? Number(ipo.price_band_high) : null;
+
+  // Newest first for the table, with change vs the previous day.
+  const rows = recent
+    .map((day, index) => ({
+      ...day,
+      delta: index > 0 ? Number((day.gmp - recent[index - 1].gmp).toFixed(2)) : null,
+    }))
+    .reverse();
 
   return (
     <>
-      <div className="trend">
-        {recent.map((point, index) => {
-          const value = Number(point.gmp);
-          return (
-            <div
-              key={index}
-              className="trend-bar"
-              data-neg={value < 0}
-              style={{ height: `${Math.max(4, (Math.abs(value) / peak) * 100)}%` }}
-              title={`₹${value} — ${fmtDateTime(point.recorded_at)}`}
-            />
-          );
-        })}
-      </div>
-      <div className="trend-meta">
-        <span>{fmtShortDate(recent[0].recorded_at)}</span>
-        <span>{fmtShortDate(recent[recent.length - 1].recorded_at)}</span>
+      {ipo.gmp_updated_at && (
+        <p className="subtitle" style={{ margin: "0 0 8px" }}>
+          Latest GMP {inr(ipo.gmp)} · updated {fmtDateTime(ipo.gmp_updated_at)} IST
+        </p>
+      )}
+
+      {recent.length > 1 && (
+        <>
+          <div className="trend">
+            {recent.map((day) => (
+              <div
+                key={day.date}
+                className="trend-bar"
+                data-neg={day.gmp < 0}
+                style={{ height: `${Math.max(4, (Math.abs(day.gmp) / peak) * 100)}%` }}
+                title={`₹${day.gmp} — ${fmtDate(day.date, true)}`}
+              />
+            ))}
+          </div>
+          <div className="trend-meta">
+            <span>{fmtShortDate(recent[0].recorded_at)}</span>
+            <span>{fmtShortDate(recent[recent.length - 1].recorded_at)}</span>
+          </div>
+        </>
+      )}
+
+      <div className="hist-wrap">
+        <table className="hist">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>GMP</th>
+              <th>Change</th>
+              <th>Est. Listing</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const delta = fmtDelta(row.delta);
+              return (
+                <tr key={row.date}>
+                  <td>{fmtDate(row.date)}</td>
+                  <td className={row.gmp > 0 ? "gmp-up" : row.gmp < 0 ? "gmp-down" : "gmp-flat"}>
+                    {inr(row.gmp)}
+                  </td>
+                  <td>
+                    {delta ? (
+                      <span className={row.delta > 0 ? "gmp-up" : "gmp-down"}>{delta}</span>
+                    ) : (
+                      <span className="gmp-flat">—</span>
+                    )}
+                  </td>
+                  <td>{high != null ? inr(high + row.gmp) : "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </>
   );
@@ -347,8 +406,8 @@ export default async function IpoDetailPage({ params }) {
         </section>
 
         <section className="card">
-          <h2>GMP Trend</h2>
-          <GmpTrend history={gmpHistory} />
+          <h2>GMP History</h2>
+          <GmpHistory history={gmpHistory} ipo={ipo} />
         </section>
 
         {manual.about && (

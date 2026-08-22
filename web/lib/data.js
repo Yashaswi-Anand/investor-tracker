@@ -12,6 +12,7 @@ import {
   supabaseHeaders,
   supabaseUrl,
 } from "./config";
+import { dailySeries } from "./format";
 
 async function get(endpointKey, query, revalidate = REVALIDATE_SECONDS) {
   if (!isConfigured()) return [];
@@ -103,4 +104,46 @@ export async function getSubscriptionHistory(slug, limit = 300) {
 /** Slugs for generateStaticParams and the sitemap. */
 export async function getAllSlugs() {
   return get("ipos", "select=slug,updated_at&limit=1000");
+}
+
+/**
+ * Most recent GMP snapshots across ALL IPOs — one query that lets the
+ * dashboard show each IPO's day-over-day GMP change without a request per
+ * row. 3000 rows ≈ 60 IPOs × 48 snapshots/day, i.e. comfortably more than
+ * the two days we need.
+ */
+export async function getRecentGmpSnapshots(limit = 3000) {
+  return get(
+    "gmpHistory",
+    `select=slug,gmp,recorded_at&order=recorded_at.desc&limit=${limit}`
+  );
+}
+
+/**
+ * {slug: {latest, previous, delta}} built from snapshots.
+ *
+ * `delta` compares today's last value with the previous day's last value,
+ * so it reads "GMP moved +₹12 since yesterday" — the number IPO readers
+ * actually look for — rather than flickering on every 30-minute tick.
+ */
+export function gmpDeltas(snapshots) {
+  const bySlug = new Map();
+  for (const row of snapshots || []) {
+    if (!row || !row.slug) continue;
+    if (!bySlug.has(row.slug)) bySlug.set(row.slug, []);
+    bySlug.get(row.slug).push(row);
+  }
+  const out = {};
+  for (const [slug, rows] of bySlug) {
+    const days = dailySeries(rows);
+    if (!days.length) continue;
+    const latest = days[days.length - 1];
+    const previous = days.length > 1 ? days[days.length - 2] : null;
+    out[slug] = {
+      latest: latest.gmp,
+      previous: previous ? previous.gmp : null,
+      delta: previous ? Number((latest.gmp - previous.gmp).toFixed(2)) : null,
+    };
+  }
+  return out;
 }

@@ -7,10 +7,14 @@ from a third-party site or from your own manual entry.
 This module is deliberately isolated so it can be swapped or switched off
 without touching anything else:
 
-    GMP_SOURCE=none          -> disabled (default). Enter GMP by hand; add
-                                'gmp' to the row's `locked` array and the
-                                scraper will never overwrite it.
-    GMP_SOURCE=investorgain  -> scrape the public GMP table.
+    GMP_SOURCE=none      -> disabled. Enter GMP by hand; add 'gmp' to the
+                            row's `locked` array and the scraper will never
+                            overwrite it.
+    GMP_SOURCE=ipowatch  -> read the public, server-rendered GMP tables on
+                            ipowatch.in (the production setting).
+
+Sources that deliver GMP only through JavaScript / reCAPTCHA-gated XHR are
+not supported on purpose — we do not work around bot protection.
 
 Etiquette built in (do not remove):
   * robots.txt is fetched and honoured before any request
@@ -55,12 +59,51 @@ def _robots_allows(url, user_agent):
         return False
 
 
-def parse_gmp_table(html):
-    """Extract {slug: gmp} from an HTML page containing a GMP table.
+GMP_HEADER = re.compile(r"\bgmp\b|grey market", re.I)
+NAME_HEADER = re.compile(r"name|company|\bipo\b", re.I)
+NAME_SUFFIX = re.compile(r"\s+(SME|Mainboard|IPO|BSE SME|NSE SME)\s*$", re.I)
 
-    Tolerant by design: sites restyle constantly, so this looks for table
-    rows where one cell is a company name and another is a rupee premium,
-    rather than depending on exact class names.
+
+def _header_map(cells):
+    """(name_idx, gmp_idx) if this row is a header that names a GMP column.
+
+    Header cells may be <th> OR <td> — several GMP sites style the header
+    row as plain <td>s. '%' and 'gain' columns are different quantities and
+    are skipped.
+    """
+    name_idx = gmp_idx = None
+    for index, text in enumerate(cells):
+        lowered = text.lower()
+        if (
+            gmp_idx is None
+            and GMP_HEADER.search(lowered)
+            and "%" not in lowered
+            and "gain" not in lowered
+        ):
+            gmp_idx = index
+        if name_idx is None and NAME_HEADER.search(lowered):
+            name_idx = index
+    if gmp_idx is None:
+        return None
+    return (name_idx if name_idx is not None else 0), gmp_idx
+
+
+def _clean_name(text):
+    return NAME_SUFFIX.sub("", text or "").strip()
+
+
+def parse_gmp_table(html):
+    """Extract {slug: gmp} from every table on a GMP page.
+
+    Per table: find the header row (th or td) that names a GMP column, then
+    read name + GMP from the columns it declares. Relying on the header
+    matters — a page can hold a live table ("Name | GMP | Price ...") AND a
+    history table ("Name | Price | GMP | Listing"), and a "first numeric
+    cell" guess would store the price as the premium in the second one.
+
+    A table with no recognisable header falls back to that positional guess.
+    When the same company appears in several tables the FIRST occurrence
+    wins, because live tables precede history tables on the pages we read.
     """
     try:
         from bs4 import BeautifulSoup
@@ -73,64 +116,66 @@ def parse_gmp_table(html):
     soup = BeautifulSoup(html, "html.parser")
     results = {}
 
-    # Which column actually holds the GMP.
-    #
-    # Taking the first numeric cell after the name would silently pick up
-    # whatever column happens to come first — price, lot size, issue size —
-    # and store it as a premium. The header is checked first; only if no
-    # header names a GMP column do we fall back to positional scanning.
-    gmp_column = _find_gmp_column(soup)
+    for table in soup.find_all("table"):
+        rows = []
+        for tr in table.find_all("tr"):
+            cells = [c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])]
+            if cells:
+                rows.append(cells)
 
-    for row in soup.find_all("tr"):
-        cells = [c.get_text(" ", strip=True) for c in row.find_all(["td", "th"])]
-        if len(cells) < 2:
-            continue
+        header_at, mapping = None, None
+        for index, cells in enumerate(rows[:5]):  # header sits near the top
+            mapping = _header_map(cells)
+            if mapping:
+                header_at = index
+                break
 
-        # First cell that reads like a company name.
-        name = cells[0]
-        if not name or len(name) < 4 or name.lower().startswith("ipo name"):
-            continue
-        # Strip trailing tags sites add, e.g. "Acme Ltd SME" / "Acme IPO"
-        name = re.sub(r"\s+(SME|Mainboard|IPO|BSE SME|NSE SME)\s*$", "", name, flags=re.I)
-
-        if gmp_column is not None and gmp_column < len(cells):
-            value = _parse_premium(cells[gmp_column])
-            if value is not None:
+        if mapping:
+            name_idx, gmp_idx = mapping
+            for cells in rows[header_at + 1:]:
+                if max(name_idx, gmp_idx) >= len(cells):
+                    continue
+                name = _clean_name(cells[name_idx])
+                if len(name) < 4:
+                    continue
+                value = _parse_premium(cells[gmp_idx])
+                if value is None:
+                    continue
                 slug = slugify(name)
                 if slug:
-                    results[slug] = value
+                    results.setdefault(slug, value)
             continue
 
-        # Fallback: no GMP header found, so take the first cell that parses
-        # as a premium.
-        gmp = None
-        for cell in cells[1:]:
-            gmp = _parse_premium(cell)
-            if gmp is not None:
-                break
-        if gmp is None:
-            continue
-
-        slug = slugify(name)
-        if slug:
-            results[slug] = gmp
+        # Fallback: no header — first cell is the name, first premium-looking
+        # cell after it is the GMP.
+        for cells in rows:
+            if len(cells) < 2:
+                continue
+            name = _clean_name(cells[0])
+            if len(name) < 4 or name.lower().startswith("ipo name"):
+                continue
+            value = None
+            for cell in cells[1:]:
+                value = _parse_premium(cell)
+                if value is not None:
+                    break
+            if value is None:
+                continue
+            slug = slugify(name)
+            if slug:
+                results.setdefault(slug, value)
 
     return results
 
 
 def _find_gmp_column(soup):
-    """Index of the column whose header names the grey market premium."""
+    """GMP column index of the first header row on the page (kept for
+    tests/debugging; parse_gmp_table resolves headers per table)."""
     for row in soup.find_all("tr"):
-        headers = [c.get_text(" ", strip=True).lower() for c in row.find_all("th")]
-        if not headers:
-            continue
-        for index, text in enumerate(headers):
-            # "GMP", "GMP (₹)", "Grey Market Premium" — but not
-            # "GMP %" / "Est Listing Gain", which are different quantities.
-            if "%" in text or "gain" in text:
-                continue
-            if re.search(r"\bgmp\b", text) or "grey market" in text:
-                return index
+        cells = [c.get_text(" ", strip=True) for c in row.find_all(["td", "th"])]
+        mapping = _header_map(cells) if cells else None
+        if mapping:
+            return mapping[1]
     return None
 
 

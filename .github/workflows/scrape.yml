@@ -48,7 +48,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          # 'none' = manual GMP (default). Change to a supported source only
-          # after checking that site's terms — see scraper/config.py.
-          GMP_SOURCE: none
+          # GMP source (see scraper/config.py). 'ipowatch' reads the public,
+          # server-rendered GMP tables on ipowatch.in once per run.
+          GMP_SOURCE: ipowatch
         run: python run_once.py

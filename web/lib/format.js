@@ -64,6 +64,48 @@ export function safeJsonLd(data) {
     .replace(/&/g, "\\u0026");
 }
 
+/** IST calendar date ('YYYY-MM-DD') of any timestamp. */
+export function istDateOf(value) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: IST_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
+
+/**
+ * Collapse 30-minute GMP snapshots into one point per IST day — the day's
+ * last recorded value — sorted oldest first.
+ *
+ * The scraper writes ~48 rows a day per IPO; readers care about the
+ * day-over-day movement, not every tick, so this is what the history table,
+ * the trend bars and the dashboard delta are all built from.
+ */
+export function dailySeries(history) {
+  const byDay = new Map();
+  for (const point of history || []) {
+    if (!point || point.gmp == null || !point.recorded_at) continue;
+    const date = istDateOf(point.recorded_at);
+    const existing = byDay.get(date);
+    if (!existing || point.recorded_at > existing.recorded_at) {
+      byDay.set(date, {
+        date,
+        gmp: Number(point.gmp),
+        recorded_at: point.recorded_at,
+      });
+    }
+  }
+  return [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Signed rupee delta for display: "+₹12" / "−₹4" / null when flat or unknown. */
+export function fmtDelta(delta) {
+  if (delta == null || Number.isNaN(Number(delta)) || Number(delta) === 0) return null;
+  const n = Number(delta);
+  return `${n > 0 ? "+" : "−"}₹${Math.abs(n).toLocaleString("en-IN")}`;
+}
+
 export function priceBand(ipo) {
   if (ipo.price_band_low == null || ipo.price_band_high == null) return "—";
   if (ipo.price_band_low === ipo.price_band_high) return inr(ipo.price_band_high);

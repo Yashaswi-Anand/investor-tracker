@@ -1,19 +1,32 @@
 /** Shared presentational pieces. Server components — no client JS shipped. */
 
-import { STATUS_LABEL, gmpPercent, inr } from "../../lib/format";
+import { STATUS_LABEL, fmtDelta, gmpPercent, inr } from "../../lib/format";
 
+/**
+ * GMP with colour/arrow, optional % of upper band, and — when the row
+ * carries `gmp_delta` — a small day-over-day change chip (+₹12 / −₹4).
+ */
 export function GmpValue({ ipo, showPercent = false }) {
   if (ipo.gmp == null) return <span className="gmp-flat">—</span>;
   const value = Number(ipo.gmp);
   const pct = gmpPercent(ipo);
   const cls = value > 0 ? "gmp-up" : value < 0 ? "gmp-down" : "gmp-flat";
   const arrow = value > 0 ? "▲" : value < 0 ? "▼" : "";
+  const delta = fmtDelta(ipo.gmp_delta);
 
   return (
     <span className={cls}>
       {arrow} {inr(Math.abs(value))}
       {showPercent && pct != null && (
         <span className="gmp-pct"> ({pct > 0 ? "+" : ""}{pct.toFixed(1)}%)</span>
+      )}
+      {delta && (
+        <span
+          className={`gmp-delta ${ipo.gmp_delta > 0 ? "gmp-delta-up" : "gmp-delta-down"}`}
+          title="Change since yesterday"
+        >
+          {delta}
+        </span>
       )}
     </span>
   );
