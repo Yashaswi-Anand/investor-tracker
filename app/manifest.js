@@ -10,14 +10,14 @@ import { SITE } from "../lib/config";
  */
 export default function manifest() {
   return {
-    name: `${SITE.name} — Live IPO GMP & Subscription`,
+    name: `${SITE.name} — Live IPO Tracker`,
     short_name: SITE.shortName,
     description: SITE.description,
     start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f5f7fb",
+    background_color: SITE.backgroundColor,
     theme_color: SITE.themeColor,
     categories: ["finance", "business", "news"],
     lang: "en-IN",

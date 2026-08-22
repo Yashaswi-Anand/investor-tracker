@@ -321,6 +321,7 @@ export default async function IpoDetailPage({ params }) {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
 
+      <div className="container">
       <Link href="/" className="back-link">
         ← All IPOs
       </Link>
@@ -336,10 +337,12 @@ export default async function IpoDetailPage({ params }) {
           {fmtDate(ipo.open_date, true)} – {fmtDate(ipo.close_date, true)}
         </p>
 
-        <div className="hero-stats">
-          <Stat label="GMP">
-            <GmpValue ipo={ipo} showPercent />
-          </Stat>
+        <div className="hero-stats-detail">
+          <div className="stat-gmp">
+            <Stat label="GMP">
+              <GmpValue ipo={ipo} showPercent />
+            </Stat>
+          </div>
           <Stat label="Price Band">{priceBand(ipo)}</Stat>
           <Stat label="Lot Size">{ipo.lot_size ?? "—"}</Stat>
           <Stat label="Min Investment">{inr(ipo.min_investment)}</Stat>
@@ -474,6 +477,7 @@ export default async function IpoDetailPage({ params }) {
           </details>
         ))}
       </section>
+      </div>
     </>
   );
 }
