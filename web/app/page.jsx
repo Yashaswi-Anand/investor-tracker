@@ -1,6 +1,6 @@
 import { SITE } from "../lib/config";
 import { getAllIpos, getRecentGmpSnapshots, gmpDeltas } from "../lib/data";
-import { safeJsonLd } from "../lib/format";
+import { inr, safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
 
 // Keep in sync with REVALIDATE_SECONDS in lib/config.js — Next.js requires
@@ -8,9 +8,9 @@ import IpoList from "./components/IpoList";
 export const revalidate = 600;
 
 export const metadata = {
-  title: "IPO GMP Today — Live Grey Market Premium & Subscription Status",
+  title: "Live IPO Tracker — GMP, Subscription, Price Band, Allotment & Listing Dates",
   description:
-    "Track every Mainboard and SME IPO in India: live GMP, price band, lot size, minimum investment, subscription status, allotment and listing dates.",
+    "Track every Mainboard and SME IPO in India in one place: live GMP with daily history, subscription status (QIB/NII/Retail), price band, lot size, minimum investment, allotment and listing dates.",
   alternates: { canonical: "/" },
 };
 
@@ -26,8 +26,14 @@ export default async function HomePage() {
     gmp_delta: deltas[ipo.slug] ? deltas[ipo.slug].delta : null,
   }));
 
-  const openCount = ipos.filter((i) => i.status === "open").length;
-  const upcomingCount = ipos.filter((i) => i.status === "upcoming").length;
+  const open = ipos.filter((i) => i.status === "open");
+  const upcoming = ipos.filter((i) => i.status === "upcoming");
+  const withGmp = ipos.filter((i) => i.gmp != null && i.price_band_high);
+  const topGmp = withGmp.length
+    ? withGmp.reduce((best, i) =>
+        i.gmp / i.price_band_high > best.gmp / best.price_band_high ? i : best
+      )
+    : null;
 
   // Structured data helps Google show rich results for the listing page.
   // Only the IPOs actually emitted are counted — declaring a larger
@@ -53,16 +59,60 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
 
-      <h1>IPO GMP Today — Live Grey Market Premium</h1>
-      <p className="subtitle">
-        {openCount > 0
-          ? `${openCount} IPO${openCount > 1 ? "s" : ""} open now`
-          : "No IPO open right now"}
-        {upcomingCount > 0 && ` · ${upcomingCount} upcoming`} · Price band, lot
-        size, subscription and allotment dates for Mainboard &amp; SME IPOs.
-      </p>
+      <section className="hero">
+        <div className="container">
+          <h1>Track every IPO in India — in one place</h1>
+          <p>
+            Live GMP with daily history, subscription status, price band, lot
+            size, minimum investment, allotment and listing dates for Mainboard
+            &amp; SME IPOs. Updated every 30 minutes.
+          </p>
 
-      <IpoList ipos={ipos} />
+          <div className="hero-stats">
+            <div className="stat-tile">
+              <div className="k">Open now</div>
+              <div className="v num">{open.length}</div>
+              <div className="s">
+                {open.length
+                  ? open.slice(0, 2).map((i) => i.short_name || i.name).join(" · ")
+                  : "No issue open today"}
+              </div>
+            </div>
+            <div className="stat-tile">
+              <div className="k">Upcoming</div>
+              <div className="v num">{upcoming.length}</div>
+              <div className="s">
+                {upcoming.length
+                  ? `Next: ${upcoming[0].short_name || upcoming[0].name}`
+                  : "Nothing announced yet"}
+              </div>
+            </div>
+            <div className="stat-tile">
+              <div className="k">Highest GMP</div>
+              <div className="v num">
+                {topGmp ? inr(topGmp.gmp) : "—"}
+              </div>
+              <div className="s">
+                {topGmp
+                  ? `${topGmp.short_name || topGmp.name} · ${(
+                      (topGmp.gmp / topGmp.price_band_high) *
+                      100
+                    ).toFixed(0)}% of band`
+                  : "GMP not recorded yet"}
+              </div>
+            </div>
+            <div className="stat-tile">
+              <div className="k">Tracked</div>
+              <div className="v num">{ipos.length}</div>
+              <div className="s">Mainboard + SME · NSE data</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="container sheet">
+        <IpoList ipos={ipos} />
+      </div>
     </>
   );
 }

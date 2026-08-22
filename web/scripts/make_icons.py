@@ -11,86 +11,101 @@ Produces public/icons/:
     apple-touch-icon.png    iOS home-screen icon
     favicon.png
 
-Design: an ascending bar chart with an arrow, on the brand blue.
-Re-run this after changing BRAND or the design.
+Design: the "Investor" brand mark — a rising line with an arrow head over a
+baseline, white on the brand gradient (indigo -> violet -> sky). Matches the
+inline SVG in web/app/components/Logo.jsx. Re-run after changing colours.
 """
 
 import os
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
-BRAND = (31, 79, 216)        # --primary #1f4fd8
-BRAND_DARK = (22, 56, 155)   # --primary-dark
+# Brand gradient stops (must match --brand-grad in globals.css)
+STOPS = [
+    (0.00, (67, 56, 202)),    # #4338ca indigo
+    (0.52, (109, 40, 217)),   # #6d28d9 violet
+    (1.00, (2, 132, 199)),    # #0284c7 sky
+]
 WHITE = (255, 255, 255)
-ACCENT = (110, 231, 168)     # the green "live" dot
+ACCENT = (110, 231, 183)      # mint — the "live" dot colour
 
-OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "public", "icons")
+OUT_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "public", "icons"
+)
 
 
-def rounded_background(size, radius_ratio=0.22):
-    """Brand-blue rounded square with a subtle vertical gradient."""
+def _lerp(a, b, t):
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def _gradient_colour(t):
+    for (t0, c0), (t1, c1) in zip(STOPS, STOPS[1:]):
+        if t <= t1:
+            return _lerp(c0, c1, (t - t0) / (t1 - t0) if t1 > t0 else 0)
+    return STOPS[-1][1]
+
+
+def gradient_square(size, rounded=True, radius_ratio=0.22):
+    """Diagonal brand gradient, optionally in a rounded square."""
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    gradient = Image.new("RGBA", (size, size))
-    draw = ImageDraw.Draw(gradient)
+    grad = Image.new("RGBA", (size, size))
+    px = grad.load()
     for y in range(size):
-        t = y / max(size - 1, 1)
-        colour = tuple(
-            int(BRAND[i] + (BRAND_DARK[i] - BRAND[i]) * t) for i in range(3)
-        )
-        draw.line([(0, y), (size, y)], fill=colour + (255,))
+        for x in range(size):
+            t = (x + y) / (2 * (size - 1))
+            px[x, y] = _gradient_colour(t) + (255,)
+    # soft highlight top-right like the hero
+    glow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gd.ellipse(
+        [int(size * 0.45), int(-size * 0.35), int(size * 1.25), int(size * 0.45)],
+        fill=(255, 255, 255, 60),
+    )
+    glow = glow.filter(ImageFilter.GaussianBlur(size * 0.12))
+    grad = Image.alpha_composite(grad, glow)
 
+    if not rounded:
+        return grad
     mask = Image.new("L", (size, size), 0)
     ImageDraw.Draw(mask).rounded_rectangle(
         [0, 0, size - 1, size - 1], radius=int(size * radius_ratio), fill=255
     )
-    image.paste(gradient, (0, 0), mask)
+    image.paste(grad, (0, 0), mask)
     return image
 
 
-def draw_chart(image, inset):
-    """Three ascending bars plus an arrow — 'IPO going up'."""
+def draw_mark(image, inset):
+    """Rising line + arrow head + baseline, scaled to the inner area."""
     size = image.size[0]
     draw = ImageDraw.Draw(image)
-
     area = size - inset * 2
-    bar_w = area * 0.17
-    gap = area * 0.09
-    base_y = inset + area * 0.80
-    heights = (0.26, 0.40, 0.54)
-    start_x = inset + area * 0.10
-    radius = max(2, int(bar_w * 0.28))
+    w = max(2, int(area * 0.11))          # stroke width
 
-    for index, height_ratio in enumerate(heights):
-        x0 = start_x + index * (bar_w + gap)
-        y0 = base_y - area * height_ratio
-        draw.rounded_rectangle(
-            [int(x0), int(y0), int(x0 + bar_w), int(base_y)],
-            radius=radius,
-            fill=WHITE,
-        )
+    def P(x, y):  # viewBox 32x32 -> pixels
+        return (inset + x / 32 * area, inset + y / 32 * area)
 
-    # Arrow head floating above the tallest bar, with a clear gap so it
-    # reads as an arrow rather than a tip on the bar.
-    tip_x = start_x + 2 * (bar_w + gap) + bar_w / 2
-    tip_y = inset + area * 0.06
-    arrow = area * 0.10
-    draw.polygon(
-        [
-            (tip_x, tip_y),
-            (tip_x - arrow, tip_y + arrow * 1.5),
-            (tip_x + arrow, tip_y + arrow * 1.5),
-        ],
-        fill=ACCENT,
-    )
-
-    # Baseline. A plain rectangle: at 48px the rounded variant is only a few
-    # pixels tall and Pillow rejects a radius larger than half the height.
-    bl_top = int(base_y + area * 0.05)
-    bl_bottom = max(bl_top + 2, int(base_y + area * 0.09))
-    draw.rectangle(
-        [int(start_x), bl_top, int(start_x + area * 0.72), bl_bottom],
-        fill=WHITE,
-    )
+    # polyline 5,24 -> 12.5,16 -> 18,20.5 -> 27,9
+    pts = [P(5, 24), P(12.5, 16), P(18, 20.5), P(27, 9)]
+    draw.line(pts, fill=WHITE, width=w, joint="curve")
+    # round caps
+    r = w / 2
+    for x, y in (pts[0], pts[-1]):
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=WHITE)
+    # arrow head: 20.5,9 -> 27,9 -> 27,15.5
+    head = [P(20.5, 9), P(27, 9), P(27, 15.5)]
+    draw.line(head, fill=WHITE, width=w, joint="curve")
+    for x, y in (head[0], head[-1]):
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=WHITE)
+    # baseline (semi-transparent white) — composite separately for alpha
+    base = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    bd = ImageDraw.Draw(base)
+    bw = max(2, int(w * 0.7))
+    x0, y0 = P(5, 28)
+    x1, _ = P(27, 28)
+    bd.line([(x0, y0), (x1, y0)], fill=WHITE + (120,), width=bw)
+    for x in (x0, x1):
+        bd.ellipse([x - bw / 2, y0 - bw / 2, x + bw / 2, y0 + bw / 2], fill=WHITE + (120,))
+    image.alpha_composite(base)
     return image
 
 
@@ -98,11 +113,11 @@ def make_icon(size, maskable=False):
     if maskable:
         # Maskable icons must keep content inside the middle 80%, because
         # Android may crop to a circle or squircle.
-        image = Image.new("RGBA", (size, size), BRAND + (255,))
-        draw_chart(image, inset=int(size * 0.22))
+        image = gradient_square(size, rounded=False)
+        draw_mark(image, inset=int(size * 0.24))
     else:
-        image = rounded_background(size)
-        draw_chart(image, inset=int(size * 0.16))
+        image = gradient_square(size)
+        draw_mark(image, inset=int(size * 0.17))
     return image
 
 

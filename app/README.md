@@ -74,7 +74,7 @@ that matter — the rest can be accepted as default:
 | Domain | `investor.socialriser.com` |
 | Application ID / package | `com.socialriser.investor` |
 | Display mode | `standalone` |
-| Status bar colour | `#1f4fd8` |
+| Status bar colour | `#4f46e5` |
 | Include support for Play Billing | `No` |
 
 [`twa-manifest.reference.json`](twa-manifest.reference.json) holds the exact

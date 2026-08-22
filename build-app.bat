@@ -24,7 +24,7 @@ if not exist twa-manifest.json (
     echo   Application ID ........................... com.socialriser.investor   ^<-- IMPORTANT, never changes
     echo   Starting version code .................... 1
     echo   Display mode ............................. standalone
-    echo   Status bar / theme color ................. #1f4fd8
+    echo   Status bar / theme color ................. #4f46e5
     echo   Splash screen color ...................... #f5f7fb
     echo   Play Billing ............................. No
     echo   Geolocation permission ................... No

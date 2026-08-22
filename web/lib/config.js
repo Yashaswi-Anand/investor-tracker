@@ -8,8 +8,9 @@ export const SITE = {
   shortName: "Investor",
   url: (process.env.NEXT_PUBLIC_SITE_URL || "https://investor.socialriser.com").replace(/\/$/, ""),
   description:
-    "Live IPO tracker for India — GMP, price band, lot size, subscription status, allotment and listing dates for Mainboard and SME IPOs.",
-  themeColor: "#1f4fd8",
+    "Live IPO tracker for India — every Mainboard and SME IPO with GMP and daily GMP history, subscription status, price band, lot size, allotment and listing dates.",
+  themeColor: "#4f46e5",
+  backgroundColor: "#f4f6fb",
 };
 
 export const SUPABASE = {

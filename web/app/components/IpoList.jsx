@@ -91,7 +91,12 @@ export default function IpoList({ ipos }) {
           {/* Phone / app view */}
           <div className="card-list">
             {visible.map((ipo) => (
-              <Link key={ipo.slug} href={`/ipo/${ipo.slug}`} className="ipo-card">
+              <Link
+                key={ipo.slug}
+                href={`/ipo/${ipo.slug}`}
+                className="ipo-card"
+                data-status={(ipo.status || "upcoming").toLowerCase()}
+              >
                 <div className="ipo-card-top">
                   <div>
                     <div className="ipo-name">{ipo.short_name || ipo.name}</div>
