@@ -18,7 +18,7 @@ the app changes — no rebuild, no Play Store review.
                         │ reads (anon key, read-only)
                         ▼
         ┌──────────────────────────────┐
-        │  web/  Next.js 15  → Vercel  │   SEO-optimised website
+        │  web/  Next.js 15 → Hostinger│   SEO-optimised website
         └───────────────┬──────────────┘
                         │ same URL, wrapped
                         ▼
@@ -194,23 +194,13 @@ Built in: server-rendered pages with 10-minute ISR, per-page
 `sitemap.xml` and `robots.txt`, dark mode, and a mobile card layout that
 becomes a table on desktop.
 
-### Deploy to Vercel
+### Production deployment
 
-1. Push the repo to GitHub/GitLab, then import it at
-   [vercel.com/new](https://vercel.com/new).
-2. **Set the root directory to `web`.**
-3. Add environment variables (Production): `NEXT_PUBLIC_SUPABASE_URL`,
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`.
-4. **Settings → Domains** → add `investor.socialriser.com`, then create this DNS
-   record at your domain provider:
+The site runs on **Hostinger Node.js Web Apps** (Business plan), auto-deployed
+from this repo on every push to `main`. The scraper runs on **GitHub
+Actions** every 30 minutes. Full step-by-step runbook: [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-   ```
-   Type   CNAME
-   Name   ipo
-   Value  cname.vercel-dns.com
-   ```
-
-HTTPS is provisioned automatically. Every push to the main branch deploys.
+Live: https://investor.socialriser.com
 
 ### Where to run the scheduler in production
 
@@ -218,7 +208,7 @@ The scraper needs a machine that is always on. Cheapest options:
 
 | Option | Cost | Notes |
 |---|---|---|
-| GitHub Actions cron | free | 30-min schedule; add the two Supabase secrets to the repo |
+| **GitHub Actions cron (in use)** | free | `.github/workflows/scrape.yml`, every 30 min; secrets `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` |
 | Any small VPS | ~₹300/mo | run `scheduler.py` under `systemd` |
 | Your PC | free | fine while testing; data stops when the machine sleeps |
 

@@ -35,7 +35,7 @@ the web app in hPanel — nothing to buy, nothing to do now.
 > The package id can never change after the first Play Store upload — it is
 > deliberately fixed now.
 
-## Phase 1 — Supabase database (10 min)
+## Phase 1 — Supabase database (done ✅)
 
 1. [supabase.com](https://supabase.com) → **New project**
    - Region: **Mumbai (ap-south-1)** — closest to your users and to NSE.
@@ -55,10 +55,10 @@ the web app in hPanel — nothing to buy, nothing to do now.
 > Free tier pauses after ~1 week without traffic. The 30-minute scraper
 > keeps it permanently awake, so this stops mattering after Phase 2.
 
-## Phase 2 — GitHub repo + scraper goes live (20 min)
+## Phase 2 — GitHub repo + scraper goes live (done ✅)
 
 1. Create a GitHub account if you don't have one → **New repository**
-   (private is fine), name e.g. `ipo-tracker`.
+   (private is fine). Ours is `Yashaswi-Anand/investor-tracker`.
 2. Push this project (secrets are already git-ignored):
 
    ```bash
@@ -66,7 +66,7 @@ the web app in hPanel — nothing to buy, nothing to do now.
    git init -b main
    git add .
    git commit -m "IPO tracker: web + scraper + TWA config"
-   git remote add origin https://github.com/YOUR_USERNAME/ipo-tracker.git
+   git remote add origin https://github.com/Yashaswi-Anand/investor-tracker.git
    git push -u origin main
    ```
 
@@ -104,20 +104,16 @@ way, in order of preference:
    buying one; a system cron there is bulletproof. Ask and I'll write the
    exact VPS runbook.
 
-## Phase 3 — Website live on Hostinger (25 min)
+## Phase 3 — Website live on Hostinger (done ✅)
 
 Based on [Hostinger's Node.js Web Apps docs](https://docs.hostinger.com/node.js/creating-an-app)
 and their [Next.js deploy guide](https://www.hostinger.com/support/how-to-deploy-a-nodejs-website-in-hostinger/):
 
 1. hPanel → **Websites → Add Website → Node.js Web App** (wording may be
    "Deploy Web App" / "Node.js Apps").
-2. **Import Git Repository** → authorize GitHub → pick `ipo-tracker`.
-3. **Root directory:** set it to `web` if the import screen offers the
-   field.
-   - If there is NO root-directory field: go to the repo's **Actions** tab →
-     run **publish-web-branch** once. It creates a `web-deploy` branch whose
-     root is the Next.js app. Connect Hostinger to that branch instead —
-     it auto-updates on every push to `main`.
+2. **Import Git Repository** → authorize GitHub → pick `investor-tracker`.
+3. **Root directory:** Hostinger auto-detected `web` (verified) — the
+   `publish-web-branch` fallback workflow was not needed.
 4. Build settings (auto-detected as Next.js; verify against
    [Hostinger's own Next.js starter](https://github.com/agneliutkiene/deploy-nextjs)):
    - Install: `npm ci`
@@ -147,6 +143,14 @@ and their [Next.js deploy guide](https://www.hostinger.com/support/how-to-deploy
 
 After this phase: **every future change = edit code → `git push` → site
 auto-updates → app auto-updates.** No republishing, ever.
+
+**Verified live on 20 Aug 2026:** all endpoints 200, service worker
+`activated` on HTTPS, manifest valid (3 icons, standalone), JSON-LD valid.
+One note: Hostinger's proxy does not forward the custom `Cache-Control`
+header on `/sw.js` (it arrives with none). Registration still works; the
+only effect is that Chrome may cache `sw.js` for up to 24 h, so service
+worker *logic* changes can take up to a day to reach installed apps. Site
+content is unaffected.
 
 ## Phase 4 — Play Store app (1–3 days incl. Google review)
 
