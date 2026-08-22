@@ -1,5 +1,5 @@
 import { SITE } from "../lib/config";
-import { getAllIpos } from "../lib/data";
+import { getAllIpos, getRecentGmpSnapshots, gmpDeltas } from "../lib/data";
 import { safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
 
@@ -15,7 +15,16 @@ export const metadata = {
 };
 
 export default async function HomePage() {
-  const ipos = await getAllIpos();
+  const [rawIpos, snapshots] = await Promise.all([
+    getAllIpos(),
+    getRecentGmpSnapshots(),
+  ]);
+  // Day-over-day GMP movement per IPO, shown beside the GMP on the dashboard.
+  const deltas = gmpDeltas(snapshots);
+  const ipos = rawIpos.map((ipo) => ({
+    ...ipo,
+    gmp_delta: deltas[ipo.slug] ? deltas[ipo.slug].delta : null,
+  }));
 
   const openCount = ipos.filter((i) => i.status === "open").length;
   const upcomingCount = ipos.filter((i) => i.status === "upcoming").length;

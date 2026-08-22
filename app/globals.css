@@ -280,6 +280,25 @@ tbody tr:hover { background: var(--surface-2); }
 .disclaimer strong { color: var(--text); }
 .footer-links { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
 
+/* ---------------- GMP delta chip + history table ---------------- */
+.gmp-delta {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.gmp-delta-up { background: rgba(11, 138, 75, 0.13); color: var(--up); }
+.gmp-delta-down { background: rgba(209, 52, 47, 0.13); color: var(--down); }
+
+.hist-wrap { overflow-x: auto; margin-top: 12px; }
+.hist { min-width: 0; font-size: 0.84rem; }
+.hist th, .hist td { padding: 7px 10px; white-space: nowrap; }
+.hist th:not(:first-child), .hist td:not(:first-child) { text-align: right; }
+.hist tbody tr:first-child td { font-weight: 700; }
+
 /* ---------------- FAQ ---------------- */
 .faq { margin-top: 14px; }
 .faq-item {
