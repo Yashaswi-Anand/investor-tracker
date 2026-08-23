@@ -88,16 +88,15 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="stat-tile">
-              <div className="k">Highest GMP</div>
+              <div className="k">Top GMP (% of price)</div>
               <div className="v num">
-                {topGmp ? inr(topGmp.gmp) : "—"}
+                {topGmp
+                  ? `+${((topGmp.gmp / topGmp.price_band_high) * 100).toFixed(0)}%`
+                  : "—"}
               </div>
               <div className="s">
                 {topGmp
-                  ? `${topGmp.short_name || topGmp.name} · ${(
-                      (topGmp.gmp / topGmp.price_band_high) *
-                      100
-                    ).toFixed(0)}% of band`
+                  ? `${topGmp.short_name || topGmp.name} · GMP ${inr(topGmp.gmp)} on ${inr(topGmp.price_band_high)}`
                   : "GMP not recorded yet"}
               </div>
             </div>
