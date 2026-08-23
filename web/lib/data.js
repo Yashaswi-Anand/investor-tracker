@@ -132,6 +132,29 @@ export async function getRecentGmpSnapshots(limit = 3000) {
  * so it reads "GMP moved +₹12 since yesterday" — the number IPO readers
  * actually look for — rather than flickering on every 30-minute tick.
  */
+/**
+ * {slug: [gmp, gmp, ...]} — each IPO's recent snapshots oldest→newest,
+ * thinned to at most `max` points. Feeds the dashboard sparklines.
+ */
+export function gmpSparklines(snapshots, max = 36) {
+  const bySlug = new Map();
+  for (const row of snapshots || []) {
+    if (!row || !row.slug || row.gmp == null) continue;
+    if (!bySlug.has(row.slug)) bySlug.set(row.slug, []);
+    bySlug.get(row.slug).push(row);
+  }
+  const out = {};
+  for (const [slug, rows] of bySlug) {
+    const asc = rows
+      .slice()
+      .sort((a, b) => String(a.recorded_at).localeCompare(String(b.recorded_at)))
+      .map((r) => Number(r.gmp));
+    const step = Math.max(1, Math.ceil(asc.length / max));
+    out[slug] = asc.filter((_, i) => i % step === 0 || i === asc.length - 1);
+  }
+  return out;
+}
+
 export function gmpDeltas(snapshots) {
   const bySlug = new Map();
   for (const row of snapshots || []) {
