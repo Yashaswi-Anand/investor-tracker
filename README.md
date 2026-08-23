@@ -40,7 +40,7 @@ the app changes — no rebuild, no Play Store review.
 
 | Change | Website | Android app |
 |---|---|---|
-| New IPO, GMP, subscription figures | ≤10 min (ISR) | same |
+| New IPO, GMP, subscription figures | instant — pages render per request; data is at most 30 min old (scraper cadence) | same |
 | Page layout, colours, new pages, new features | on deploy | same, instantly |
 | App name, launcher icon, package id | — | needs an APK rebuild |
 
@@ -196,7 +196,7 @@ npm run dev                 # http://localhost:3000
 
 Or double-click `run-website.bat`.
 
-Built in: server-rendered pages with 10-minute ISR, per-page
+Built in: server-rendered pages (rendered per request, no stale cache), per-page
 `generateMetadata`, JSON-LD structured data (ItemList + FAQPage), dynamic
 `sitemap.xml` and `robots.txt`, dark mode, and a mobile card layout that
 becomes a table on desktop.

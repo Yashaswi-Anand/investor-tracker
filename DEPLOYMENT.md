@@ -10,7 +10,7 @@ already own — zero extra cost). **Brand/app name:** Investor.
 
 | Piece | Where | Why |
 |---|---|---|
-| Website (Next.js) | Hostinger **Node.js Web App** on your Business/Cloud plan | [Officially supported](https://docs.hostinger.com/node.js/creating-an-app): Git connect, auto-deploy on push, Node 18/20/22/24. `next start` runs as a real server, so ISR works |
+| Website (Next.js) | Hostinger **Node.js Web App** on your Business/Cloud plan | [Officially supported](https://docs.hostinger.com/node.js/creating-an-app): Git connect, auto-deploy on push, Node 18/20/22/24. `next start` runs as a real server, so per-request rendering works |
 | Scraper (every 30 min) | **GitHub Actions** (free) | Hostinger web hosting has no supported Python runtime ([Hostinger recommends VPS for Python](https://www.hostinger.com/tutorials/install-pip-in-ubuntu/)); Actions is always-on and already wired up in `.github/workflows/scrape.yml` |
 | Database | Supabase (free tier) | Postgres + REST, row-level security already in `database/schema.sql` |
 | Domain + DNS | Hostinger | You already have the account |

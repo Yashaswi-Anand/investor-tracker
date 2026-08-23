@@ -3,9 +3,9 @@ import { getAllIpos, getRecentGmpSnapshots, gmpDeltas } from "../lib/data";
 import { inr, safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
 
-// Keep in sync with REVALIDATE_SECONDS in lib/config.js — Next.js requires
-// a static literal here.
-export const revalidate = 600;
+// Rendered on every request: a live tracker must never show a cached GMP.
+// (See the note in lib/data.js for why ISR was removed.)
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Live IPO Tracker — GMP, Subscription, Price Band, Allotment & Listing Dates",
