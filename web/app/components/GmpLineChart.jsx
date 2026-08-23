@@ -1,12 +1,15 @@
-import { fmtDateTime, fmtShortDate, inr } from "../../lib/format";
+import { fmtDate, fmtDateTime, fmtShortDate, inr } from "../../lib/format";
 
 /**
  * GMP line chart — server-rendered inline SVG, no chart library.
  *
- * Plots every recorded snapshot (30-minute granularity) over time, so intraday
- * moves are visible, with an area fill, a dot per point (when not too dense),
- * the latest value labelled, ₹ gridlines and IST date ticks. Colours come
- * from CSS tokens so it follows light/dark mode.
+ * Default mode is DAILY: one point per calendar day (the day's last GMP),
+ * which is how IPO readers follow GMP — "what was it yesterday vs today".
+ * Pass points shaped {date: 'YYYY-MM-DD', gmp}. mode="intraday" plots raw
+ * timestamps instead ({recorded_at, gmp}).
+ *
+ * Area fill, a dot per point, the latest value labelled, ₹ gridlines and
+ * date ticks. Colours come from CSS tokens so it follows light/dark mode.
  */
 
 const W = 640;
@@ -26,11 +29,22 @@ function niceTicks(lo, hi) {
   return [round(lo), round(mid), round(hi)];
 }
 
-export default function GmpLineChart({ points, ariaLabel = "GMP trend" }) {
+export default function GmpLineChart({ points, mode = "daily", ariaLabel = "GMP trend" }) {
+  const daily = mode === "daily";
+
   const data = downsample(
     (points || [])
-      .filter((p) => p && p.gmp != null && p.recorded_at)
-      .map((p) => ({ v: Number(p.gmp), t: new Date(p.recorded_at).getTime(), at: p.recorded_at }))
+      .filter((p) => p && p.gmp != null && (daily ? p.date : p.recorded_at))
+      .map((p) => {
+        const v = Number(p.gmp);
+        if (daily) {
+          // Calendar day as UTC midnight purely for x-spacing; labels use the date string.
+          const t = new Date(`${p.date}T00:00:00Z`).getTime();
+          return { v, t, short: fmtDate(p.date), long: fmtDate(p.date, true) };
+        }
+        const t = new Date(p.recorded_at).getTime();
+        return { v, t, short: fmtShortDate(p.recorded_at), long: `${fmtDateTime(p.recorded_at)} IST` };
+      })
       .filter((p) => Number.isFinite(p.v) && Number.isFinite(p.t))
       .sort((a, b) => a.t - b.t)
   );
@@ -66,11 +80,14 @@ export default function GmpLineChart({ points, ariaLabel = "GMP trend" }) {
   const last = data[data.length - 1];
   const down = last.v < first.v;
 
-  // Up to 4 date ticks, evenly spread by index (dedupe identical labels).
-  const tickIdx = [0, Math.floor((data.length - 1) / 3), Math.floor((2 * (data.length - 1)) / 3), data.length - 1];
+  // Date ticks: every day when there are few points, else 4 spread evenly.
+  const tickIdx =
+    data.length <= 8
+      ? data.map((_, i) => i)
+      : [0, Math.floor((data.length - 1) / 3), Math.floor((2 * (data.length - 1)) / 3), data.length - 1];
   const seen = new Set();
   const xTicks = tickIdx
-    .map((i) => ({ x: x(data[i].t), label: fmtShortDate(data[i].at) }))
+    .map((i) => ({ x: x(data[i].t), label: data[i].short }))
     .filter((t) => (seen.has(t.label) ? false : (seen.add(t.label), true)));
 
   const showDots = data.length <= 64;
@@ -86,7 +103,7 @@ export default function GmpLineChart({ points, ariaLabel = "GMP trend" }) {
         className="chart"
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`${ariaLabel}: from ${inr(first.v)} on ${fmtShortDate(first.at)} to ${inr(last.v)} on ${fmtShortDate(last.at)}`}
+        aria-label={`${ariaLabel}: from ${inr(first.v)} on ${first.short} to ${inr(last.v)} on ${last.short}`}
       >
         <defs>
           <linearGradient id="gmpFill" x1="0" y1="0" x2="0" y2="1">
@@ -120,12 +137,12 @@ export default function GmpLineChart({ points, ariaLabel = "GMP trend" }) {
               cy={y(d.v)}
               r={i === data.length - 1 ? 5 : 3}
             >
-              <title>{`₹${d.v} — ${fmtDateTime(d.at)} IST`}</title>
+              <title>{`₹${d.v} — ${d.long}`}</title>
             </circle>
           ))}
         {!showDots && (
           <circle className="gmp-dot-last" data-down={down} cx={lastX} cy={lastY} r={5}>
-            <title>{`₹${last.v} — ${fmtDateTime(last.at)} IST`}</title>
+            <title>{`₹${last.v} — ${last.long}`}</title>
           </circle>
         )}
 
