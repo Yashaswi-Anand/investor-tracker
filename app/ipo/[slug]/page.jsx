@@ -98,10 +98,16 @@ function GmpHistory({ history, ipo }) {
         </p>
       )}
 
-      {/* Line graph over every snapshot (30-min granularity), so intraday
-          moves show; the table beside it is the day-by-day summary. */}
+      {/* Day-wise line graph (one point per day = that day's last GMP); the
+          table beside it lists the same days newest-first. */}
       <div className="hist-layout">
-      <GmpLineChart points={history} ariaLabel={`${ipo.name} GMP trend`} />
+      {recent.length >= 2 ? (
+        <GmpLineChart points={recent} mode="daily" ariaLabel={`${ipo.name} GMP trend`} />
+      ) : (
+        <p className="subtitle" style={{ margin: 0 }}>
+          The graph appears from the second day of GMP data.
+        </p>
+      )}
 
       <div className="hist-wrap">
         <table className="hist">
