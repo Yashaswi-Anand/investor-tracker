@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SITE } from "../../../lib/config";
-import {
-  getAllSlugs,
-  getGmpHistory,
-  getIpoBySlug,
-} from "../../../lib/data";
+import { getGmpHistory, getIpoBySlug } from "../../../lib/data";
 import {
   dailySeries,
   fmtDate,
@@ -26,14 +22,9 @@ import {
   StatusBadge,
 } from "../../components/ui";
 
-// Keep in sync with REVALIDATE_SECONDS in lib/config.js.
-export const revalidate = 600;
-export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  const rows = await getAllSlugs();
-  return rows.map(({ slug }) => ({ slug }));
-}
+// Rendered on every request so the GMP, subscription figures and history
+// are always the latest — no build-time snapshot, no ISR cache.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
