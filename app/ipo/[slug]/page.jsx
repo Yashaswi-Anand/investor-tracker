@@ -14,6 +14,7 @@ import {
   safeJsonLd,
   times,
 } from "../../../lib/format";
+import GmpLineChart from "../../components/GmpLineChart";
 import {
   BoardBadge,
   GmpValue,
@@ -79,7 +80,6 @@ function GmpHistory({ history, ipo }) {
   }
 
   const recent = days.slice(-30);
-  const peak = Math.max(...recent.map((d) => Math.abs(d.gmp)), 1);
   const high = ipo.price_band_high != null ? Number(ipo.price_band_high) : null;
 
   // Newest first for the table, with change vs the previous day.
@@ -98,25 +98,10 @@ function GmpHistory({ history, ipo }) {
         </p>
       )}
 
-      {recent.length > 1 && (
-        <>
-          <div className="trend">
-            {recent.map((day) => (
-              <div
-                key={day.date}
-                className="trend-bar"
-                data-neg={day.gmp < 0}
-                style={{ height: `${Math.max(4, (Math.abs(day.gmp) / peak) * 100)}%` }}
-                title={`₹${day.gmp} — ${fmtDate(day.date, true)}`}
-              />
-            ))}
-          </div>
-          <div className="trend-meta">
-            <span>{fmtShortDate(recent[0].recorded_at)}</span>
-            <span>{fmtShortDate(recent[recent.length - 1].recorded_at)}</span>
-          </div>
-        </>
-      )}
+      {/* Line graph over every snapshot (30-min granularity), so intraday
+          moves show; the table beside it is the day-by-day summary. */}
+      <div className="hist-layout">
+      <GmpLineChart points={history} ariaLabel={`${ipo.name} GMP trend`} />
 
       <div className="hist-wrap">
         <table className="hist">
@@ -150,6 +135,7 @@ function GmpHistory({ history, ipo }) {
             })}
           </tbody>
         </table>
+      </div>
       </div>
     </>
   );
@@ -399,7 +385,7 @@ export default async function IpoDetailPage({ params }) {
           )}
         </section>
 
-        <section className="card">
+        <section className="card card-wide">
           <h2>GMP History</h2>
           <GmpHistory history={gmpHistory} ipo={ipo} />
         </section>

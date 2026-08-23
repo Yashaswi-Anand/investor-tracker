@@ -1,5 +1,10 @@
 import { SITE } from "../lib/config";
-import { getAllIpos, getRecentGmpSnapshots, gmpDeltas } from "../lib/data";
+import {
+  getAllIpos,
+  getRecentGmpSnapshots,
+  gmpDeltas,
+  gmpSparklines,
+} from "../lib/data";
 import { inr, safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
 
@@ -19,11 +24,13 @@ export default async function HomePage() {
     getAllIpos(),
     getRecentGmpSnapshots(),
   ]);
-  // Day-over-day GMP movement per IPO, shown beside the GMP on the dashboard.
+  // Day-over-day GMP movement + a 3-day sparkline per IPO for the dashboard.
   const deltas = gmpDeltas(snapshots);
+  const sparks = gmpSparklines(snapshots);
   const ipos = rawIpos.map((ipo) => ({
     ...ipo,
     gmp_delta: deltas[ipo.slug] ? deltas[ipo.slug].delta : null,
+    gmp_spark: sparks[ipo.slug] || null,
   }));
 
   const open = ipos.filter((i) => i.status === "open");

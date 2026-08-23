@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { fmtDate, inr, priceBand, times } from "../../lib/format";
+import Sparkline from "./Sparkline";
 import { GmpValue, Stat, StatusBadge } from "./ui";
 
 const TABS = [
@@ -127,6 +128,7 @@ export default function IpoList({ ipos }) {
                   <th>Company</th>
                   <th>Board</th>
                   <th>GMP</th>
+                  <th>Trend (3d)</th>
                   <th>Price Band</th>
                   <th>Lot</th>
                   <th>Min Invest</th>
@@ -146,6 +148,9 @@ export default function IpoList({ ipos }) {
                     <td>{ipo.board || "Mainboard"}</td>
                     <td>
                       <GmpValue ipo={ipo} showPercent />
+                    </td>
+                    <td>
+                      <Sparkline values={ipo.gmp_spark} />
                     </td>
                     <td>{priceBand(ipo)}</td>
                     <td>{ipo.lot_size ?? "—"}</td>
