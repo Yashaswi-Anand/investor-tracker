@@ -20,7 +20,10 @@ name: scrape
 
 on:
   schedule:
-    - cron: "*/30 * * * *"    # every 30 minutes (UTC)
+    # Every 15 minutes. The repo is public, so Actions minutes are free, and
+    # GitHub delays cron under load — a 15-min schedule keeps the effective
+    # gap near 15–25 min instead of 30–60.
+    - cron: "*/15 * * * *"
   workflow_dispatch: {}        # manual run button, for testing
 
 concurrency:

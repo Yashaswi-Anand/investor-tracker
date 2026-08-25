@@ -5,7 +5,7 @@ import {
   gmpDeltas,
   gmpSparklines,
 } from "../lib/data";
-import { inr, safeJsonLd } from "../lib/format";
+import { fmtDateTime, inr, safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
 
 // Rendered on every request: a live tracker must never show a cached GMP.
@@ -32,6 +32,13 @@ export default async function HomePage() {
     gmp_delta: deltas[ipo.slug] ? deltas[ipo.slug].delta : null,
     gmp_spark: sparks[ipo.slug] || null,
   }));
+
+  // Newest GMP sync time across all IPOs — shown so readers can see how
+  // fresh the premium data is.
+  const lastSync = ipos.reduce(
+    (max, i) => (i.gmp_updated_at && i.gmp_updated_at > max ? i.gmp_updated_at : max),
+    ""
+  );
 
   const open = ipos.filter((i) => i.status === "open");
   const upcoming = ipos.filter((i) => i.status === "upcoming");
@@ -110,7 +117,11 @@ export default async function HomePage() {
             <div className="stat-tile">
               <div className="k">Tracked</div>
               <div className="v num">{ipos.length}</div>
-              <div className="s">Mainboard + SME · NSE data</div>
+              <div className="s">
+                {lastSync
+                  ? `GMP synced ${fmtDateTime(lastSync)} IST`
+                  : "Mainboard + SME · NSE data"}
+              </div>
             </div>
           </div>
         </div>
