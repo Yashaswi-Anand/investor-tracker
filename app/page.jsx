@@ -4,8 +4,9 @@ import {
   getRecentGmpSnapshots,
   gmpDeltas,
   gmpSparklines,
+  lastUpdatedAt,
 } from "../lib/data";
-import { fmtDateTime, inr, safeJsonLd } from "../lib/format";
+import { fmtShortDate, fmtTime, inr, safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
 
 // Rendered on every request: a live tracker must never show a cached GMP.
@@ -33,12 +34,9 @@ export default async function HomePage() {
     gmp_spark: sparks[ipo.slug] || null,
   }));
 
-  // Newest GMP sync time across all IPOs — shown so readers can see how
-  // fresh the premium data is.
-  const lastSync = ipos.reduce(
-    (max, i) => (i.gmp_updated_at && i.gmp_updated_at > max ? i.gmp_updated_at : max),
-    ""
-  );
+  // When the scraper last refreshed the data — shown so readers can see the
+  // page is live, even on a run where no premium moved.
+  const lastRun = lastUpdatedAt(ipos);
 
   const open = ipos.filter((i) => i.status === "open");
   const upcoming = ipos.filter((i) => i.status === "upcoming");
@@ -115,12 +113,14 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="stat-tile">
-              <div className="k">Tracked</div>
-              <div className="v num">{ipos.length}</div>
+              <div className="k">Last updated</div>
+              <div className="v num">
+                {lastRun ? fmtTime(lastRun) : "—"}
+              </div>
               <div className="s">
-                {lastSync
-                  ? `GMP synced ${fmtDateTime(lastSync)} IST`
-                  : "Mainboard + SME · NSE data"}
+                {lastRun
+                  ? `${fmtShortDate(lastRun)} IST · ${ipos.length} IPOs tracked`
+                  : `${ipos.length} IPOs · Mainboard + SME`}
               </div>
             </div>
           </div>
