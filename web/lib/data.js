@@ -133,6 +133,22 @@ export async function getRecentGmpSnapshots(limit = 3000) {
  * actually look for — rather than flickering on every 30-minute tick.
  */
 /**
+ * When the scraper last wrote to the database, as an ISO string.
+ *
+ * Every run upserts every IPO, and a Postgres trigger stamps `updated_at`
+ * on each write — so the newest `updated_at` across all rows IS the last
+ * successful run, whether or not any value actually changed. That is what
+ * readers want to see: proof the data is being refreshed.
+ */
+export function lastUpdatedAt(ipos) {
+  let latest = "";
+  for (const ipo of ipos || []) {
+    if (ipo && ipo.updated_at && ipo.updated_at > latest) latest = ipo.updated_at;
+  }
+  return latest || null;
+}
+
+/**
  * {slug: [gmp, gmp, ...]} — each IPO's recent snapshots oldest→newest,
  * thinned to at most `max` points. Feeds the dashboard sparklines.
  */

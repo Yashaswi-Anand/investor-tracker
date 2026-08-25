@@ -8,6 +8,7 @@ import {
   fmtDateTime,
   fmtDelta,
   fmtShortDate,
+  fmtTime,
   inr,
   istToday,
   priceBand,
@@ -92,11 +93,15 @@ function GmpHistory({ history, ipo }) {
 
   return (
     <>
-      {ipo.gmp_updated_at && (
-        <p className="subtitle" style={{ margin: "0 0 8px" }}>
-          Latest GMP {inr(ipo.gmp)} · updated {fmtDateTime(ipo.gmp_updated_at)} IST
-        </p>
-      )}
+      {/* `updated_at` is stamped on every scraper run, so this reads as
+          "last refreshed" even on a run where no premium moved. */}
+      <p className="subtitle" style={{ margin: "0 0 8px" }}>
+        {ipo.gmp != null && <>Latest GMP {inr(ipo.gmp)} · </>}
+        Last updated{" "}
+        <strong style={{ color: "var(--text)" }}>
+          {fmtDateTime(ipo.updated_at || ipo.gmp_updated_at)} IST
+        </strong>
+      </p>
 
       {/* Day-wise line graph (one point per day = that day's last GMP); the
           table beside it lists the same days newest-first. */}
@@ -117,6 +122,9 @@ function GmpHistory({ history, ipo }) {
               <th>GMP</th>
               <th>Change</th>
               <th>Est. Listing</th>
+              {/* Each row is a day; the time is that day's last recorded
+                  snapshot, so readers can see exactly how fresh it is. */}
+              <th>Updated (IST)</th>
             </tr>
           </thead>
           <tbody>
@@ -136,6 +144,9 @@ function GmpHistory({ history, ipo }) {
                     )}
                   </td>
                   <td>{high != null ? inr(high + row.gmp) : "—"}</td>
+                  <td className="hist-updated">
+                    <time dateTime={row.recorded_at}>{fmtTime(row.recorded_at)}</time>
+                  </td>
                 </tr>
               );
             })}

@@ -487,7 +487,8 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .card-wide { grid-column: 1 / -1; }
 /* Side-by-side chart + table on wide screens; stacked on phones. */
 .hist-layout { display: grid; grid-template-columns: 1fr; gap: 14px; }
-@media (min-width: 880px) { .hist-layout { grid-template-columns: 3fr 2fr; align-items: start; } }
+/* The table now carries five columns, so give it a bit more room. */
+@media (min-width: 880px) { .hist-layout { grid-template-columns: 1fr 1fr; align-items: start; } }
 .card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
@@ -544,7 +545,8 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .hist-wrap { overflow-x: auto; margin-top: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .hist { min-width: 0; font-size: 0.84rem; }
 .hist th { position: static; }
-.hist th, .hist td { padding: 8px 12px; white-space: nowrap; }
+.hist th, .hist td { padding: 8px 10px; white-space: nowrap; }
+.hist-updated { color: var(--text-muted); font-weight: 500 !important; }
 .hist th:not(:first-child), .hist td:not(:first-child) { text-align: right; }
 .hist tbody tr:first-child td { font-weight: 800; }
 
