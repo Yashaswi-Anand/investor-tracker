@@ -4,17 +4,20 @@ GMP source — grey market premium.
 GMP is unofficial: no exchange or regulator publishes it, so it can only come
 from a third-party site or from your own manual entry.
 
-This module is deliberately isolated so it can be swapped or switched off
-without touching anything else:
+This module is deliberately isolated so sources can be swapped or switched
+off without touching anything else. `fetch(ipo_rows)` reads the PRIMARY
+source (config.GMP_SOURCE) and then, for any IPO still without a premium,
+falls through the fallbacks (config.GMP_FALLBACKS) in order.
 
-    GMP_SOURCE=none      -> disabled. Enter GMP by hand; add 'gmp' to the
-                            row's `locked` array and the scraper will never
-                            overwrite it.
-    GMP_SOURCE=ipowatch  -> read the public, server-rendered GMP tables on
-                            ipowatch.in (the production setting).
+    GMP_SOURCE=investorgain  -> primary (JSON report API, richest & freshest)
+    GMP_FALLBACKS=ipowatch,ipocentral -> fill gaps from server-rendered HTML
+    GMP_SOURCE=none          -> disabled; enter GMP by hand and add 'gmp' to
+                                the row's `locked` array so it is never
+                                overwritten.
 
-Sources that deliver GMP only through JavaScript / reCAPTCHA-gated XHR are
-not supported on purpose — we do not work around bot protection.
+HTML sources are parsed by their header row and gated on robots.txt. The
+investorgain source uses its public JSON data endpoint (the same one its own
+page calls), so no HTML scraping or bot-detection bypass is involved.
 
 Etiquette built in (do not remove):
   * robots.txt is fetched and honoured before any request
@@ -26,6 +29,7 @@ republishing scraped data may not be permitted even when robots.txt allows
 crawling.
 """
 
+import datetime
 import re
 import time
 import urllib.robotparser
@@ -239,33 +243,126 @@ def match_to_ipos(gmp_by_slug, ipo_rows):
     return matched
 
 
-def fetch(ipo_rows):
-    """Return {slug: gmp}. Empty dict when disabled or blocked."""
-    if config.GMP_SOURCE == "none":
-        return {}
+def _fiscal_year(today):
+    """Indian fiscal year label 'YYYY-YY' (April–March) for a date."""
+    if today.month >= 4:
+        return f"{today.year}-{str((today.year + 1) % 100).zfill(2)}"
+    return f"{today.year - 1}-{str(today.year % 100).zfill(2)}"
 
-    url = config.gmp_url()
-    if not url:
-        return {}
 
-    user_agent = config.SCRAPER_USER_AGENT
-    if not _robots_allows(url, user_agent):
-        print(f"  GMP skipped: robots.txt disallows {url}")
-        return {}
+def parse_investorgain_gmp(cell):
+    """'₹<b>25</b> (30.12%)...' -> 25.0 ; '₹<b>--</b> ...' -> None."""
+    match = re.search(r">\s*(-?[\d,]+(?:\.\d+)?)\s*<", cell or "")
+    if not match:
+        return None
+    try:
+        return float(match.group(1).replace(",", ""))
+    except ValueError:
+        return None
 
+
+def _fetch_investorgain(ipo_rows):
+    """Primary source: investorgain's JSON report API.
+
+    Returns {slug: gmp} for IPOs that currently have a GMP. IPOs the API
+    lists with '--' (no premium yet) are intentionally absent, so a fallback
+    can supply them.
+    """
+    source = config.GMP_SOURCES["investorgain"]
+    today = datetime.date.today()
+    url = source["url_template"].format(
+        month=today.month, year=today.year, fiscal=_fiscal_year(today)
+    )
     try:
         time.sleep(config.DELAY_SECONDS)
         response = requests.get(
             url,
-            headers={"User-Agent": user_agent, "Accept": "text/html"},
+            headers={
+                "User-Agent": config.SCRAPER_USER_AGENT,
+                "Accept": "application/json, text/plain, */*",
+                "Referer": source["referer"],
+                "Origin": "https://www.investorgain.com",
+            },
+            timeout=config.REQUEST_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+        rows = response.json().get("reportTableData") or []
+    except (requests.RequestException, ValueError) as error:
+        print(f"  GMP[investorgain] fetch failed: {error}")
+        return {}
+
+    scraped = {}
+    for row in rows:
+        name = (row.get("~ipo_name") or "").strip()
+        if not name:
+            continue
+        value = parse_investorgain_gmp(row.get("GMP", ""))
+        if value is not None:
+            scraped[slugify(name)] = value
+    return match_to_ipos(scraped, ipo_rows)
+
+
+def _fetch_html_source(name, ipo_rows):
+    """Fallback source: a server-rendered HTML GMP table (robots-honoured)."""
+    source = config.GMP_SOURCES[name]
+    url = source["base_url"] + source["path"]
+    if not _robots_allows(url, config.SCRAPER_USER_AGENT):
+        print(f"  GMP[{name}] skipped: robots.txt disallows {url}")
+        return {}
+    try:
+        time.sleep(config.DELAY_SECONDS)
+        response = requests.get(
+            url,
+            headers={"User-Agent": config.SCRAPER_USER_AGENT, "Accept": "text/html"},
             timeout=config.REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
     except requests.RequestException as error:
-        print(f"  GMP fetch failed: {error}")
+        print(f"  GMP[{name}] fetch failed: {error}")
+        return {}
+    return match_to_ipos(parse_gmp_table(response.text), ipo_rows)
+
+
+def _fetch_one(name, ipo_rows):
+    source = config.GMP_SOURCES.get(name)
+    if not source:
+        print(f"  GMP: unknown source '{name}' — skipped")
+        return {}
+    if source.get("type") == "investorgain_api":
+        return _fetch_investorgain(ipo_rows)
+    return _fetch_html_source(name, ipo_rows)
+
+
+def source_order():
+    """Primary source first, then each fallback once (deduped)."""
+    order = []
+    for name in [config.GMP_SOURCE, *config.GMP_FALLBACKS]:
+        if name and name != "none" and name not in order:
+            order.append(name)
+    return order
+
+
+def fetch(ipo_rows):
+    """Return {slug: gmp}, filling gaps down the source chain.
+
+    The primary source wins wherever it has a value; each fallback only adds
+    IPOs still missing, so one incomplete site never blanks an IPO out.
+    """
+    if config.GMP_SOURCE == "none":
         return {}
 
-    scraped = parse_gmp_table(response.text)
-    matched = match_to_ipos(scraped, ipo_rows)
-    print(f"  GMP: {len(scraped)} rows on page, {len(matched)} matched to our IPOs")
-    return matched
+    result = {}
+    for name in source_order():
+        missing = [row for row in ipo_rows if row["slug"] not in result]
+        if not missing:
+            break
+        got = _fetch_one(name, missing)
+        added = 0
+        for slug, value in got.items():
+            if slug not in result:
+                result[slug] = value
+                added += 1
+        print(f"  GMP[{name}]: matched {len(got)}, newly filled {added}")
+
+    print(f"  GMP: {len(result)}/{len(ipo_rows)} IPOs have a premium")
+    return result

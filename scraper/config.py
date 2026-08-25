@@ -49,30 +49,53 @@ NSE_HEADERS = {
 }
 
 # ---------------------------------------------------------------------------
-# GMP source — grey market premium is unofficial, so no exchange publishes it.
-# This block is deliberately isolated and swappable.
+# GMP sources — grey market premium is unofficial, so no exchange publishes
+# it. We read one PRIMARY source and fall back to others only for IPOs the
+# primary does not cover (gap-filling), so a single site being incomplete
+# never leaves an IPO blank.
 #
-#   GMP_SOURCE = "none"     -> skip GMP; enter it by hand (protected by `locked`)
-#   GMP_SOURCE = "ipowatch" -> read the public GMP tables on ipowatch.in
+#   GMP_SOURCE   = primary source (default 'investorgain')
+#   GMP_FALLBACKS = comma-separated fallbacks tried in order for gaps
+#                   (default 'ipowatch,ipocentral')
+#   GMP_SOURCE = 'none' disables GMP entirely (enter it by hand; protect
+#   with `locked`).
 #
-# Why ipowatch: its GMP page is server-rendered HTML (parseable without
-# running JavaScript), robots.txt allows crawling, and its tables carry a
-# header row naming the GMP column. Sites that load GMP via JavaScript or
-# reCAPTCHA-gated XHR (e.g. investorgain) are deliberately NOT supported —
-# we do not work around bot protection.
+# Source types:
+#   * investorgain -> JSON API (webnodejs.investorgain.com data-read). Clean
+#     per-IPO GMP with a per-row 'Updated-On'; the richest, freshest source.
+#   * ipowatch / ipocentral -> server-rendered HTML tables, parsed by their
+#     header row (so a "Name | Price | GMP" history table is never mistaken
+#     for the live one). robots.txt is honoured before each HTML request.
 #
-# Etiquette enforced by scraper/sources/gmp.py:
-#   * robots.txt is fetched and honoured before any request
-#   * one request per run (every 30 min), descriptive User-Agent
-# GMP is unofficial and is shown with a disclaimer. Check the source site's
-# terms before enabling in production.
+# GMP is unofficial and is shown with a disclaimer. Check each site's terms
+# before relying on it commercially.
 # ---------------------------------------------------------------------------
-GMP_SOURCE = os.environ.get("GMP_SOURCE", "none").lower()
+GMP_SOURCE = os.environ.get("GMP_SOURCE", "investorgain").lower()
+GMP_FALLBACKS = [
+    s.strip().lower()
+    for s in os.environ.get("GMP_FALLBACKS", "ipowatch,ipocentral").split(",")
+    if s.strip()
+]
 
 GMP_SOURCES = {
+    "investorgain": {
+        "type": "investorgain_api",
+        # {month}/{year}/{fiscal} are filled at run time from today's date.
+        "url_template": (
+            "https://webnodejs.investorgain.com/cloud/v2/report/data-read/"
+            "331/1/{month}/{year}/{fiscal}/0/all?search=&v=1-1"
+        ),
+        "referer": "https://www.investorgain.com/report/ipo-gmp-live/331/",
+    },
     "ipowatch": {
+        "type": "html",
         "base_url": "https://ipowatch.in",
         "path": "/ipo-grey-market-premium-latest-ipo-gmp/",
+    },
+    "ipocentral": {
+        "type": "html",
+        "base_url": "https://ipocentral.in",
+        "path": "/ipo-discussion/",
     },
 }
 
@@ -106,14 +129,6 @@ def nse_url(key, **kwargs):
     return NSE_BASE_URL + NSE_ENDPOINTS[key].format(**kwargs)
 
 
-def gmp_url():
-    """Full URL of the configured GMP source, or None when disabled."""
-    source = GMP_SOURCES.get(GMP_SOURCE)
-    if not source:
-        return None
-    return source["base_url"] + source["path"]
-
-
 def _placeholder(value):
     return not value or value.startswith("your-") or "example.com" in value
 
@@ -125,10 +140,11 @@ def validate():
         problems.append("SUPABASE_URL is not set (see scraper/.env)")
     if _placeholder(SUPABASE_SERVICE_KEY):
         problems.append("SUPABASE_SERVICE_KEY is not set (see scraper/.env)")
-    if GMP_SOURCE not in ("none",) and GMP_SOURCE not in GMP_SOURCES:
-        problems.append(
-            f"GMP_SOURCE='{GMP_SOURCE}' is unknown. "
-            f"Use 'none' or one of: {', '.join(GMP_SOURCES)}"
-        )
+    for name in [GMP_SOURCE, *GMP_FALLBACKS]:
+        if name not in ("none",) and name not in GMP_SOURCES:
+            problems.append(
+                f"GMP source '{name}' is unknown. "
+                f"Use 'none' or one of: {', '.join(GMP_SOURCES)}"
+            )
     if problems:
         raise SystemExit("Cannot start:\n  - " + "\n  - ".join(problems))

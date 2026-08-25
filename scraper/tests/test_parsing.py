@@ -535,3 +535,56 @@ def test_first_table_wins_on_duplicate_company():
 def test_ipowatch_is_a_configured_source():
     assert "ipowatch" in config.GMP_SOURCES
     assert config.GMP_SOURCES["ipowatch"]["base_url"].startswith("https://ipowatch.in")
+
+
+# --------------------------------------------------------------------------
+# investorgain JSON GMP parsing + multi-source order
+# --------------------------------------------------------------------------
+def test_parse_investorgain_gmp():
+    assert gmp.parse_investorgain_gmp('&#8377;<b>25</b> (30.12%)<br>x') == 25.0
+    assert gmp.parse_investorgain_gmp('₹<b>-4</b> (-2.6%)') == -4.0
+    assert gmp.parse_investorgain_gmp('₹<b>1,250</b> (5%)') == 1250.0
+    assert gmp.parse_investorgain_gmp('&#8377;<b>--</b> (0.00%)') is None
+    assert gmp.parse_investorgain_gmp('') is None
+
+
+def test_fiscal_year():
+    import datetime
+    assert gmp._fiscal_year(datetime.date(2026, 8, 25)) == "2026-27"
+    assert gmp._fiscal_year(datetime.date(2026, 4, 1)) == "2026-27"
+    assert gmp._fiscal_year(datetime.date(2027, 3, 31)) == "2026-27"
+    assert gmp._fiscal_year(datetime.date(2026, 1, 15)) == "2025-26"
+
+
+def test_source_order_dedupes_primary_and_fallbacks(monkeypatch):
+    monkeypatch.setattr(gmp.config, "GMP_SOURCE", "investorgain")
+    monkeypatch.setattr(gmp.config, "GMP_FALLBACKS", ["ipowatch", "investorgain", "ipocentral"])
+    assert gmp.source_order() == ["investorgain", "ipowatch", "ipocentral"]
+
+
+def test_source_order_excludes_none(monkeypatch):
+    monkeypatch.setattr(gmp.config, "GMP_SOURCE", "ipowatch")
+    monkeypatch.setattr(gmp.config, "GMP_FALLBACKS", ["none", "ipocentral"])
+    assert gmp.source_order() == ["ipowatch", "ipocentral"]
+
+
+def test_fetch_disabled_returns_empty(monkeypatch):
+    monkeypatch.setattr(gmp.config, "GMP_SOURCE", "none")
+    assert gmp.fetch([{"slug": "x"}]) == {}
+
+
+def test_fetch_gap_fills_from_fallback(monkeypatch):
+    """Primary supplies some; fallback fills only the still-missing IPOs."""
+    monkeypatch.setattr(gmp.config, "GMP_SOURCE", "investorgain")
+    monkeypatch.setattr(gmp.config, "GMP_FALLBACKS", ["ipowatch"])
+
+    def fake_one(name, rows):
+        if name == "investorgain":
+            return {"a": 10.0}          # has 'a' only
+        if name == "ipowatch":
+            return {"a": 99.0, "b": 20.0}  # would also give 'a', but 'a' is taken
+        return {}
+
+    monkeypatch.setattr(gmp, "_fetch_one", fake_one)
+    out = gmp.fetch([{"slug": "a"}, {"slug": "b"}, {"slug": "c"}])
+    assert out == {"a": 10.0, "b": 20.0}   # primary wins 'a'; fallback fills 'b'
