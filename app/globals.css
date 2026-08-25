@@ -345,6 +345,8 @@ h2::before {
   box-shadow: var(--shadow-lg);
 }
 .tab-count { opacity: 0.75; margin-left: 6px; font-weight: 600; }
+.tabs-board { margin-top: -4px; }
+.tab-sm { padding: 6px 12px; min-height: 32px; font-size: 0.78rem; }
 
 /* ==========================================================================
    Cards (phone / app)

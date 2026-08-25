@@ -22,38 +22,80 @@ const TABS = [
   { key: "listed", label: "Listed" },
 ];
 
+const BOARDS = [
+  { key: "all", label: "All boards" },
+  { key: "mainboard", label: "Mainboard" },
+  { key: "sme", label: "SME" },
+];
+
 const TAB_KEYS = TABS.map((t) => t.key);
+const BOARD_KEYS = BOARDS.map((b) => b.key);
+
+const boardOf = (ipo) => (ipo.board || "Mainboard").toLowerCase();
 
 export default function IpoList({ ipos }) {
   const [active, setActive] = useState("all");
+  const [board, setBoard] = useState("all");
 
-  // Read ?tab= on the client rather than from server searchParams, so the
-  // page stays statically rendered for SEO. This is what makes the app
-  // manifest shortcut ("/?tab=open") work and makes tab links shareable.
+  // Read ?tab= / ?board= on the client rather than from server searchParams,
+  // so the page keeps one cacheable render. This also makes the app-manifest
+  // shortcut ("/?tab=open") work and makes filter links shareable.
   useEffect(() => {
-    const requested = new URLSearchParams(window.location.search).get("tab");
-    if (requested && TAB_KEYS.includes(requested)) setActive(requested);
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    const requestedBoard = params.get("board");
+    if (tab && TAB_KEYS.includes(tab)) setActive(tab);
+    if (requestedBoard && BOARD_KEYS.includes(requestedBoard)) setBoard(requestedBoard);
   }, []);
 
-  const selectTab = (key) => {
-    setActive(key);
+  const setParam = (name, key) => {
     const url = new URL(window.location.href);
-    if (key === "all") url.searchParams.delete("tab");
-    else url.searchParams.set("tab", key);
+    if (key === "all") url.searchParams.delete(name);
+    else url.searchParams.set(name, key);
     window.history.replaceState(null, "", url);
   };
 
+  const selectTab = (key) => {
+    setActive(key);
+    setParam("tab", key);
+  };
+
+  const selectBoard = (key) => {
+    setBoard(key);
+    setParam("board", key);
+  };
+
+  // Status counts respect the board filter, and board counts respect the
+  // status filter — each row of pills reflects what the other has narrowed.
+  const byBoard = useMemo(
+    () => (board === "all" ? ipos : ipos.filter((i) => boardOf(i) === board)),
+    [ipos, board]
+  );
+
   const counts = useMemo(() => {
-    const map = { all: ipos.length };
-    for (const ipo of ipos) {
+    const map = { all: byBoard.length };
+    for (const ipo of byBoard) {
       map[ipo.status] = (map[ipo.status] || 0) + 1;
     }
     return map;
-  }, [ipos]);
+  }, [byBoard]);
 
-  const visible = useMemo(
+  const byStatus = useMemo(
     () => (active === "all" ? ipos : ipos.filter((i) => i.status === active)),
     [ipos, active]
+  );
+
+  const boardCounts = useMemo(() => {
+    const map = { all: byStatus.length, mainboard: 0, sme: 0 };
+    for (const ipo of byStatus) {
+      map[boardOf(ipo)] = (map[boardOf(ipo)] || 0) + 1;
+    }
+    return map;
+  }, [byStatus]);
+
+  const visible = useMemo(
+    () => byBoard.filter((i) => active === "all" || i.status === active),
+    [byBoard, active]
   );
 
   if (!ipos.length) {
@@ -66,7 +108,7 @@ export default function IpoList({ ipos }) {
 
   return (
     <>
-      <div className="tabs" role="tablist">
+      <div className="tabs" role="tablist" aria-label="Filter by status">
         {TABS.map((tab) => (
           <button
             key={tab.key}
@@ -85,8 +127,30 @@ export default function IpoList({ ipos }) {
         ))}
       </div>
 
+      <div className="tabs tabs-board" role="tablist" aria-label="Filter by board">
+        {BOARDS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            className="tab tab-sm"
+            data-active={board === item.key}
+            aria-selected={board === item.key}
+            onClick={() => selectBoard(item.key)}
+          >
+            {item.label}
+            {boardCounts[item.key] ? (
+              <span className="tab-count">{boardCounts[item.key]}</span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
       {visible.length === 0 ? (
-        <div className="empty">No {active} IPOs right now.</div>
+        <div className="empty">
+          No {active === "all" ? "" : `${active} `}
+          {board === "all" ? "IPOs" : `${board === "sme" ? "SME" : "Mainboard"} IPOs`} right now.
+        </div>
       ) : (
         <>
           {/* Phone / app view */}
