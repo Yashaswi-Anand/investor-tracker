@@ -79,7 +79,7 @@ export default function RootLayout({ children }) {
             <div className="header-actions">
               <span className="live-pill">
                 <span className="live-dot" aria-hidden="true" />
-                Live · refreshes every 30 min
+                Live · refreshes every 15 min
               </span>
               <ThemeToggle />
             </div>
