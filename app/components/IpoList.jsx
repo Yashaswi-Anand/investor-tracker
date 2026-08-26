@@ -23,6 +23,7 @@ import {
   istToday,
   priceBand,
   times,
+  timelineDays,
   timelineLabel,
 } from "../../lib/format";
 import Sparkline from "./Sparkline";
@@ -47,7 +48,7 @@ const SORTS = [
   { key: "gmp", label: "GMP (high → low)" },
   { key: "gmp_pct", label: "GMP % (high → low)" },
   { key: "subs", label: "Subscription (high → low)" },
-  { key: "close", label: "Closing soonest" },
+  { key: "close", label: "Soonest first (countdown)" },
   { key: "issue", label: "Issue size (large → small)" },
   { key: "min", label: "Min investment (low → high)" },
   { key: "name", label: "Company (A → Z)" },
@@ -176,7 +177,7 @@ const COLUMNS = [
 ];
 
 /** The comparable value behind each sortable column. */
-function sortValue(ipo, key) {
+function sortValue(ipo, key, today) {
   switch (key) {
     case "name":
       return (ipo.short_name || ipo.name || "").toLowerCase();
@@ -200,13 +201,36 @@ function sortValue(ipo, key) {
       return ipo.lot_size;
     case "min":
       return ipo.min_investment;
+    // Sorted by the countdown the reader can actually see in this column,
+    // not by close_date. They differ: an upcoming IPO counts down to its
+    // OPEN date and a closed one to its LISTING date, so ordering by
+    // close_date would shuffle the visible "2 days left / Opens tomorrow"
+    // labels into an order that looks arbitrary.
     case "close":
-      return ipo.close_date || null;
+      return timelineDays(ipo, today);
     case "subs":
       return ipo.subscription_total;
     default:
       return null;
   }
+}
+
+/**
+ * Settles rows the chosen column cannot separate.
+ *
+ * Always ascending, never flipped by the sort direction: a tiebreak exists to
+ * make the order predictable, and reversing it would make two rows swap
+ * places for no reason the reader can see. Lifecycle order comes first, so
+ * that among IPOs one day away the one closing beats the one merely opening.
+ */
+function tiebreak(a, b) {
+  const rank =
+    (STATUS_RANK[String(a.status || "").toLowerCase()] ?? 9) -
+    (STATUS_RANK[String(b.status || "").toLowerCase()] ?? 9);
+  if (rank !== 0) return rank;
+  return String(a.short_name || a.name || "").localeCompare(
+    String(b.short_name || b.name || "")
+  );
 }
 
 /**
@@ -216,12 +240,12 @@ function sortValue(ipo, key) {
  * by GMP should surface the highest premium, not a wall of IPOs whose premium
  * has not been recorded yet.
  */
-function compare(a, b, key, dir) {
-  const av = sortValue(a, key);
-  const bv = sortValue(b, key);
+function compare(a, b, key, dir, today) {
+  const av = sortValue(a, key, today);
+  const bv = sortValue(b, key, today);
   const aEmpty = av == null || av === "";
   const bEmpty = bv == null || bv === "";
-  if (aEmpty && bEmpty) return 0;
+  if (aEmpty && bEmpty) return tiebreak(a, b);
   if (aEmpty) return 1;
   if (bEmpty) return -1;
 
@@ -229,7 +253,8 @@ function compare(a, b, key, dir) {
     typeof av === "number" && typeof bv === "number"
       ? av - bv
       : String(av).localeCompare(String(bv));
-  return dir === "desc" ? -result : result;
+  if (result !== 0) return dir === "desc" ? -result : result;
+  return tiebreak(a, b);
 }
 
 function PinIcon() {
@@ -417,7 +442,7 @@ export default function IpoList({ ipos }) {
     // The server already ordered by status then date; only re-sort when the
     // reader asked for a different column.
     if (sort.key !== "default") {
-      rows = [...rows].sort((a, b) => compare(a, b, sort.key, sort.dir));
+      rows = [...rows].sort((a, b) => compare(a, b, sort.key, sort.dir, today));
     }
     return rows;
   }, [filtered, query, closingToday, today, sort]);
