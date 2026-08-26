@@ -105,12 +105,12 @@ export default async function HomePage() {
 
       <section className="hero">
         <div className="container">
-          <h1>Track every IPO in India — in one place</h1>
-          <p>
-            Live GMP with daily history, subscription status, price band, lot
-            size, minimum investment, allotment and listing dates for Mainboard
-            &amp; SME IPOs.
-          </p>
+          {/* Short on purpose. The long-form keywords live in the page
+              metadata, so the one line on screen can lead with the two words
+              readers actually arrive searching for. */}
+          <h1>
+            Live GMP. <span className="nowrap">Every IPO in India.</span>
+          </h1>
 
           <div className="hero-stats">
             <div className="stat-tile">
