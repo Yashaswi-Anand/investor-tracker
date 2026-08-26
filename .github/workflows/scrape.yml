@@ -1,6 +1,7 @@
 # ===========================================================================
-# Scraper cron — runs scraper/run_once.py every 30 minutes on GitHub's
-# servers, so IPO data stays fresh without your PC being on.
+# Scraper cron — runs scraper/run_once.py on GitHub's servers, so IPO data
+# stays fresh without your PC being on. See the schedule note below for what
+# the interval actually works out to in practice.
 #
 # Setup (one time):
 #   Repo -> Settings -> Secrets and variables -> Actions -> New repository secret
@@ -20,9 +21,17 @@ name: scrape
 
 on:
   schedule:
-    # Every 15 minutes. The repo is public, so Actions minutes are free, and
-    # GitHub delays cron under load — a 15-min schedule keeps the effective
-    # gap near 15–25 min instead of 30–60.
+    # Asks for every 15 minutes; do NOT read that as a guarantee.
+    #
+    # Measured over 166 runs across 4.5 days (26 Aug 2026): median gap 34
+    # minutes, mean 39, longest 94. GitHub runs scheduled workflows on a
+    # best-effort basis and delays them heavily under load, and a shorter
+    # cron does not buy a shorter gap — it only means more requests get
+    # dropped. Asking for 15 keeps the effective interval as low as GitHub
+    # is willing to go.
+    #
+    # If the site genuinely needs a dependable interval, this has to move off
+    # Actions — a cron job on the Hostinger box would actually honour it.
     - cron: "*/15 * * * *"
   workflow_dispatch: {}        # manual run button, for testing
 
