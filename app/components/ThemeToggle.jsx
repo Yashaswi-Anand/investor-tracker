@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "theme";
-const LIGHT_BAR = "#4f46e5";
-const DARK_BAR = "#0a0e1a";
 
 /** Resolve the effective theme: explicit choice, else the OS preference. */
 function currentTheme() {
@@ -13,10 +11,23 @@ function currentTheme() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+/**
+ * Repaint the browser/Android chrome to match the theme.
+ *
+ * The colour is read back out of the stylesheet (`--theme-bar`) rather than
+ * duplicated here, so the palette lives in exactly one file. Setting
+ * `data-theme` first is what makes the variable resolve to the new theme's
+ * value; if the stylesheet has not applied yet the value is empty and the
+ * meta tag is left alone rather than blanked.
+ */
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", theme === "dark" ? DARK_BAR : LIGHT_BAR);
+  if (!meta) return;
+  const bar = getComputedStyle(document.documentElement)
+    .getPropertyValue("--theme-bar")
+    .trim();
+  if (bar) meta.setAttribute("content", bar);
 }
 
 /**
