@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SITE } from "../../../lib/config";
-import { getGmpHistory, getIpoBySlug } from "../../../lib/data";
 import {
+  getGmpHistory,
+  getIpoBySlug,
+  getSubscriptionHistory,
+} from "../../../lib/data";
+import {
+  dailyLatest,
   dailySeries,
   fmtDate,
   fmtDateTime,
@@ -161,6 +166,55 @@ function GmpHistory({ history, ipo }) {
 /** A full bar means 10x subscribed; green means fully subscribed (>= 1x). */
 const SUBSCRIPTION_FULL_SCALE = 10;
 
+/**
+ * How demand built, one row per day.
+ *
+ * The scraper has been writing a subscription snapshot on every run since the
+ * table existed; nothing read it until now. Only each day's LAST snapshot is
+ * kept, so a row reads as where the book stood at the end of that day rather
+ * than wherever it happened to be when a run fired.
+ *
+ * Hidden below two days: with a single row this repeats the bars above it.
+ */
+function SubscriptionHistory({ history }) {
+  const days = dailyLatest(history, ["qib", "nii", "retail", "total"]);
+  if (days.length < 2) return null;
+
+  const rows = days.slice(-15).reverse();
+
+  return (
+    <>
+      <p className="subtitle" style={{ margin: "18px 0 8px" }}>
+        Day-wise subscription
+      </p>
+      <div className="hist-wrap">
+        <table className="hist">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>QIB</th>
+              <th>NII / HNI</th>
+              <th>Retail</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((day) => (
+              <tr key={day.date}>
+                <td>{fmtDate(day.date)}</td>
+                <td>{times(day.qib)}</td>
+                <td>{times(day.nii)}</td>
+                <td>{times(day.retail)}</td>
+                <td>{times(day.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 function SubscriptionBar({ label, value }) {
   if (value == null) return null;
   const amount = Number(value);
@@ -265,9 +319,10 @@ function buildFaq(ipo) {
 
 export default async function IpoDetailPage({ params }) {
   const { slug } = await params;
-  const [ipo, gmpHistory] = await Promise.all([
+  const [ipo, gmpHistory, subscriptionHistory] = await Promise.all([
     getIpoBySlug(slug),
     getGmpHistory(slug),
+    getSubscriptionHistory(slug),
   ]);
   if (!ipo) notFound();
 
@@ -400,6 +455,7 @@ export default async function IpoDetailPage({ params }) {
               <SubscriptionBar label="Total" value={ipo.subscription_total} />
             </>
           )}
+          <SubscriptionHistory history={subscriptionHistory} />
         </section>
 
         <section className="card card-wide">

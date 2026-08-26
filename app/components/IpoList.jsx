@@ -479,6 +479,13 @@ export default function IpoList({ ipos }) {
                       <td>{ipo.board || "Mainboard"}</td>
                       <td>
                         <GmpValue ipo={ipo} showPercent />
+                        {/* Second line, so the column keeps its width — the
+                            value line is already wider than a timestamp. */}
+                        {ipo.gmp_stamp ? (
+                          <span className="cell-stamp" title="GMP last updated">
+                            {ipo.gmp_stamp}
+                          </span>
+                        ) : null}
                       </td>
                       <td>
                         <EstListing ipo={ipo} />
