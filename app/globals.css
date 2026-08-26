@@ -223,19 +223,51 @@ button { font-family: inherit; }
 .hero {
   background: var(--brand-grad);
   color: var(--on-brand);
-  padding: 28px 0 72px;
+  padding: 28px 0 76px;
   position: relative;
   overflow: hidden;
+}
+/*
+ * The band used to stop dead against the page, drawing a hard line across
+ * the middle of the screen — and because the filter tabs are pulled up into
+ * the hero, that line ran straight through them. It now dissolves into the
+ * page colour instead, so there is no edge to notice and no half-and-half
+ * split.
+ *
+ * The fade sits BELOW the container (z-index 0 against the container's 1),
+ * so it never washes over the tiles; it only covers the empty padding the
+ * tabs sit in. It resolves to var(--bg), so it lands on cream in the light
+ * theme and near-black in the dark one rather than assuming either.
+ */
+.hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Exactly the hero's bottom padding: the fade fills the empty strip
+     below the tiles and starts no higher, so it never shows through
+     their translucent backgrounds. Overridden with the padding below. */
+  height: 76px;
+  z-index: 0;
+  background: linear-gradient(to bottom, transparent, var(--bg));
+  pointer-events: none;
 }
 .hero::before {
   content: "";
   position: absolute; inset: 0;
+  /* Both glows are deliberately faint. At 0.22 the white one washed the
+     right-hand side out to a pale orange, which is what made the band read
+     as a slab of colour fighting the dark page rather than a header. Keeping
+     it deep means there is far less contrast for the fade below to bridge. */
   background:
-    radial-gradient(600px 200px at 85% -20%, rgba(255, 255, 255, 0.22), transparent 60%),
-    radial-gradient(400px 180px at 10% 120%, rgba(217, 138, 82, 0.38), transparent 60%);
+    radial-gradient(620px 220px at 88% -25%, rgba(255, 255, 255, 0.1), transparent 62%),
+    radial-gradient(420px 200px at 6% 118%, rgba(109, 50, 32, 0.42), transparent 62%);
   pointer-events: none;
 }
-.hero .container { position: relative; }
+/* Above .hero::after — a pseudo-element declared after the content would
+   otherwise paint over it and fade the tiles along with the band. */
+.hero .container { position: relative; z-index: 1; }
 /* The hero is one line now, so it can carry more weight than it used to. */
 .hero h1 {
   margin: 0;
@@ -334,6 +366,7 @@ a.top-gmp-row:active { background: rgba(255, 255, 255, 0.26); }
 }
 @media (min-width: 760px) {
   .hero { padding: 40px 0 84px; }
+  .hero::after { height: 84px; }
   .hero h1 { font-size: 2.5rem; }
   .hero-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 26px; }
   .stat-tile-wide { grid-column: auto; }
