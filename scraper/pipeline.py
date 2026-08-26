@@ -16,8 +16,10 @@ import traceback
 
 import config
 import db
+import util
 from sources import gmp as gmp_source
 from sources import nse
+from sources import timetable as timetable_source
 
 
 def effective_gmp(row, existing_row):
@@ -33,21 +35,63 @@ def effective_gmp(row, existing_row):
     return scraped if scraped is not None else (existing_row or {}).get("gmp")
 
 
+def gmp_is_observed(row, existing_row):
+    """Whether this run actually has a premium worth recording in history.
+
+    A locked GMP is maintained by hand and is authoritative on every run, so
+    it keeps building a trend. But when the source gave us nothing and the
+    value is not locked, effective_gmp falls back to the STORED number —
+    appending that to gmp_history would record yesterday's premium as if it
+    had been observed today, drawing a confident flat line straight through
+    an outage. The GMP history is the one dataset nobody else has; it must
+    not contain values we never saw.
+    """
+    locked = set((existing_row or {}).get("locked") or [])
+    if "gmp" in locked:
+        return True
+    return row.get("gmp") is not None
+
+
+def effective_listing_date(row, existing_row):
+    """The listing date that will actually be stored after this run.
+
+    Mirrors effective_gmp. Two things matter here:
+
+      * A locked listing_date must win, exactly as a locked GMP does.
+        Without this, apply_locks correctly holds the column back while the
+        status computed from the rejected value is still written — the lock
+        protects the evidence and leaks the conclusion.
+      * Everything is normalised to ISO first, because status is decided by
+        comparing date strings. '01/09/2026' sorts BEFORE today's
+        '2026-08-26', so an unnormalised value would promote an IPO that
+        lists next month to 'listed' — and nothing ever demotes it.
+    """
+    locked = set((existing_row or {}).get("locked") or [])
+    stored = util.to_date((existing_row or {}).get("listing_date"))
+    if "listing_date" in locked:
+        return stored
+    return util.to_date(row.get("listing_date")) or stored
+
+
 def apply_listing_status(row, existing_row, today=None):
     """Promote a closed IPO to 'listed' once its listing date has passed.
 
     NSE's list endpoints never return a listing date, so status derived from
-    them alone can only ever reach 'closed'. The stored listing_date — which
-    you fill in by hand, or a future source provides — is what allows the
-    final transition.
+    them alone can only ever reach 'closed'. A scraped or stored listing_date
+    is what allows the final transition.
     """
-    listing_date = row.get("listing_date") or (existing_row or {}).get(
-        "listing_date"
-    )
+    # Keep what we store in the column ISO too, so a source that hands us a
+    # regional format can never reach Postgres ambiguously (03/04 is April 3
+    # or March 4 depending on who is reading).
+    normalised = util.to_date(row.get("listing_date"))
+    if normalised:
+        row["listing_date"] = normalised
+
+    listing_date = effective_listing_date(row, existing_row)
     if not listing_date:
         return row
     today = today or datetime.date.today().isoformat()
-    if today >= str(listing_date) and row.get("status") in ("closed", "open"):
+    if today >= listing_date and row.get("status") in ("closed", "open"):
         row["status"] = "listed"
     return row
 
@@ -67,7 +111,7 @@ def run():
     """Execute one full scrape. Returns (ok, message, record_count)."""
     started = time.time()
     try:
-        print("[1/5] Fetching from NSE (official)...")
+        print("[1/6] Fetching from NSE (official)...")
         rows, fetch_failures = nse.fetch()
         print(f"      {len(rows)} IPOs")
         if not rows:
@@ -76,37 +120,52 @@ def run():
                        int((time.time() - started) * 1000))
             return False, message, 0
 
-        print(f"[2/5] GMP source: {config.GMP_SOURCE}")
+        print(f"[2/6] GMP source: {config.GMP_SOURCE}")
         gmp_by_slug = gmp_source.fetch(rows)
         for row in rows:
             if row["slug"] in gmp_by_slug:
                 row["gmp"] = gmp_by_slug[row["slug"]]
                 row["gmp_updated_at"] = row["updated_at"]
 
-        print("[3/5] Reading existing rows (locks + stored GMP)...")
+        # Read before the timetable fetch, not just before deriving: knowing
+        # which IPOs already have their dates is what keeps that fetch down to
+        # a handful of requests instead of one per IPO per run.
+        print("[3/6] Reading existing rows (locks + stored GMP)...")
         existing = db.fetch_existing([row["slug"] for row in rows])
         locked_count = sum(1 for slug in existing if existing[slug]["locked"])
         print(f"      {locked_count} IPOs have locked columns (left untouched)")
 
-        print("[4/5] Computing derived fields from the effective GMP...")
+        print("[4/6] Timetable + registrar (only for IPOs still missing it)...")
+        timetable_by_slug = timetable_source.fetch(rows, existing)
+        for row in rows:
+            row.update(timetable_by_slug.get(row["slug"], {}))
+        print(f"      {len(timetable_by_slug)} IPOs gained timetable data")
+
+        print("[5/6] Computing derived fields from the effective GMP...")
         effective = {}
+        observed = set()
         for row in rows:
             existing_row = existing.get(row["slug"])
             value = effective_gmp(row, existing_row)
             effective[row["slug"]] = value
+            if gmp_is_observed(row, existing_row):
+                observed.add(row["slug"])
             compute_derived(row, value)
             apply_listing_status(row, existing_row)
 
-        print("[5/5] Writing to Supabase...")
+        print("[6/6] Writing to Supabase...")
         payload = db.apply_locks(rows, existing)
         written = db.upsert_ipos(payload)
 
         # History uses the effective GMP, so a hand-maintained value still
         # builds a trend and never disagrees with what the site displays.
+        # Slugs whose premium was not actually observed this run are skipped,
+        # so an outage leaves a gap in the chart rather than a fabricated
+        # flat line — see gmp_is_observed.
         snapshots = [
             {"slug": slug, "gmp": value}
             for slug, value in effective.items()
-            if value is not None
+            if value is not None and slug in observed
         ]
         gmp_written = db.append_gmp_history(snapshots)
         sub_written = db.append_subscription_history(rows)

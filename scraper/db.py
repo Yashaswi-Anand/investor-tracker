@@ -104,17 +104,32 @@ def _in_list(values):
     return ",".join(f'"{v}"' for v in values)
 
 
+# Read back on every run so the scraper knows which IPOs still need their
+# timetable fetched. Without this the timetable source would have to request a
+# detail page for every IPO on every run — 30x the request volume, aimed at a
+# site that owes us nothing.
+TIMETABLE_COLUMNS = (
+    "allotment_date", "refund_date", "demat_date", "listing_date",
+    "registrar", "registrar_url",
+)
+
+_EXISTING_COLUMNS = ("slug", "locked", "gmp") + TIMETABLE_COLUMNS
+
+
 def fetch_existing(slugs):
     """Stored state the scraper needs before it can decide what to write.
 
     listing_date is included because NSE's list endpoints never return it —
-    without the stored value an IPO could never progress to 'listed'.
+    without the stored value an IPO could never progress to 'listed'. The rest
+    of the timetable is included so a source that has already answered for an
+    IPO is never asked again.
     """
     if not slugs:
         return {}
+    select = ",".join(_EXISTING_COLUMNS)
     response = requests.get(
         config.supabase_url("ipos")
-        + f"?select=slug,locked,gmp,listing_date&slug=in.({_in_list(slugs)})",
+        + f"?select={select}&slug=in.({_in_list(slugs)})",
         headers=_headers(),
         timeout=config.REQUEST_TIMEOUT_SECONDS,
     )
@@ -123,7 +138,7 @@ def fetch_existing(slugs):
         row["slug"]: {
             "locked": row.get("locked") or [],
             "gmp": row.get("gmp"),
-            "listing_date": row.get("listing_date"),
+            **{column: row.get(column) for column in TIMETABLE_COLUMNS},
         }
         for row in response.json()
     }

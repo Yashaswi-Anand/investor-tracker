@@ -81,11 +81,20 @@ GMP_SOURCES = {
     "investorgain": {
         "type": "investorgain_api",
         # {month}/{year}/{fiscal} are filled at run time from today's date.
+        #
+        # NOTE, measured 26 Aug 2026: these placeholders are INERT. Requesting
+        # month 7, 8, 9 or even Dec 2025 all return the identical 30 rows —
+        # this is a live rolling window (roughly two weeks back, two weeks
+        # forward), not a monthly archive. Harmless for GMP, but it means a
+        # past month cannot be re-queried: once an IPO ages out of the window
+        # its data is unrecoverable from here. Anything that needs history
+        # must capture it while the IPO is in the window.
         "url_template": (
             "https://webnodejs.investorgain.com/cloud/v2/report/data-read/"
             "331/1/{month}/{year}/{fiscal}/0/all?search=&v=1-1"
         ),
         "referer": "https://www.investorgain.com/report/ipo-gmp-live/331/",
+        "origin": "https://www.investorgain.com",
     },
     "ipowatch": {
         "type": "html",
@@ -98,6 +107,44 @@ GMP_SOURCES = {
         "path": "/ipo-discussion/",
     },
 }
+
+# ---------------------------------------------------------------------------
+# Timetable sources — allotment / refund / demat / listing dates and the
+# registrar. No exchange API publishes these: NSE's ipo-detail carries the
+# registrar NAME but no dates at all, and BSE's public issue JSON carries
+# neither (its robots.txt also answers 403, so it is not used).
+#
+# The dates come from the issuer's RHP timetable, republished on investorgain's
+# per-IPO page. They are SCHEDULED dates, not facts — before allotment happens
+# the date is a plan, and it can move. Treat them as such in the UI.
+#
+# Request budget: a detail page is fetched only for IPOs whose timetable is
+# still missing (see db.TIMETABLE_COLUMNS and sources/timetable.py). In steady
+# state that is zero requests per run; a new IPO costs one. TIMETABLE_MAX_
+# FETCHES_PER_RUN caps the burst when many IPOs are new at once, so a cold
+# start spreads over several runs instead of arriving as a spike.
+# ---------------------------------------------------------------------------
+TIMETABLE_SOURCE = os.environ.get("TIMETABLE_SOURCE", "investorgain").lower()
+
+TIMETABLE_SOURCES = {
+    "investorgain": {
+        "type": "investorgain_detail",
+        "base_url": "https://www.investorgain.com",
+        # The GMP list payload already carries each IPO's own detail path in
+        # '~urlrewrite_folder_name' (e.g. '/gmp/rays-of-belief-ipo/2041/'),
+        # so no id is ever guessed or constructed.
+        "list_url_template": (
+            "https://webnodejs.investorgain.com/cloud/v2/report/data-read/"
+            "331/1/{month}/{year}/{fiscal}/0/all?search=&v=1-1"
+        ),
+        "referer": "https://www.investorgain.com/report/ipo-gmp-live/331/",
+        "origin": "https://www.investorgain.com",
+    },
+}
+
+TIMETABLE_MAX_FETCHES_PER_RUN = int(
+    os.environ.get("TIMETABLE_MAX_FETCHES_PER_RUN", "6")
+)
 
 SCRAPER_USER_AGENT = os.environ.get(
     "SCRAPER_USER_AGENT",
@@ -146,5 +193,10 @@ def validate():
                 f"GMP source '{name}' is unknown. "
                 f"Use 'none' or one of: {', '.join(GMP_SOURCES)}"
             )
+    if TIMETABLE_SOURCE not in ("none",) and TIMETABLE_SOURCE not in TIMETABLE_SOURCES:
+        problems.append(
+            f"Timetable source '{TIMETABLE_SOURCE}' is unknown. "
+            f"Use 'none' or one of: {', '.join(TIMETABLE_SOURCES)}"
+        )
     if problems:
         raise SystemExit("Cannot start:\n  - " + "\n  - ".join(problems))

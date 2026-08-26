@@ -13,11 +13,14 @@ import config
 from pipeline import compute_derived, run
 from sources import gmp as gmp_source
 from sources import nse
+from sources import timetable as timetable_source
 
 INTERESTING = (
     "slug", "name", "board", "status", "symbol",
     "price_band_low", "price_band_high", "lot_size", "min_investment",
     "face_value", "open_date", "close_date", "gmp", "estimated_listing",
+    "allotment_date", "refund_date", "demat_date", "listing_date",
+    "registrar", "registrar_url",
     "subscription_qib", "subscription_nii", "subscription_retail",
     "subscription_total", "issue_size",
 )
@@ -38,6 +41,15 @@ def dry_run():
     for row in rows:
         if row["slug"] in gmp_by_slug:
             row["gmp"] = gmp_by_slug[row["slug"]]
+    # With no database to read, every IPO looks like it still needs its
+    # timetable, so a dry run shows what the source WOULD collect — bounded by
+    # config.TIMETABLE_MAX_FETCHES_PER_RUN, same as a real run.
+    print(f"\nTimetable source: {config.TIMETABLE_SOURCE}")
+    timetable_by_slug = timetable_source.fetch(rows, {})
+    for row in rows:
+        row.update(timetable_by_slug.get(row["slug"], {}))
+    print(f"  {len(timetable_by_slug)} IPOs with timetable data")
+
     rows = [compute_derived(row, row.get("gmp")) for row in rows]
 
     print(f"\n{'=' * 70}")

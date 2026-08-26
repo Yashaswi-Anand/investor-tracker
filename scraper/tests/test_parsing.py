@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa: E402
 import db  # noqa: E402
 import util  # noqa: E402
-from sources import gmp, nse  # noqa: E402
+from sources import gmp, nse, timetable  # noqa: E402
 
 
 # --------------------------------------------------------------------------
@@ -496,6 +496,126 @@ def test_status_promotion_noop_without_listing_date():
     assert row["status"] == "closed"
 
 
+def test_locked_listing_date_does_not_leak_into_status():
+    """A lock must hold back the conclusion, not just the evidence.
+
+    apply_locks correctly strips a locked listing_date from the payload. If
+    the status computed from that rejected value were still written, the lock
+    would protect the column and publish its consequence anyway.
+    """
+    row = {"slug": "f", "name": "F", "status": "closed",
+           "listing_date": "2026-08-20"}
+    existing = {"locked": ["listing_date"], "listing_date": None}
+    pipeline.apply_listing_status(row, existing, today="2026-08-26")
+    assert row["status"] == "closed"
+
+    payload = db.apply_locks([dict(row)], {"f": existing})[0]
+    assert "listing_date" not in payload
+    assert payload["status"] == "closed"
+
+
+def test_non_iso_future_listing_date_does_not_promote():
+    """Status is decided by comparing date strings.
+
+    '01/09/2026' sorts before today's '2026-08-26', so an unnormalised value
+    would promote an IPO that lists next month — and nothing demotes it.
+    """
+    for value in ("01/09/2026", "15-Sep-2026", "1st Sep 2026"):
+        row = {"slug": "x", "status": "closed", "listing_date": value}
+        pipeline.apply_listing_status(row, None, today="2026-08-26")
+        assert row["status"] == "closed", f"{value} wrongly promoted"
+
+
+def test_listing_date_is_normalised_to_iso_before_storage():
+    row = {"slug": "x", "status": "closed", "listing_date": "1st Sep 2026"}
+    pipeline.apply_listing_status(row, None, today="2026-08-26")
+    assert row["listing_date"] == "2026-09-01"
+
+
+# --------------------------------------------------------------------------
+# GMP history must contain only premiums we actually observed
+# --------------------------------------------------------------------------
+def test_stale_gmp_is_not_recorded_as_observed():
+    """A dead source must leave a gap in the chart, not a flat line.
+
+    effective_gmp deliberately falls back to the stored value so derived
+    fields stay consistent with what the site shows. Appending that value to
+    gmp_history would record yesterday's premium as if seen today.
+    """
+    row = {"slug": "a"}
+    existing = {"locked": [], "gmp": 42}
+    assert pipeline.effective_gmp(row, existing) == 42
+    assert pipeline.gmp_is_observed(row, existing) is False
+
+
+def test_scraped_gmp_is_observed():
+    assert pipeline.gmp_is_observed({"slug": "a", "gmp": 12.0}, {"locked": []})
+
+
+def test_locked_gmp_counts_as_observed_every_run():
+    """A hand-maintained premium is authoritative, so it keeps its trend."""
+    assert pipeline.gmp_is_observed({"slug": "a"}, {"locked": ["gmp"], "gmp": 7})
+
+
+# --------------------------------------------------------------------------
+# Timetable source
+# --------------------------------------------------------------------------
+def test_timetable_skips_ipos_that_already_have_everything():
+    """Steady state must cost zero requests."""
+    complete = {column: "2026-08-28" for column in timetable.COLUMNS}
+    complete["locked"] = []
+    assert timetable._missing_columns(complete) == set()
+
+
+def test_timetable_ignores_locked_columns():
+    """Spending a request on a value apply_locks will discard is waste."""
+    existing = {"locked": ["registrar"], "registrar": None}
+    assert "registrar" not in timetable._missing_columns(existing)
+
+
+def test_timetable_reports_every_missing_column():
+    assert timetable._missing_columns({"locked": []}) == set(timetable.COLUMNS)
+
+
+def test_flight_payload_survives_escaped_quotes():
+    """Chunks are JS string literals; a naive quote scan truncates them."""
+    html = (
+        'self.__next_f.push([1,"{\\"a\\":\\"one\\"}"])'
+        'self.__next_f.push([1,"{\\"b\\":\\"two\\"}"])'
+    )
+    assert timetable.flight_payload(html) == '{"a":"one"}{"b":"two"}'
+
+
+def test_json_string_reads_escaped_values():
+    text = '"registrar_name":"MUFG \\"Intime\\" Ltd."'
+    assert timetable.json_string(text, "registrar_name") == 'MUFG "Intime" Ltd.'
+
+
+def test_json_string_missing_key_is_none():
+    assert timetable.json_string('{"a":"1"}', "registrar_name") is None
+
+
+def test_parse_registrar_prefers_the_website_link():
+    """Phone and email rows carry anchors too; the label disambiguates."""
+    info = (
+        '<strong>MUFG</strong><br><strong>Website:</strong> '
+        '<a href=\\"https://in.mpms.mufg.com/x.html\\">site</a><br>'
+        '<strong>Email:</strong> <a href=\\"mailto:a@b.com\\">a@b.com</a>'
+    )
+    flight = f'"registrar_name":"MUFG Intime India Pvt.Ltd.","registrar_basic_info":"{info}"'
+    name, url = timetable.parse_registrar(flight)
+    assert name == "MUFG Intime India Pvt.Ltd."
+    assert url == "https://in.mpms.mufg.com/x.html"
+
+
+def test_fetch_detail_refuses_paths_pointing_at_another_host():
+    """The path comes from a third party, so it must not choose the host."""
+    source = {"base_url": "https://www.investorgain.com",
+              "referer": "r", "origin": "o"}
+    for path in ("//evil.example/x", "https://evil.example/x", "gmp/x/1/", "", None):
+        assert timetable._fetch_detail(source, path) == {}
+
+
 # --------------------------------------------------------------------------
 # Real-world page shape (ipowatch): td-based headers, and a history table
 # whose column order is Name | PRICE | GMP — the price must not be taken as GMP
@@ -550,10 +670,10 @@ def test_parse_investorgain_gmp():
 
 def test_fiscal_year():
     import datetime
-    assert gmp._fiscal_year(datetime.date(2026, 8, 25)) == "2026-27"
-    assert gmp._fiscal_year(datetime.date(2026, 4, 1)) == "2026-27"
-    assert gmp._fiscal_year(datetime.date(2027, 3, 31)) == "2026-27"
-    assert gmp._fiscal_year(datetime.date(2026, 1, 15)) == "2025-26"
+    assert gmp.fiscal_year(datetime.date(2026, 8, 25)) == "2026-27"
+    assert gmp.fiscal_year(datetime.date(2026, 4, 1)) == "2026-27"
+    assert gmp.fiscal_year(datetime.date(2027, 3, 31)) == "2026-27"
+    assert gmp.fiscal_year(datetime.date(2026, 1, 15)) == "2025-26"
 
 
 def test_source_order_dedupes_primary_and_fallbacks(monkeypatch):

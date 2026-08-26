@@ -60,6 +60,11 @@ def to_date(value):
     if not value:
         return None
     text = str(value).strip()
+    # Drop English ordinal suffixes before matching: investorgain publishes
+    # listing dates as '1st Sep 2026', and the separator-based pattern below
+    # cannot see a date through the 'st'. Without this the value parses to
+    # None and the date is silently lost rather than loudly rejected.
+    text = re.sub(r"(?<=\d)(?:st|nd|rd|th)\b", "", text, flags=re.IGNORECASE)
     match = re.search(r"\d{1,2}[-/ ][A-Za-z]{3,}[-/ ]\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2}[-/]\d{1,2}[-/]\d{4}", text)
     if match:
         text = match.group(0)

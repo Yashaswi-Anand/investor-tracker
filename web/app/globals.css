@@ -535,6 +535,17 @@ h2::before {
 }
 .cell-note[data-urgent="true"] { color: var(--down); }
 
+/* Same second-line treatment, but for information rather than urgency —
+   e.g. when a row's GMP was last refreshed. */
+.cell-stamp {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Sets no colour of its own: it sits beside .gmp-up / .gmp-down, which do. */
 .est-pct { margin-left: 4px; font-size: 0.88em; font-weight: 600; }
 

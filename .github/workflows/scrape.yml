@@ -55,4 +55,8 @@ jobs:
           # fill any IPO it doesn't cover. See scraper/config.py.
           GMP_SOURCE: investorgain
           GMP_FALLBACKS: ipowatch,ipocentral
+          # Timetable dates + registrar. Only fetched for IPOs that are still
+          # missing them, so this adds no requests in steady state.
+          TIMETABLE_SOURCE: investorgain
+          TIMETABLE_MAX_FETCHES_PER_RUN: "6"
         run: python run_once.py

@@ -43,24 +43,37 @@ from util import slugify, to_float
 SOURCE_NAME = "gmp"
 
 
-def _robots_allows(url, user_agent):
+# One robots.txt per host per process. A run touches several URLs on the same
+# host, and refetching the file for each one is pure waste aimed at someone
+# else's server.
+_robots_cache = {}
+
+
+def robots_allows(url, user_agent):
     """True when robots.txt permits fetching `url`. Fails closed on error."""
     parsed = urlparse(url)
-    robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
-    parser = urllib.robotparser.RobotFileParser()
-    try:
-        response = requests.get(
-            robots_url,
-            headers={"User-Agent": user_agent},
-            timeout=config.REQUEST_TIMEOUT_SECONDS,
-        )
-        if response.status_code >= 400:
-            # No robots.txt published -> crawling is permitted by convention.
-            return True
-        parser.parse(response.text.splitlines())
-        return parser.can_fetch(user_agent, url)
-    except requests.RequestException:
-        return False
+    host = f"{parsed.scheme}://{parsed.netloc}"
+
+    if host not in _robots_cache:
+        parser = urllib.robotparser.RobotFileParser()
+        try:
+            response = requests.get(
+                f"{host}/robots.txt",
+                headers={"User-Agent": user_agent},
+                timeout=config.REQUEST_TIMEOUT_SECONDS,
+            )
+            if response.status_code >= 400:
+                # No robots.txt published -> crawling is permitted by
+                # convention. Cached as None to mean "nothing to check".
+                _robots_cache[host] = None
+            else:
+                parser.parse(response.text.splitlines())
+                _robots_cache[host] = parser
+        except requests.RequestException:
+            return False  # not cached: a transient error should be retried
+
+    parser = _robots_cache[host]
+    return True if parser is None else parser.can_fetch(user_agent, url)
 
 
 GMP_HEADER = re.compile(r"\bgmp\b|grey market", re.I)
@@ -206,8 +219,8 @@ def _parse_premium(cell):
     return -abs(magnitude) if negative else magnitude
 
 
-def match_to_ipos(gmp_by_slug, ipo_rows):
-    """Map scraped GMP onto our IPO rows.
+def match_to_ipos(gmp_by_slug, ipo_rows, label="GMP"):
+    """Map values scraped from a source onto our IPO rows, keyed by slug.
 
     Site names rarely match NSE names exactly ('Acme Ltd' vs 'Acme Limited'),
     so an exact slug match is tried first, then a prefix match on the first
@@ -238,12 +251,13 @@ def match_to_ipos(gmp_by_slug, ipo_rows):
             matched[slug] = candidates[0][1]
         elif len(candidates) > 1:
             print(
-                f"  GMP: skipped '{slug}' — {len(candidates)} ambiguous matches"
+                f"  {label}: skipped '{slug}' — "
+                f"{len(candidates)} ambiguous matches"
             )
     return matched
 
 
-def _fiscal_year(today):
+def fiscal_year(today):
     """Indian fiscal year label 'YYYY-YY' (April–March) for a date."""
     if today.month >= 4:
         return f"{today.year}-{str((today.year + 1) % 100).zfill(2)}"
@@ -271,8 +285,13 @@ def _fetch_investorgain(ipo_rows):
     source = config.GMP_SOURCES["investorgain"]
     today = datetime.date.today()
     url = source["url_template"].format(
-        month=today.month, year=today.year, fiscal=_fiscal_year(today)
+        month=today.month, year=today.year, fiscal=fiscal_year(today)
     )
+    # The API lives on a different host than the site, so it has its own
+    # robots.txt. It permits us today, but checking is the point.
+    if not robots_allows(url, config.SCRAPER_USER_AGENT):
+        print("  GMP[investorgain] skipped: robots.txt disallows the API path")
+        return {}
     try:
         time.sleep(config.DELAY_SECONDS)
         response = requests.get(
@@ -281,7 +300,7 @@ def _fetch_investorgain(ipo_rows):
                 "User-Agent": config.SCRAPER_USER_AGENT,
                 "Accept": "application/json, text/plain, */*",
                 "Referer": source["referer"],
-                "Origin": "https://www.investorgain.com",
+                "Origin": source["origin"],
             },
             timeout=config.REQUEST_TIMEOUT_SECONDS,
         )
@@ -306,7 +325,7 @@ def _fetch_html_source(name, ipo_rows):
     """Fallback source: a server-rendered HTML GMP table (robots-honoured)."""
     source = config.GMP_SOURCES[name]
     url = source["base_url"] + source["path"]
-    if not _robots_allows(url, config.SCRAPER_USER_AGENT):
+    if not robots_allows(url, config.SCRAPER_USER_AGENT):
         print(f"  GMP[{name}] skipped: robots.txt disallows {url}")
         return {}
     try:
