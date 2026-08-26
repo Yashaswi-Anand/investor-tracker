@@ -13,6 +13,7 @@ import config
 from pipeline import compute_derived, run
 from sources import gmp as gmp_source
 from sources import nse
+from sources import listing as listing_source
 from sources import timetable as timetable_source
 
 INTERESTING = (
@@ -20,7 +21,7 @@ INTERESTING = (
     "price_band_low", "price_band_high", "lot_size", "min_investment",
     "face_value", "open_date", "close_date", "gmp", "estimated_listing",
     "allotment_date", "refund_date", "demat_date", "listing_date",
-    "registrar", "registrar_url",
+    "registrar", "registrar_url", "listing_price", "listing_gain_pct",
     "subscription_qib", "subscription_nii", "subscription_retail",
     "subscription_total", "issue_size",
 )
@@ -49,6 +50,14 @@ def dry_run():
     for row in rows:
         row.update(timetable_by_slug.get(row["slug"], {}))
     print(f"  {len(timetable_by_slug)} IPOs with timetable data")
+
+    # Same shape as a real run: with no database, every listed IPO looks
+    # like it still needs a price, so this shows what WOULD be fetched.
+    print(f"\nListing source: {config.LISTING_SOURCE}")
+    listing_by_slug = listing_source.fetch(rows, {})
+    for row in rows:
+        row.update(listing_by_slug.get(row["slug"], {}))
+    print(f"  {len(listing_by_slug)} IPOs with a listing price")
 
     rows = [compute_derived(row, row.get("gmp")) for row in rows]
 

@@ -114,7 +114,13 @@ TIMETABLE_COLUMNS = (
     "registrar", "registrar_url",
 )
 
-_EXISTING_COLUMNS = ("slug", "locked", "gmp") + TIMETABLE_COLUMNS
+# Read back for the same reason: once a listing price is stored, the source
+# is never asked for it again.
+LISTING_COLUMNS = ("listing_price", "listing_gain_pct")
+
+_EXISTING_COLUMNS = (
+    ("slug", "locked", "gmp") + TIMETABLE_COLUMNS + LISTING_COLUMNS
+)
 
 
 def fetch_existing(slugs):
@@ -139,14 +145,18 @@ def fetch_existing(slugs):
         row["slug"]: {
             "locked": row.get("locked") or [],
             "gmp": row.get("gmp"),
-            **{column: row.get(column) for column in TIMETABLE_COLUMNS},
+            **{
+                column: row.get(column)
+                for column in TIMETABLE_COLUMNS + LISTING_COLUMNS
+            },
         }
         for row in response.json()
     }
 
 
 def fetch_unfinished(known_slugs, limit=200):
-    """IPOs still in flight that NSE has stopped returning.
+    """IPOs that still have something outstanding and that NSE has stopped
+    returning.
 
     NSE's list endpoints carry only current and upcoming issues, so an IPO
     drops off them within a day or two of closing — usually BEFORE it lists.
@@ -154,16 +164,29 @@ def fetch_unfinished(known_slugs, limit=200):
     this those IPOs are never touched again: their timetable can never be
     filled in, and because apply_listing_status only sees rows in the current
     batch, they can never reach 'listed' no matter what listing_date says.
-    They would sit at 'closed' permanently.
 
-    Returns skeleton rows — slug, name and stored status. Everything else is
-    left out on purpose: apply_locks drops empty values, so a skeleton can
-    only ever add to a stored row, never blank part of it.
+    'listed' rows are included too, but ONLY while listing_price is still
+    missing. That is not tidiness — it is the whole reason a listing price
+    can ever be captured. The moment an IPO flips to 'listed' it is gone from
+    NSE's lists as well, so if this query stopped at 'closed' the one run
+    that noticed the listing would be the last run ever to see the row. And
+    that run cannot have the price: NSE publishes the day's bhavcopy in the
+    evening, after the flip has already happened. Once the price is stored
+    the row stops matching and costs nothing again.
+
+    Returns skeleton rows — slug, name, stored status and symbol. Everything
+    else is left out on purpose: apply_locks drops empty values, so a
+    skeleton can only ever add to a stored row, never blank part of it.
     """
+    unfinished = (
+        "or=("
+        "status.in.(upcoming,open,closed),"
+        "and(status.eq.listed,listing_price.is.null)"
+        ")"
+    )
     response = requests.get(
         config.supabase_url("ipos")
-        + "?select=slug,name,status&status=in.(upcoming,open,closed)"
-        + f"&limit={limit}",
+        + f"?select=slug,name,status,symbol,listing_date&{unfinished}&limit={limit}",
         headers=_headers(),
         timeout=config.REQUEST_TIMEOUT_SECONDS,
     )
@@ -174,6 +197,8 @@ def fetch_unfinished(known_slugs, limit=200):
             "slug": row["slug"],
             "name": row.get("name"),
             "status": row.get("status"),
+            "symbol": row.get("symbol"),
+            "listing_date": row.get("listing_date"),
             "updated_at": util.utc_now(),
         }
         for row in response.json()

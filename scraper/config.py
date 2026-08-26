@@ -146,6 +146,47 @@ TIMETABLE_MAX_FETCHES_PER_RUN = int(
     os.environ.get("TIMETABLE_MAX_FETCHES_PER_RUN", "6")
 )
 
+# ---------------------------------------------------------------------------
+# Listing-day price — NSE's daily bhavcopy archive.
+#
+# This is a DATE-INDEXED ARCHIVE, not a live quote, which is the only reason
+# the feature works at all: an IPO's listing day can be read back weeks later
+# (verified — a 14-day-old listing returned its full OHLC). A live quote
+# endpoint could only ever answer on the listing day itself, and the scraper
+# is never looking on exactly that day.
+#
+# Each row also carries PrvsClsgPric, which on a listing day IS the final
+# issue price (verified on 4 of 4 IPOs). That matters more than convenience:
+# our price_band_high is the CAP, and a book-built issue may price below it —
+# on DLF the cap gave -4.25% where the truth was +0.30%. Taking both numbers
+# from the same exchange row removes that whole class of error, and works for
+# SME issues whose price band NSE reports as null.
+#
+# The file is published once a day at roughly 11:03 UTC (16:33 IST), so a
+# listing date is only readable AFTER its trading day has finished.
+#
+# archives.nseindia.com serves no robots.txt (404 = nothing disallowed) and
+# applies no bot protection; it answers our honest User-Agent directly.
+# ---------------------------------------------------------------------------
+LISTING_SOURCE = os.environ.get("LISTING_SOURCE", "nse_bhavcopy").lower()
+
+LISTING_SOURCES = {
+    "nse_bhavcopy": {
+        "type": "nse_bhavcopy",
+        # {yyyymmdd} is the IPO's listing date. Returns a ZIP holding one CSV.
+        "url_template": (
+            "https://archives.nseindia.com/content/cm/"
+            "BhavCopy_NSE_CM_0_0_0_{yyyymmdd}_F_0000.csv.zip"
+        ),
+    },
+}
+
+# One request covers every IPO that listed on the same day, so this caps
+# distinct DATES, not IPOs.
+LISTING_MAX_FETCHES_PER_RUN = int(
+    os.environ.get("LISTING_MAX_FETCHES_PER_RUN", "3")
+)
+
 SCRAPER_USER_AGENT = os.environ.get(
     "SCRAPER_USER_AGENT",
     "IPOTrackerBot/1.0 (personal IPO dashboard; contact via site)",

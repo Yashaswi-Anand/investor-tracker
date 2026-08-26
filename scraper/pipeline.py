@@ -21,6 +21,7 @@ import db
 import util
 from sources import gmp as gmp_source
 from sources import nse
+from sources import listing as listing_source
 from sources import timetable as timetable_source
 
 
@@ -113,7 +114,7 @@ def run():
     """Execute one full scrape. Returns (ok, message, record_count)."""
     started = time.time()
     try:
-        print("[1/6] Fetching from NSE (official)...")
+        print("[1/7] Fetching from NSE (official)...")
         rows, fetch_failures = nse.fetch()
         print(f"      {len(rows)} IPOs")
         if not rows:
@@ -135,7 +136,7 @@ def run():
             # Enrichment, not the point of the run: NSE's own rows still write.
             print(f"      (could not read in-flight IPOs: {error})")
 
-        print(f"[2/6] GMP source: {config.GMP_SOURCE}")
+        print(f"[2/7] GMP source: {config.GMP_SOURCE}")
         gmp_by_slug = gmp_source.fetch(rows)
         for row in rows:
             if row["slug"] in gmp_by_slug:
@@ -145,18 +146,26 @@ def run():
         # Read before the timetable fetch, not just before deriving: knowing
         # which IPOs already have their dates is what keeps that fetch down to
         # a handful of requests instead of one per IPO per run.
-        print("[3/6] Reading existing rows (locks + stored GMP)...")
+        print("[3/7] Reading existing rows (locks + stored GMP)...")
         existing = db.fetch_existing([row["slug"] for row in rows])
         locked_count = sum(1 for slug in existing if existing[slug]["locked"])
         print(f"      {locked_count} IPOs have locked columns (left untouched)")
 
-        print("[4/6] Timetable + registrar (only for IPOs still missing it)...")
+        print("[4/7] Timetable + registrar (only for IPOs still missing it)...")
         timetable_by_slug = timetable_source.fetch(rows, existing)
         for row in rows:
             row.update(timetable_by_slug.get(row["slug"], {}))
         print(f"      {len(timetable_by_slug)} IPOs gained timetable data")
 
-        print("[5/6] Computing derived fields from the effective GMP...")
+        # After the timetable, because it needs listing_date, and before the
+        # derive step, because apply_listing_status reads the same column.
+        print("[5/7] Listing price (only for IPOs that have already listed)...")
+        listing_by_slug = listing_source.fetch(rows, existing)
+        for row in rows:
+            row.update(listing_by_slug.get(row["slug"], {}))
+        print(f"      {len(listing_by_slug)} IPOs gained a listing price")
+
+        print("[6/7] Computing derived fields from the effective GMP...")
         effective = {}
         observed = set()
         for row in rows:
@@ -168,7 +177,7 @@ def run():
             compute_derived(row, value)
             apply_listing_status(row, existing_row)
 
-        print("[6/6] Writing to Supabase...")
+        print("[7/7] Writing to Supabase...")
         payload = db.apply_locks(rows, existing)
         written = db.upsert_ipos(payload)
 

@@ -66,6 +66,35 @@ export function EstListing({ ipo }) {
   );
 }
 
+/**
+ * What the IPO actually listed at, and the gain on the issue price.
+ *
+ * Deliberately renders nothing but a dash until a real price is stored. The
+ * two figures it replaces are dangerous: a missing listing price computed
+ * against the price band gives -100%, and an SME issue whose band NSE never
+ * published gives Infinity. Both would look like confident numbers.
+ *
+ * The percentage is measured against the FINAL issue price taken from the
+ * exchange's own listing-day row, not against our stored price band, which
+ * is only the cap — a book-built issue may price below it.
+ */
+export function ListingResult({ ipo, showPercent = true }) {
+  if (ipo.listing_price == null) return <span className="gmp-flat">—</span>;
+  const pct = ipo.listing_gain_pct;
+  const tone = pct == null ? "gmp-flat" : pct > 0 ? "gmp-up" : pct < 0 ? "gmp-down" : "gmp-flat";
+  return (
+    <span>
+      {inr(ipo.listing_price)}
+      {showPercent && pct != null && (
+        <span className={`est-pct ${tone}`}>
+          ({pct > 0 ? "+" : ""}
+          {pct.toFixed(1)}%)
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function StatusBadge({ status }) {
   const key = (status || "upcoming").toLowerCase();
   return (

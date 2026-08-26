@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa: E402
 import db  # noqa: E402
 import util  # noqa: E402
-from sources import gmp, nse, timetable  # noqa: E402
+from sources import gmp, listing, nse, timetable  # noqa: E402
 
 
 # --------------------------------------------------------------------------
@@ -739,3 +739,98 @@ def test_fetch_gap_fills_from_fallback(monkeypatch):
     monkeypatch.setattr(gmp, "_fetch_one", fake_one)
     out = gmp.fetch([{"slug": "a"}, {"slug": "b"}, {"slug": "c"}])
     assert out == {"a": 10.0, "b": 20.0}   # primary wins 'a'; fallback fills 'b'
+
+
+# --------------------------------------------------------------------------
+# Listing-day price
+# --------------------------------------------------------------------------
+BHAV_HEADER = "TckrSymb,SctySrs,OpnPric,PrvsClsgPric,FinInstrmNm"
+
+
+def _bhavcopy(*rows):
+    """A one-file bhavcopy ZIP, as NSE publishes it."""
+    import io as _io
+    import zipfile as _zip
+
+    text = "\n".join((BHAV_HEADER,) + rows) + "\n"
+    buf = _io.BytesIO()
+    with _zip.ZipFile(buf, "w") as archive:
+        archive.writestr("BhavCopy.csv", text)
+    return buf.getvalue()
+
+
+def test_listing_gain_never_divides_by_nothing():
+    """The two numbers this must never print are -100% and Infinity.
+
+    Both were reachable: listing_price is written by nothing until a fetch
+    succeeds, and NSE reports no price band at all for several SME issues.
+    """
+    assert listing.gain_percent(None, 100) is None
+    assert listing.gain_percent(120, None) is None
+    assert listing.gain_percent(120, 0) is None
+
+
+def test_listing_gain_rounds_half_away_from_zero():
+    """A 160 issue opening at 185 is exactly 15.625%.
+
+    Python's round() answers 15.62 (half to even) while much of the industry
+    prints 15.63. Either is defensible; an unpredictable rule is not.
+    """
+    assert listing.gain_percent(185, 160) == 15.63
+    assert listing.gain_percent(99, 99) == 0.0
+    assert listing.gain_percent(90, 100) == -10.0
+
+
+def test_listing_not_read_before_the_archive_exists():
+    """NSE publishes a day's bhavcopy that evening, so today is too early."""
+    assert listing.is_readable("2026-08-26", "2026-08-27") is True
+    assert listing.is_readable("2026-08-27", "2026-08-27") is False
+    assert listing.is_readable("2026-08-28", "2026-08-27") is False
+    assert listing.is_readable(None, "2026-08-27") is False
+
+
+def test_listing_skips_locked_and_already_stored():
+    assert listing._missing({"locked": ["listing_price"], "listing_price": None}) is False
+    assert listing._missing({"locked": [], "listing_price": 72.0}) is False
+    assert listing._missing({"locked": []}) is True
+
+
+def test_listing_takes_the_issue_price_from_the_same_row():
+    """PrvsClsgPric on a listing day IS the final issue price.
+
+    Using price_band_high instead would be the CAP, and a book-built issue
+    may price below it -- on DLF that turned a +0.30% listing into -4.25%.
+    The error only ever runs one way, so it would never look wrong.
+    """
+    parsed = listing.parse_bhavcopy(
+        _bhavcopy("ARDEE,EQ,72.00,53.00,ARDEE INDUSTRIES LIMITED")
+    )
+    assert parsed["ARDEE"]["open"] == 72.0
+    assert parsed["ARDEE"]["prev_close"] == 53.0
+    assert listing.gain_percent(72.0, 53.0) == 35.85
+
+
+def test_listing_drops_rows_that_will_not_parse():
+    """A 0.0 stored here would render as a -100% listing."""
+    parsed = listing.parse_bhavcopy(_bhavcopy(
+        "GOOD,EQ,72.00,53.00,Good Ltd",
+        "NOOPEN,EQ,,53.00,No Open Ltd",
+        "NOPREV,EQ,72.00,0,No Prev Ltd",
+    ))
+    assert set(parsed) == {"GOOD"}
+
+
+def test_listing_headers_may_be_padded():
+    """Some NSE CSVs pad every header and value; unstripped lookups miss."""
+    import io as _io
+    import zipfile as _zip
+
+    padded = (
+        "TckrSymb, SctySrs, OpnPric, PrvsClsgPric, FinInstrmNm\n"
+        "ARDEE, EQ, 72.00, 53.00, ARDEE INDUSTRIES LIMITED\n"
+    )
+    buf = _io.BytesIO()
+    with _zip.ZipFile(buf, "w") as archive:
+        archive.writestr("BhavCopy.csv", padded)
+    parsed = listing.parse_bhavcopy(buf.getvalue())
+    assert parsed["ARDEE"]["open"] == 72.0

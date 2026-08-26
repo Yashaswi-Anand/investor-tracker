@@ -107,3 +107,15 @@ def derive_status(open_date, close_date, listing_date, today=None):
 
 def utc_now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+# The scraper runs on GitHub's servers in UTC, but every date it reasons about
+# — listing days, trading days — is an Indian calendar date. Between 00:00 and
+# 05:30 IST the two disagree, so anything comparing "has this date passed" has
+# to ask in IST or it is wrong for five and a half hours a day.
+IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+
+def ist_today():
+    """Today's calendar date in India, as 'YYYY-MM-DD'."""
+    return datetime.datetime.now(IST).date().isoformat()

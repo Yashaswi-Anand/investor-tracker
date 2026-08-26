@@ -25,6 +25,7 @@ import {
   BoardBadge,
   GmpValue,
   KV,
+  ListingResult,
   Stat,
   StatusBadge,
 } from "../../components/ui";
@@ -395,7 +396,13 @@ export default async function IpoDetailPage({ params }) {
           <Stat label="Price Band">{priceBand(ipo)}</Stat>
           <Stat label="Lot Size">{ipo.lot_size ?? "—"}</Stat>
           <Stat label="Min Investment">{inr(ipo.min_investment)}</Stat>
-          <Stat label="Est. Listing">{inr(ipo.estimated_listing)}</Stat>
+          {ipo.listing_price != null ? (
+            <Stat label="Listed At">
+              <ListingResult ipo={ipo} />
+            </Stat>
+          ) : (
+            <Stat label="Est. Listing">{inr(ipo.estimated_listing)}</Stat>
+          )}
         </div>
       </section>
 

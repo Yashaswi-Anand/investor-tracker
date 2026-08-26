@@ -27,7 +27,7 @@ import {
   timelineLabel,
 } from "../../lib/format";
 import Sparkline from "./Sparkline";
-import { EstListing, GmpValue, Stat, StatusBadge } from "./ui";
+import { EstListing, GmpValue, ListingResult, Stat, StatusBadge } from "./ui";
 
 const TABS = [
   { key: "all", label: "All" },
@@ -113,9 +113,18 @@ const COLUMNS = [
   },
   {
     key: "est",
-    label: "Est. Listing",
+    // The column answers "what will it list at" until it lists, then "what
+    // did it". One column, because a reader only ever wants whichever of the
+    // two still applies, and an estimate beside a fact invites comparing them
+    // as though both were live.
+    label: "Est. / Actual Listing",
     sort: "gmp_pct",
-    render: (ipo) => <EstListing ipo={ipo} />,
+    render: (ipo) =>
+      ipo.listing_price != null ? (
+        <ListingResult ipo={ipo} />
+      ) : (
+        <EstListing ipo={ipo} />
+      ),
   },
   {
     key: "dates",
