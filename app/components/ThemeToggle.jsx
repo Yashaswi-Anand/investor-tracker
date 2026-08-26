@@ -12,22 +12,25 @@ function currentTheme() {
 }
 
 /**
- * Repaint the browser/Android chrome to match the theme.
+ * Repaint the browser/Android chrome to match whatever theme is in force.
  *
  * The colour is read back out of the stylesheet (`--theme-bar`) rather than
- * duplicated here, so the palette lives in exactly one file. Setting
- * `data-theme` first is what makes the variable resolve to the new theme's
- * value; if the stylesheet has not applied yet the value is empty and the
- * meta tag is left alone rather than blanked.
+ * duplicated here, so the palette lives in exactly one file. If the
+ * stylesheet has not applied yet the value is empty and the meta tag is left
+ * as served rather than blanked.
  */
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
+function syncThemeBar() {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) return;
   const bar = getComputedStyle(document.documentElement)
     .getPropertyValue("--theme-bar")
     .trim();
   if (bar) meta.setAttribute("content", bar);
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  syncThemeBar();
 }
 
 /**
@@ -43,10 +46,19 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     setTheme(currentTheme());
+    // The meta tag is served with one fixed colour, so a reader whose OS is
+    // dark and who never touches the toggle would otherwise get the light
+    // chrome bar above a dark page. Sync it to the theme that actually
+    // applied — without writing data-theme, which would pin the choice and
+    // stop the page following the OS.
+    syncThemeBar();
+
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {
       // Only follow the OS while the user has not picked explicitly.
-      if (!localStorage.getItem(STORAGE_KEY)) setTheme(currentTheme());
+      if (localStorage.getItem(STORAGE_KEY)) return;
+      setTheme(currentTheme());
+      syncThemeBar();
     };
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);
