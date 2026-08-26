@@ -61,6 +61,35 @@ export function istToday() {
 }
 
 /**
+ * Whole days from today (IST) until a calendar date; negative once it is past.
+ *
+ * Both sides are parsed as UTC midnight so the subtraction counts calendar
+ * days rather than elapsed hours — otherwise a date could round to the wrong
+ * day depending on when the page happened to render.
+ */
+export function daysUntil(date, today = istToday()) {
+  if (!date) return null;
+  const from = Date.parse(`${today}T00:00:00Z`);
+  const to = Date.parse(`${date}T00:00:00Z`);
+  if (Number.isNaN(from) || Number.isNaN(to)) return null;
+  return Math.round((to - from) / 86400000);
+}
+
+/**
+ * "Last day" / "2 days left" for an issue that is still accepting bids.
+ *
+ * Returns null for anything not currently open, so callers can render it
+ * unconditionally without checking status themselves.
+ */
+export function closingLabel(ipo, today = istToday()) {
+  if (!ipo || String(ipo.status || "").toLowerCase() !== "open") return null;
+  const left = daysUntil(ipo.close_date, today);
+  if (left == null || left < 0) return null;
+  if (left === 0) return "Last day";
+  return left === 1 ? "1 day left" : `${left} days left`;
+}
+
+/**
  * Serialise a JSON-LD object for embedding in a <script> tag.
  *
  * Company names come from a scraped source, so a literal '<' in the data
