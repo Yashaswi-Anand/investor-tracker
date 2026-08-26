@@ -216,6 +216,137 @@ function SubscriptionHistory({ history }) {
   );
 }
 
+/** The issue mechanics NSE publishes, in the order a reader meets them. */
+const ISSUE_DETAIL_ROWS = [
+  ["issue_type", "Issue Type"],
+  ["discount", "Discount"],
+  ["categories", "Categories"],
+  ["max_retail", "Max Bid (Retail)"],
+  ["max_employee", "Max Bid (Employee)"],
+  ["tick_size", "Tick Size"],
+  ["market_timings", "Bidding Hours"],
+  ["upi_cutoff", "UPI Mandate Cut-off"],
+  ["sponsor_bank", "Sponsor Bank"],
+];
+
+const DOCUMENT_ROWS = [
+  ["rhp_url", "Red Herring Prospectus"],
+  ["ratios_url", "Basis of Issue Price"],
+  ["anchor_url", "Anchor Allocation"],
+];
+
+/**
+ * Company and issue detail collected by the scraper.
+ *
+ * NSE first: it carries every mechanic here — issue type, discount, UPI
+ * cut-off, the prospectus link. What it does NOT carry is what the business
+ * actually is, so the description, sector and promoters come from the
+ * fallback source and only fill gaps NSE leaves.
+ *
+ * Renders nothing at all when the blob is empty, rather than an empty card.
+ */
+function CompanyDetails({ ipo }) {
+  const details = ipo.details || {};
+  const issueRows = ISSUE_DETAIL_ROWS.filter(([key]) => details[key]);
+  const documents = DOCUMENT_ROWS.filter(([key]) => details[key]);
+  const hasProse = details.about || details.sector || details.promoters;
+
+  if (!hasProse && !issueRows.length && !documents.length) return null;
+
+  return (
+    <section className="card card-wide">
+      <h2>Company &amp; Issue Details</h2>
+
+      {details.about && <p className="about-text">{details.about}</p>}
+
+      {(details.sector || details.incorporated || details.promoters) && (
+        <dl className="detail-grid">
+          {details.sector && <KV label="Sector">{details.sector}</KV>}
+          {details.incorporated && (
+            <KV label="Incorporated">{details.incorporated}</KV>
+          )}
+          {details.promoters && <KV label="Promoters">{details.promoters}</KV>}
+          {details.promoter_holding_pre && (
+            <KV label="Promoter holding (pre-issue)">
+              {details.promoter_holding_pre}
+            </KV>
+          )}
+          {details.promoter_holding_post && (
+            <KV label="Promoter holding (post-issue)">
+              {details.promoter_holding_post}
+            </KV>
+          )}
+        </dl>
+      )}
+
+      {details.objects && (
+        <>
+          <p className="subtitle sub-hist-caption">Objects of the issue</p>
+          <p className="about-text">{details.objects}</p>
+        </>
+      )}
+
+      {issueRows.length > 0 && (
+        <>
+          <p className="subtitle sub-hist-caption">Issue mechanics</p>
+          <dl className="detail-grid">
+            {issueRows.map(([key, label]) => (
+              <KV key={key} label={label}>
+                <span className="kv-note">{details[key]}</span>
+              </KV>
+            ))}
+          </dl>
+        </>
+      )}
+
+      {(details.registrar_address || details.registrar_contact) && (
+        <>
+          <p className="subtitle sub-hist-caption">Registrar</p>
+          <dl className="detail-grid">
+            {ipo.registrar && <KV label="Name">{ipo.registrar}</KV>}
+            {details.registrar_address && (
+              <KV label="Address">
+                <span className="kv-note">{details.registrar_address}</span>
+              </KV>
+            )}
+            {details.registrar_contact && (
+              <KV label="Contact">
+                <span className="kv-note">{details.registrar_contact}</span>
+              </KV>
+            )}
+          </dl>
+        </>
+      )}
+
+      {documents.length > 0 && (
+        <>
+          <p className="subtitle sub-hist-caption">Documents</p>
+          <ul className="list">
+            {documents.map(([key, label]) => (
+              <li key={key}>
+                {/* NSE serves these as ZIPs from its own archive. External and
+                    untrusted-by-default, hence noopener. */}
+                <a
+                  href={details[key]}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                >
+                  {label} ↗
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <p className="subtitle sub-hist-caption">
+        Collected from NSE and public sources. Always confirm against the
+        prospectus before applying.
+      </p>
+    </section>
+  );
+}
+
 function SubscriptionBar({ label, value }) {
   if (value == null) return null;
   const amount = Number(value);
@@ -469,6 +600,8 @@ export default async function IpoDetailPage({ params }) {
           <h2>GMP History</h2>
           <GmpHistory history={gmpHistory} ipo={ipo} />
         </section>
+
+        <CompanyDetails ipo={ipo} />
 
         {manual.about && (
           <section className="card">
