@@ -1,16 +1,30 @@
 "use client";
 
 /**
- * Dashboard list with status filter tabs, search and sorting.
+ * Dashboard list with status filter tabs, search, sorting and column pinning.
  *
  * Renders as cards on phones (what the Android app shows) and as a table on
  * desktop — one component, switched by CSS so there is no layout shift and
  * no duplicated data.
+ *
+ * The table is driven by the COLUMNS array below rather than by hand-written
+ * <th>/<td> pairs. With eleven columns, reordering by hand means editing two
+ * lists in lockstep and silently shifting every cell in the body if you miss
+ * one; here the order lives in exactly one place.
  */
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { closingLabel, fmtDate, inr, istToday, priceBand, times } from "../../lib/format";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  fmtDate,
+  fmtIssueSize,
+  inr,
+  issueSizeCrore,
+  istToday,
+  priceBand,
+  times,
+  timelineLabel,
+} from "../../lib/format";
 import Sparkline from "./Sparkline";
 import { EstListing, GmpValue, Stat, StatusBadge } from "./ui";
 
@@ -28,13 +42,13 @@ const BOARDS = [
   { key: "sme", label: "SME" },
 ];
 
-/** Sort options offered in the mobile dropdown, in menu order. */
 const SORTS = [
   { key: "default", label: "Live issues first" },
   { key: "gmp", label: "GMP (high → low)" },
   { key: "gmp_pct", label: "GMP % (high → low)" },
   { key: "subs", label: "Subscription (high → low)" },
   { key: "close", label: "Closing soonest" },
+  { key: "issue", label: "Issue size (large → small)" },
   { key: "min", label: "Min investment (low → high)" },
   { key: "name", label: "Company (A → Z)" },
 ];
@@ -43,19 +57,27 @@ const SORTS = [
  * The direction a column sorts on its FIRST click.
  *
  * Money and demand read high-to-low (the biggest premium is the story), while
- * dates and names read low-to-high. Clicking the same header again flips it.
+ * dates, names and lifecycle order read low-to-high. Clicking again flips it.
  */
 const FIRST_DIR = {
   name: "asc",
+  status: "asc",
   board: "asc",
   gmp: "desc",
   gmp_pct: "desc",
   price: "desc",
+  issue: "desc",
   lot: "asc",
   min: "asc",
   close: "asc",
   subs: "desc",
 };
+
+/** Lifecycle order, so sorting by Status walks the timeline. */
+const STATUS_RANK = { open: 0, upcoming: 1, closed: 2, listed: 3 };
+
+/** At most two columns may be pinned; more would leave nothing to scroll. */
+const MAX_PINNED = 2;
 
 const TAB_KEYS = TABS.map((t) => t.key);
 const BOARD_KEYS = BOARDS.map((b) => b.key);
@@ -63,11 +85,103 @@ const SORT_KEYS = SORTS.map((s) => s.key);
 
 const boardOf = (ipo) => (ipo.board || "Mainboard").toLowerCase();
 
+/**
+ * Table columns, in display order. `sort` is the sortValue key, omitted for
+ * columns there is no sensible ordering for.
+ */
+const COLUMNS = [
+  {
+    key: "name",
+    label: "Company",
+    sort: "name",
+    render: (ipo) => (
+      <Link href={`/ipo/${ipo.slug}`}>{ipo.short_name || ipo.name}</Link>
+    ),
+  },
+  {
+    key: "status",
+    label: "Status",
+    sort: "status",
+    render: (ipo) => <StatusBadge status={ipo.status} />,
+  },
+  {
+    key: "gmp",
+    label: "GMP",
+    sort: "gmp",
+    render: (ipo) => (
+      <>
+        <GmpValue ipo={ipo} showPercent />
+        {/* Second line, so the column keeps its width — the value line is
+            already wider than a timestamp. */}
+        {ipo.gmp_stamp ? (
+          <span className="cell-stamp" title="GMP last updated">
+            {ipo.gmp_stamp}
+          </span>
+        ) : null}
+      </>
+    ),
+  },
+  {
+    key: "est",
+    label: "Est. Listing",
+    sort: "gmp_pct",
+    render: (ipo) => <EstListing ipo={ipo} />,
+  },
+  {
+    key: "dates",
+    label: "Open – Close",
+    sort: "close",
+    render: (ipo, { timeline }) => (
+      <>
+        {fmtDate(ipo.open_date)} – {fmtDate(ipo.close_date)}
+        {timeline ? (
+          <span className="cell-note" data-urgent={timeline.urgent}>
+            {timeline.text}
+          </span>
+        ) : null}
+      </>
+    ),
+  },
+  {
+    key: "band",
+    label: "Price Band",
+    sort: "price",
+    render: (ipo) => priceBand(ipo),
+  },
+  {
+    key: "issue",
+    label: "Issue Size",
+    sort: "issue",
+    render: (ipo) => fmtIssueSize(ipo),
+  },
+  { key: "lot", label: "Lot", sort: "lot", render: (ipo) => ipo.lot_size ?? "—" },
+  {
+    key: "min",
+    label: "Min Invest",
+    sort: "min",
+    render: (ipo) => inr(ipo.min_investment),
+  },
+  {
+    key: "trend",
+    label: "Trend (3d)",
+    render: (ipo) => <Sparkline values={ipo.gmp_spark} />,
+  },
+  { key: "board", label: "Board", sort: "board", render: (ipo) => ipo.board || "Mainboard" },
+  {
+    key: "subs",
+    label: "Subs.",
+    sort: "subs",
+    render: (ipo) => times(ipo.subscription_total),
+  },
+];
+
 /** The comparable value behind each sortable column. */
 function sortValue(ipo, key) {
   switch (key) {
     case "name":
       return (ipo.short_name || ipo.name || "").toLowerCase();
+    case "status":
+      return STATUS_RANK[String(ipo.status || "").toLowerCase()] ?? 9;
     case "board":
       return boardOf(ipo);
     case "gmp":
@@ -78,6 +192,10 @@ function sortValue(ipo, key) {
         : null;
     case "price":
       return ipo.price_band_high;
+    case "issue": {
+      const size = issueSizeCrore(ipo);
+      return size ? size.value : null;
+    }
     case "lot":
       return ipo.lot_size;
     case "min":
@@ -114,27 +232,59 @@ function compare(a, b, key, dir) {
   return dir === "desc" ? -result : result;
 }
 
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
+      <path d="M6 1.5h4l-.5 4 2.5 2.2v1.3H8.6V15h-1.2V9H4V7.7l2.5-2.2z" />
+    </svg>
+  );
+}
+
 /**
- * A table header that sorts the column it labels.
+ * One table header: its label (sortable or not) plus a pin toggle.
  *
  * Declared at module scope on purpose. A component defined inside IpoList
  * would be a brand-new type on every render, so React would tear down and
  * rebuild every header cell each time the list changed — dropping keyboard
  * focus and discarding the very click that triggered the re-render.
  */
-function SortTh({ sortKey, sort, onSort, children }) {
-  const on = sort.key === sortKey;
+function HeadCell({ column, sort, onSort, pinned, pinEdge, left, onPin }) {
+  const active = column.sort && sort.key === column.sort;
   return (
     <th
-      data-sortable="true"
-      data-active={on}
-      data-dir={on ? sort.dir : undefined}
-      aria-sort={on ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+      data-col={column.key}
+      data-active={active || undefined}
+      data-dir={active ? sort.dir : undefined}
+      data-pinned={pinned || undefined}
+      data-pin-edge={pinEdge || undefined}
+      style={pinned ? { left } : undefined}
+      aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}
     >
-      <button type="button" className="th-sort" onClick={() => onSort(sortKey)}>
-        <span>{children}</span>
-        <span className="th-arrow" aria-hidden="true" />
-      </button>
+      <div className="th-inner">
+        {column.sort ? (
+          <button
+            type="button"
+            className="th-sort"
+            onClick={() => onSort(column.sort)}
+          >
+            <span>{column.label}</span>
+            <span className="th-arrow" aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="th-label">{column.label}</span>
+        )}
+        <button
+          type="button"
+          className="th-pin"
+          data-on={pinned || undefined}
+          aria-pressed={Boolean(pinned)}
+          title={pinned ? `Unpin ${column.label}` : `Pin ${column.label}`}
+          aria-label={pinned ? `Unpin ${column.label}` : `Pin ${column.label}`}
+          onClick={() => onPin(column.key)}
+        >
+          <PinIcon />
+        </button>
+      </div>
     </th>
   );
 }
@@ -145,6 +295,7 @@ export default function IpoList({ ipos }) {
   const [query, setQuery] = useState("");
   const [closingToday, setClosingToday] = useState(false);
   const [sort, setSort] = useState({ key: "default", dir: "desc" });
+  const [pinned, setPinned] = useState(["name"]);
 
   // Read ?tab= / ?board= on the client rather than from server searchParams,
   // so the page keeps one cacheable render. This also makes the app-manifest
@@ -192,6 +343,19 @@ export default function IpoList({ ipos }) {
   const chooseSort = (key) => {
     setSort({ key, dir: FIRST_DIR[key] || "desc" });
     setParam("sort", key);
+  };
+
+  /**
+   * Pinning past the limit drops the OLDEST pin rather than refusing.
+   * Refusing would leave the reader hunting for which column to release
+   * before they can pin the one they actually want.
+   */
+  const togglePin = (key) => {
+    setPinned((current) =>
+      current.includes(key)
+        ? current.filter((item) => item !== key)
+        : [...current, key].slice(-MAX_PINNED)
+    );
   };
 
   // Status counts respect the board filter, and board counts respect the
@@ -258,6 +422,40 @@ export default function IpoList({ ipos }) {
     return rows;
   }, [filtered, query, closingToday, today, sort]);
 
+  // Pinned columns stick at cumulative offsets, so the second one sits
+  // exactly against the first. The widths are whatever the browser resolved,
+  // so they have to be measured rather than assumed.
+  const tableRef = useRef(null);
+  const [offsets, setOffsets] = useState({});
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const table = tableRef.current;
+      if (!table) return;
+      const next = {};
+      let left = 0;
+      for (const cell of table.querySelectorAll("thead th")) {
+        const key = cell.dataset.col;
+        if (!pinned.includes(key)) continue;
+        next[key] = Math.round(left);
+        left += cell.getBoundingClientRect().width;
+      }
+      // Bail out when nothing moved: setting state unconditionally from a
+      // layout effect that runs on every render is an infinite loop.
+      setOffsets((current) => {
+        const keys = Object.keys(next);
+        const same =
+          keys.length === Object.keys(current).length &&
+          keys.every((key) => current[key] === next[key]);
+        return same ? current : next;
+      });
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [pinned, visible]);
+
   if (!ipos.length) {
     return (
       <div className="empty">
@@ -267,7 +465,9 @@ export default function IpoList({ ipos }) {
   }
 
   const narrowed = visible.length !== filtered.length;
-
+  // Only the rightmost pinned column casts the edge shadow, so two pinned
+  // columns read as one block instead of two stacked panels.
+  const lastPinned = COLUMNS.filter((c) => pinned.includes(c.key)).slice(-1)[0];
 
   return (
     <>
@@ -348,21 +548,18 @@ export default function IpoList({ ipos }) {
           </button>
         ) : null}
 
-        <label className="sort-field">
-          <span className="sort-label">Sort</span>
-          <select
-            className="sort-select"
-            value={sort.key}
-            onChange={(e) => chooseSort(e.target.value)}
-            aria-label="Sort IPOs"
-          >
-            {SORTS.map((option) => (
-              <option key={option.key} value={option.key}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <select
+          className="sort-select"
+          value={sort.key}
+          onChange={(e) => chooseSort(e.target.value)}
+          aria-label="Sort IPOs"
+        >
+          {SORTS.map((option) => (
+            <option key={option.key} value={option.key}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {narrowed && visible.length > 0 ? (
@@ -402,7 +599,7 @@ export default function IpoList({ ipos }) {
           {/* Phone / app view */}
           <div className="card-list">
             {visible.map((ipo) => {
-              const closing = closingLabel(ipo, today);
+              const timeline = timelineLabel(ipo, today);
               return (
                 <Link
                   key={ipo.slug}
@@ -421,12 +618,9 @@ export default function IpoList({ ipos }) {
                     </div>
                     <div className="card-flags">
                       <StatusBadge status={ipo.status} />
-                      {closing ? (
-                        <span
-                          className="days-left"
-                          data-urgent={closing === "Last day"}
-                        >
-                          {closing}
+                      {timeline ? (
+                        <span className="days-left" data-urgent={timeline.urgent}>
+                          {timeline.text}
                         </span>
                       ) : null}
                     </div>
@@ -448,69 +642,44 @@ export default function IpoList({ ipos }) {
 
           {/* Desktop view */}
           <div className="table-wrap">
-            <table>
+            <table ref={tableRef}>
               <thead>
                 <tr>
-                  <SortTh sortKey="name" sort={sort} onSort={selectSort}>Company</SortTh>
-                  <SortTh sortKey="board" sort={sort} onSort={selectSort}>Board</SortTh>
-                  <SortTh sortKey="gmp" sort={sort} onSort={selectSort}>GMP</SortTh>
-                  <SortTh sortKey="gmp_pct" sort={sort} onSort={selectSort}>
-                    Est. Listing
-                  </SortTh>
-                  <th>Trend (3d)</th>
-                  <SortTh sortKey="price" sort={sort} onSort={selectSort}>Price Band</SortTh>
-                  <SortTh sortKey="lot" sort={sort} onSort={selectSort}>Lot</SortTh>
-                  <SortTh sortKey="min" sort={sort} onSort={selectSort}>Min Invest</SortTh>
-                  <SortTh sortKey="close" sort={sort} onSort={selectSort}>Open – Close</SortTh>
-                  <SortTh sortKey="subs" sort={sort} onSort={selectSort}>Subs.</SortTh>
-                  <th>Status</th>
+                  {COLUMNS.map((column) => (
+                    <HeadCell
+                      key={column.key}
+                      column={column}
+                      sort={sort}
+                      onSort={selectSort}
+                      pinned={pinned.includes(column.key)}
+                      pinEdge={lastPinned && lastPinned.key === column.key}
+                      left={offsets[column.key] ?? 0}
+                      onPin={togglePin}
+                    />
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {visible.map((ipo) => {
-                  const closing = closingLabel(ipo, today);
+                  const timeline = timelineLabel(ipo, today);
                   return (
                     <tr key={ipo.slug}>
-                      <td>
-                        <Link href={`/ipo/${ipo.slug}`}>
-                          {ipo.short_name || ipo.name}
-                        </Link>
-                      </td>
-                      <td>{ipo.board || "Mainboard"}</td>
-                      <td>
-                        <GmpValue ipo={ipo} showPercent />
-                        {/* Second line, so the column keeps its width — the
-                            value line is already wider than a timestamp. */}
-                        {ipo.gmp_stamp ? (
-                          <span className="cell-stamp" title="GMP last updated">
-                            {ipo.gmp_stamp}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td>
-                        <EstListing ipo={ipo} />
-                      </td>
-                      <td>
-                        <Sparkline values={ipo.gmp_spark} />
-                      </td>
-                      <td>{priceBand(ipo)}</td>
-                      <td>{ipo.lot_size ?? "—"}</td>
-                      <td>{inr(ipo.min_investment)}</td>
-                      <td>
-                        {fmtDate(ipo.open_date)} – {fmtDate(ipo.close_date)}
-                        {closing ? (
-                          <span
-                            className="cell-note"
-                            data-urgent={closing === "Last day"}
+                      {COLUMNS.map((column) => {
+                        const isPinned = pinned.includes(column.key);
+                        return (
+                          <td
+                            key={column.key}
+                            data-col={column.key}
+                            data-pinned={isPinned || undefined}
+                            data-pin-edge={
+                              (lastPinned && lastPinned.key === column.key) || undefined
+                            }
+                            style={isPinned ? { left: offsets[column.key] ?? 0 } : undefined}
                           >
-                            {closing}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td>{times(ipo.subscription_total)}</td>
-                      <td>
-                        <StatusBadge status={ipo.status} />
-                      </td>
+                            {column.render(ipo, { timeline })}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}

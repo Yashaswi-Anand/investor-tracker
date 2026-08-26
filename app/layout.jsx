@@ -77,10 +77,6 @@ export default function RootLayout({ children }) {
               <Logo tagline="IPO Tracker · India" />
             </Link>
             <div className="header-actions">
-              <span className="live-pill">
-                <span className="live-dot" aria-hidden="true" />
-                Live · refreshes every 15 min
-              </span>
               <ThemeToggle />
             </div>
           </div>
