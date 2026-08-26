@@ -109,18 +109,7 @@ const COLUMNS = [
     key: "gmp",
     label: "GMP",
     sort: "gmp",
-    render: (ipo) => (
-      <>
-        <GmpValue ipo={ipo} showPercent />
-        {/* Second line, so the column keeps its width — the value line is
-            already wider than a timestamp. */}
-        {ipo.gmp_stamp ? (
-          <span className="cell-stamp" title="GMP last updated">
-            {ipo.gmp_stamp}
-          </span>
-        ) : null}
-      </>
-    ),
+    render: (ipo) => <GmpValue ipo={ipo} showPercent />,
   },
   {
     key: "est",
