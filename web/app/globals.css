@@ -260,6 +260,46 @@ button { font-family: inherit; }
   line-height: 1.15;
 }
 .stat-tile .s { font-size: 0.72rem; opacity: 0.85; margin-top: 2px; }
+
+/* Top GMP carries two entries — the best premium among issues you can still
+   apply for, and the best among those still to open. One headline number
+   would hide whichever of the two the reader came for. Each row links to
+   that IPO. */
+.top-gmp { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.top-gmp-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  border-radius: 8px;
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+a.top-gmp-row:hover { background: rgba(255, 255, 255, 0.18); text-decoration: none; }
+a.top-gmp-row:active { background: rgba(255, 255, 255, 0.26); }
+.top-gmp-label {
+  flex: 0 0 auto;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  opacity: 0.72;
+}
+/* min-width:0 is what actually lets a flex child shrink enough to ellipsis. */
+.top-gmp-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top-gmp-pct { flex: 0 0 auto; font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
+.top-gmp-row[data-empty="true"] { opacity: 0.6; }
+.top-gmp-row[data-empty="true"] .top-gmp-name { font-weight: 500; }
 @media (min-width: 760px) {
   .hero { padding: 40px 0 84px; }
   .hero h1 { font-size: 2.25rem; }

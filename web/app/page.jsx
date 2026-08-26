@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SITE } from "../lib/config";
 import {
   getAllIpos,
@@ -9,6 +10,7 @@ import {
 import {
   fmtShortDate,
   fmtTime,
+  gmpPercent,
   inr,
   istDateOf,
   istToday,
@@ -58,12 +60,24 @@ export default async function HomePage() {
 
   const open = ipos.filter((i) => i.status === "open");
   const upcoming = ipos.filter((i) => i.status === "upcoming");
-  const withGmp = ipos.filter((i) => i.gmp != null && i.price_band_high);
-  const topGmp = withGmp.length
-    ? withGmp.reduce((best, i) =>
-        i.gmp / i.price_band_high > best.gmp / best.price_band_high ? i : best
-      )
-    : null;
+
+  // Ranked as a PERCENTAGE of the price band, not as rupees: a ₹60 premium
+  // on a ₹120 issue is a far better bet than ₹60 on a ₹900 one, and ranking
+  // by the rupee figure would put the expensive issue on top every time.
+  const topGmp = (status) => {
+    const candidates = ipos.filter(
+      (i) => i.status === status && gmpPercent(i) != null
+    );
+    if (!candidates.length) return null;
+    return candidates.reduce((best, i) =>
+      gmpPercent(i) > gmpPercent(best) ? i : best
+    );
+  };
+
+  // Split by stage, because they answer different questions: one is what you
+  // can still apply for today, the other what to watch for.
+  const topOpen = topGmp("open");
+  const topUpcoming = topGmp("upcoming");
 
   // Structured data helps Google show rich results for the listing page.
   // Only the IPOs actually emitted are counted — declaring a larger
@@ -119,15 +133,34 @@ export default async function HomePage() {
             </div>
             <div className="stat-tile">
               <div className="k">Top GMP (% of price)</div>
-              <div className="v num">
-                {topGmp
-                  ? `+${((topGmp.gmp / topGmp.price_band_high) * 100).toFixed(0)}%`
-                  : "—"}
-              </div>
-              <div className="s">
-                {topGmp
-                  ? `${topGmp.short_name || topGmp.name} · GMP ${inr(topGmp.gmp)} on ${inr(topGmp.price_band_high)}`
-                  : "GMP not recorded yet"}
+              <div className="top-gmp">
+                {[
+                  ["Open", topOpen],
+                  ["Upcoming", topUpcoming],
+                ].map(([label, ipo]) =>
+                  ipo ? (
+                    <Link
+                      key={label}
+                      href={`/ipo/${ipo.slug}`}
+                      className="top-gmp-row"
+                      title={`${ipo.name} — GMP ${inr(ipo.gmp)} on ${inr(ipo.price_band_high)}`}
+                    >
+                      <span className="top-gmp-label">{label}</span>
+                      <span className="top-gmp-name">
+                        {ipo.short_name || ipo.name}
+                      </span>
+                      <span className="top-gmp-pct num">
+                        {gmpPercent(ipo) > 0 ? "+" : ""}
+                        {gmpPercent(ipo).toFixed(0)}%
+                      </span>
+                    </Link>
+                  ) : (
+                    <div key={label} className="top-gmp-row" data-empty="true">
+                      <span className="top-gmp-label">{label}</span>
+                      <span className="top-gmp-name">No premium yet</span>
+                    </div>
+                  )
+                )}
               </div>
             </div>
             <div className="stat-tile">
