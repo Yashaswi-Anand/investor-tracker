@@ -56,7 +56,12 @@ export const viewport = {
  * Runs before first paint: restores the user's saved theme so the page never
  * flashes the wrong colours. Kept tiny and dependency-free on purpose.
  */
-const THEME_INIT = `(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);var m=document.querySelector('meta[name="theme-color"]');if(m){m.setAttribute("content",t==="dark"?"#0a0e1a":"#4f46e5")}}}catch(e){}})();`;
+// Applies the stored theme before first paint, so a dark-mode reader never
+// sees a flash of the light palette. The chrome colour is read from
+// `--theme-bar` in globals.css rather than repeated here — no colour literal
+// belongs in a script. If the stylesheet has not applied yet the value is
+// empty and the meta tag is left as served.
+const THEME_INIT = `(function(){try{var t=localStorage.getItem("theme");if(t!=="dark"&&t!=="light")return;var r=document.documentElement;r.setAttribute("data-theme",t);var m=document.querySelector('meta[name="theme-color"]');if(!m)return;var b=getComputedStyle(r).getPropertyValue("--theme-bar").trim();if(b)m.setAttribute("content",b)}catch(e){}})();`;
 
 export default function RootLayout({ children }) {
   return (
@@ -86,7 +91,7 @@ export default function RootLayout({ children }) {
 
         <footer className="disclaimer">
           <div className="container">
-            <p style={{ margin: 0 }}>
+            <p className="disclaimer-text">
               <strong>Disclaimer:</strong> GMP (grey market premium) is
               unofficial and indicative only. This is not investment advice.
               Data is sourced from NSE and third parties — always verify on

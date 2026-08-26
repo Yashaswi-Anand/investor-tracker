@@ -79,7 +79,7 @@ function GmpHistory({ history, ipo }) {
 
   if (!days.length) {
     return (
-      <p className="subtitle" style={{ margin: 0 }}>
+      <p className="subtitle subtitle-flush">
         No GMP recorded yet. History builds up from the first snapshot.
       </p>
     );
@@ -100,10 +100,10 @@ function GmpHistory({ history, ipo }) {
     <>
       {/* `updated_at` is stamped on every scraper run, so this reads as
           "last refreshed" even on a run where no premium moved. */}
-      <p className="subtitle" style={{ margin: "0 0 8px" }}>
+      <p className="subtitle hist-caption">
         {ipo.gmp != null && <>Latest GMP {inr(ipo.gmp)} · </>}
         Last updated{" "}
-        <strong style={{ color: "var(--text)" }}>
+        <strong className="hist-stamp">
           {fmtDateTime(ipo.updated_at || ipo.gmp_updated_at)} IST
         </strong>
       </p>
@@ -114,7 +114,7 @@ function GmpHistory({ history, ipo }) {
       {recent.length >= 2 ? (
         <GmpLineChart points={recent} mode="daily" ariaLabel={`${ipo.name} GMP trend`} />
       ) : (
-        <p className="subtitle" style={{ margin: 0 }}>
+        <p className="subtitle subtitle-flush">
           The graph appears from the second day of GMP data.
         </p>
       )}
@@ -184,7 +184,7 @@ function SubscriptionHistory({ history }) {
 
   return (
     <>
-      <p className="subtitle" style={{ margin: "18px 0 8px" }}>
+      <p className="subtitle sub-hist-caption">
         Day-wise subscription
       </p>
       <div className="hist-wrap">
@@ -231,7 +231,7 @@ function SubscriptionBar({ label, value }) {
         <div
           className="sub-fill"
           data-over={amount >= 1}
-          style={{ width: `${pct}%` }}
+          style={{ "--fill": `${pct}%` }}
         />
       </div>
     </div>
@@ -252,7 +252,7 @@ function Timeline({ ipo }) {
   ].filter(([, date]) => date);
 
   if (!steps.length) {
-    return <p className="subtitle" style={{ margin: 0 }}>Dates not announced yet.</p>;
+    return <p className="subtitle subtitle-flush">Dates not announced yet.</p>;
   }
 
   return (
@@ -381,8 +381,8 @@ export default async function IpoDetailPage({ params }) {
           <BoardBadge board={ipo.board} />
           {ipo.symbol && <span className="badge badge-board">{ipo.symbol}</span>}
         </div>
-        <h1 style={{ marginBottom: 4 }}>{ipo.name} IPO</h1>
-        <p className="subtitle" style={{ margin: 0 }}>
+        <h1 className="detail-title">{ipo.name} IPO</h1>
+        <p className="subtitle subtitle-flush">
           {fmtDate(ipo.open_date, true)} – {fmtDate(ipo.close_date, true)}
         </p>
 
@@ -410,7 +410,7 @@ export default async function IpoDetailPage({ params }) {
             <KV label="Min Investment">{inr(ipo.min_investment)}</KV>
             <KV label="Face Value">{inr(ipo.face_value)}</KV>
             <KV label="Issue Size">
-              <span style={{ fontWeight: 500, fontSize: "0.8rem" }}>
+              <span className="kv-note">
                 {ipo.issue_size || "—"}
               </span>
             </KV>
@@ -443,7 +443,7 @@ export default async function IpoDetailPage({ params }) {
             ipo.subscription_emp,
             ipo.subscription_total,
           ].every((value) => value == null) ? (
-            <p className="subtitle" style={{ margin: 0 }}>
+            <p className="subtitle subtitle-flush">
               Subscription figures appear once bidding opens.
             </p>
           ) : (
@@ -466,7 +466,7 @@ export default async function IpoDetailPage({ params }) {
         {manual.about && (
           <section className="card">
             <h2>About the Company</h2>
-            <p style={{ fontSize: "0.87rem", margin: 0 }}>{manual.about}</p>
+            <p className="about-text">{manual.about}</p>
           </section>
         )}
 

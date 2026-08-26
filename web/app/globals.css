@@ -14,46 +14,56 @@
 :root {
   color-scheme: light;
 
-  /* Brand */
-  --brand-1: #4f46e5;            /* indigo  */
-  --brand-2: #7c3aed;            /* violet  */
-  --brand-3: #0ea5e9;            /* sky     */
-  --brand-grad: linear-gradient(120deg, #4338ca 0%, #6d28d9 52%, #0284c7 100%);
-  --primary: #4f46e5;
-  --primary-strong: #4338ca;
-  --primary-soft: #eef0ff;
-  --on-brand: #ffffff;
+  /* Brand — the two supplied accents. Rust carries the light theme and the
+     lighter orange carries the dark one, because each is the member of the
+     pair that holds its contrast against that ground. */
+  --brand-1: #8f4429;
+  --brand-2: #b0603a;
+  --brand-3: #d98a52;
+  --brand-grad: linear-gradient(120deg, #6d3220 0%, #8f4429 52%, #d98a52 100%);
+  --primary: #8f4429;
+  --primary-strong: #6d3220;
+  --primary-soft: #f3e5d8;
+  --on-brand: #fdf8f0;
+  /* The colour the browser/Android chrome paints around the page. Kept
+     here rather than in JS so the palette has exactly one home; the
+     theme toggle reads it back out of the computed styles. */
+  --theme-bar: #8f4429;
 
-  /* Surfaces */
-  --bg: #f4f6fb;
-  --surface: #ffffff;
-  --surface-2: #f1f3f9;
-  --surface-3: #e9ecf5;
-  --border: #e3e7f0;
-  --border-strong: #cfd5e3;
+  /* Surfaces — the supplied cream, with tints of itself for depth. */
+  --bg: #f7f2e8;
+  --surface: #fffdf7;
+  --surface-2: #f1e9db;
+  --surface-3: #e7dcc9;
+  --border: #e3d8c4;
+  --border-strong: #c9b79a;
 
-  /* Text */
-  --text: #0f172a;
-  --text-2: #334155;
-  --text-muted: #64748b;
+  /* Text — the supplied near-black, lightened through warm greys. */
+  --text: #14100c;
+  --text-2: #3f362a;
+  --text-muted: #7b6b55;
 
-  /* Semantics */
-  --up: #059669;
-  --up-soft: #d1fae5;
-  --down: #e11d48;
-  --down-soft: #ffe4e6;
-  --warn: #d97706;
-  --warn-soft: #fef3c7;
-  --info: #2563eb;
-  --info-soft: #dbeafe;
+  /* Semantics. Green and red stay green and red — they carry meaning, not
+     brand — but both are warmed to sit on cream. Down leans crimson rather
+     than scarlet so a negative premium can never be mistaken for the rust
+     accent sitting next to it. */
+  --up: #2e7d4f;
+  --up-strong: #3fa06a;
+  --up-soft: #ddefe3;
+  --down: #c0304a;
+  --down-soft: #fae0e5;
+  --warn: #86690b;
+  --warn-soft: #f4ecd2;
+  --info: #3a6a9e;
+  --info-soft: #dfe9f3;
 
   /* Shape + elevation */
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px -12px rgba(15, 23, 42, 0.18);
-  --shadow-lg: 0 12px 40px -12px rgba(79, 70, 229, 0.35);
-  --ring: 0 0 0 3px rgba(79, 70, 229, 0.25);
+  --shadow-sm: 0 1px 2px rgba(20, 16, 12, 0.06), 0 1px 1px rgba(20, 16, 12, 0.04);
+  --shadow: 0 1px 2px rgba(20, 16, 12, 0.06), 0 8px 24px -12px rgba(20, 16, 12, 0.22);
+  --shadow-lg: 0 12px 40px -12px rgba(143, 68, 41, 0.38);
+  --ring: 0 0 0 3px rgba(143, 68, 41, 0.28);
 
   --header-h: 60px;
   --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -65,58 +75,62 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --primary: #818cf8;
-    --primary-strong: #a5b4fc;
-    --primary-soft: #1e1b4b;
-    --bg: #0a0e1a;
-    --surface: #111727;
-    --surface-2: #182036;
-    --surface-3: #1f2942;
-    --border: #243048;
-    --border-strong: #334463;
-    --text: #e7ebf7;
-    --text-2: #c3cbe0;
-    --text-muted: #8f9bb7;
-    --up: #34d399;
-    --up-soft: rgba(52, 211, 153, 0.14);
-    --down: #fb7185;
-    --down-soft: rgba(251, 113, 133, 0.14);
-    --warn: #fbbf24;
-    --warn-soft: rgba(251, 191, 36, 0.14);
-    --info: #60a5fa;
-    --info-soft: rgba(96, 165, 250, 0.14);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.6);
-    --shadow-lg: 0 12px 40px -12px rgba(0, 0, 0, 0.7);
-    --ring: 0 0 0 3px rgba(129, 140, 248, 0.35);
+    --primary: #d98a52;
+    --primary-strong: #e8a370;
+    --primary-soft: #2b1d13;
+  --theme-bar: #14100c;
+    --theme-bar: #14100c;
+    --bg: #14100c;
+    --surface: #1e1811;
+    --surface-2: #272019;
+    --surface-3: #332a20;
+    --border: #372d22;
+    --border-strong: #4d4032;
+    --text: #f7f2e8;
+    --text-2: #ded4c3;
+    --text-muted: #a3937c;
+    --up: #63c98d;
+    --up-strong: #8fdcae;
+    --up-soft: rgba(99, 201, 141, 0.14);
+    --down: #f2778f;
+    --down-soft: rgba(242, 119, 143, 0.14);
+    --warn: #dcc84a;
+    --warn-soft: rgba(220, 200, 74, 0.14);
+    --info: #7fb3e0;
+    --info-soft: rgba(127, 179, 224, 0.14);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+    --shadow-lg: 0 12px 40px -12px rgba(0, 0, 0, 0.8);
+    --ring: 0 0 0 3px rgba(217, 138, 82, 0.35);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --primary: #818cf8;
-  --primary-strong: #a5b4fc;
-  --primary-soft: #1e1b4b;
-  --bg: #0a0e1a;
-  --surface: #111727;
-  --surface-2: #182036;
-  --surface-3: #1f2942;
-  --border: #243048;
-  --border-strong: #334463;
-  --text: #e7ebf7;
-  --text-2: #c3cbe0;
-  --text-muted: #8f9bb7;
-  --up: #34d399;
-  --up-soft: rgba(52, 211, 153, 0.14);
-  --down: #fb7185;
-  --down-soft: rgba(251, 113, 133, 0.14);
-  --warn: #fbbf24;
-  --warn-soft: rgba(251, 191, 36, 0.14);
-  --info: #60a5fa;
-  --info-soft: rgba(96, 165, 250, 0.14);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 12px 40px -12px rgba(0, 0, 0, 0.7);
-  --ring: 0 0 0 3px rgba(129, 140, 248, 0.35);
+  --primary: #d98a52;
+  --primary-strong: #e8a370;
+  --primary-soft: #2b1d13;
+  --bg: #14100c;
+  --surface: #1e1811;
+  --surface-2: #272019;
+  --surface-3: #332a20;
+  --border: #372d22;
+  --border-strong: #4d4032;
+  --text: #f7f2e8;
+  --text-2: #ded4c3;
+  --text-muted: #a3937c;
+  --up: #63c98d;
+  --up-strong: #8fdcae;
+  --up-soft: rgba(99, 201, 141, 0.14);
+  --down: #f2778f;
+  --down-soft: rgba(242, 119, 143, 0.14);
+  --warn: #dcc84a;
+  --warn-soft: rgba(220, 200, 74, 0.14);
+  --info: #7fb3e0;
+  --info-soft: rgba(127, 179, 224, 0.14);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 12px 40px -12px rgba(0, 0, 0, 0.8);
+  --ring: 0 0 0 3px rgba(217, 138, 82, 0.35);
 }
 
 /* ==========================================================================
@@ -153,7 +167,7 @@ button { font-family: inherit; }
   background: var(--brand-grad);
   color: var(--on-brand);
   padding-top: env(safe-area-inset-top);
-  box-shadow: 0 6px 24px -12px rgba(67, 56, 202, 0.6);
+  box-shadow: 0 6px 24px -12px rgba(109, 50, 32, 0.55);
 }
 .site-header .container {
   height: var(--header-h);
@@ -166,7 +180,7 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #fff;
+  color: var(--on-brand);
   text-decoration: none;
 }
 .brand:hover { text-decoration: none; }
@@ -191,7 +205,7 @@ button { font-family: inherit; }
   border-radius: 11px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  color: var(--on-brand);
   display: grid; place-items: center;
   cursor: pointer;
   transition: background 0.15s ease, transform 0.15s ease;
@@ -205,7 +219,7 @@ button { font-family: inherit; }
    ========================================================================== */
 .hero {
   background: var(--brand-grad);
-  color: #fff;
+  color: var(--on-brand);
   padding: 28px 0 72px;
   position: relative;
   overflow: hidden;
@@ -215,7 +229,7 @@ button { font-family: inherit; }
   position: absolute; inset: 0;
   background:
     radial-gradient(600px 200px at 85% -20%, rgba(255, 255, 255, 0.22), transparent 60%),
-    radial-gradient(400px 180px at 10% 120%, rgba(14, 165, 233, 0.35), transparent 60%);
+    radial-gradient(400px 180px at 10% 120%, rgba(217, 138, 82, 0.38), transparent 60%);
   pointer-events: none;
 }
 .hero .container { position: relative; }
@@ -273,7 +287,7 @@ button { font-family: inherit; }
   padding: 3px 6px;
   margin: 0 -6px;
   border-radius: 8px;
-  color: #fff;
+  color: var(--on-brand);
   text-decoration: none;
   transition: background 0.12s ease;
 }
@@ -321,6 +335,9 @@ a.top-gmp-row:active { background: rgba(255, 255, 255, 0.26); }
    ========================================================================== */
 main { padding: 0 0 48px; min-height: 65vh; }
 .page-pad { padding-top: 22px; }
+/* A single column of prose: long lines are hard to track back from. */
+.page-card { max-width: 760px; margin: 0 auto; }
+.back-row { margin-top: 24px; }
 h1 { font-size: 1.4rem; margin: 0 0 6px; letter-spacing: -0.02em; font-weight: 800; }
 h2 {
   font-size: 0.95rem;
@@ -338,6 +355,8 @@ h2::before {
   background: var(--brand-grad);
 }
 .subtitle { color: var(--text-muted); font-size: 0.875rem; margin: 0 0 16px; }
+/* Same voice, no trailing gap — for a subtitle that sits last in a card. */
+.subtitle-flush { margin: 0; }
 
 /* ==========================================================================
    Tabs
@@ -366,7 +385,7 @@ h2::before {
 .tab[data-active="true"] {
   background: var(--brand-grad);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-brand);
   box-shadow: var(--shadow-lg);
 }
 .tab-count { opacity: 0.75; margin-left: 6px; font-weight: 600; }
@@ -614,6 +633,8 @@ h2::before {
 .table-wrap th[data-pinned],
 .table-wrap td[data-pinned] {
   position: sticky;
+  /* --pin-left comes from the measured header widths; see IpoList. */
+  left: var(--pin-left, 0px);
   z-index: 2;
   background: var(--surface);
 }
@@ -626,7 +647,7 @@ h2::before {
    read as one block rather than two stacked panels. */
 .table-wrap th[data-pin-edge],
 .table-wrap td[data-pin-edge] {
-  box-shadow: 1px 0 0 var(--border), 6px 0 10px -6px rgba(15, 23, 42, 0.18);
+  box-shadow: 1px 0 0 var(--border), 6px 0 10px -6px rgba(20, 16, 12, 0.22);
 }
 table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
 th, td { padding: 12px 14px; text-align: left; white-space: nowrap; }
@@ -763,6 +784,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
 }
 .detail-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .detail-head h1 { font-size: 1.35rem; }
+.detail-title { margin-bottom: 4px; }
 .hero-stats-detail {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
   margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border);
@@ -777,6 +799,8 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .hist-layout { display: grid; grid-template-columns: 1fr; gap: 14px; }
 /* The table now carries five columns, so give it a bit more room. */
 @media (min-width: 880px) { .hist-layout { grid-template-columns: 1fr 1fr; align-items: start; } }
+/* Free prose inside a card — smaller than body copy, flush to the edges. */
+.about-text { font-size: 0.87rem; margin: 0; }
 .card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
@@ -786,6 +810,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
   padding: 8px 0; font-size: 0.86rem; border-bottom: 1px solid var(--border);
 }
 .kv:last-child { border-bottom: none; }
+.kv-note { font-weight: 500; font-size: 0.8rem; }
 .kv dt { color: var(--text-muted); }
 .kv dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 .list { margin: 0; padding-left: 18px; font-size: 0.87rem; }
@@ -835,6 +860,11 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .hist th { position: static; }
 .hist th, .hist td { padding: 8px 10px; white-space: nowrap; }
 .hist-updated { color: var(--text-muted); font-weight: 500 !important; }
+/* Caption above the GMP history layout, and the timestamp it emphasises. */
+.hist-caption { margin: 0 0 8px; }
+.hist-stamp { color: var(--text); }
+/* The day-wise subscription table follows the bars, so it needs air above. */
+.sub-hist-caption { margin: 18px 0 8px; }
 .hist th:not(:first-child), .hist td:not(:first-child) { text-align: right; }
 .hist tbody tr:first-child td { font-weight: 800; }
 
@@ -842,8 +872,15 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .sub-row { margin-bottom: 12px; }
 .sub-head { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 5px; }
 .sub-track { height: 8px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
-.sub-fill { height: 100%; background: var(--brand-grad); border-radius: 999px; transition: width 0.4s ease; }
-.sub-fill[data-over="true"] { background: linear-gradient(90deg, var(--up), #34d399); }
+.sub-fill {
+  height: 100%;
+  /* --fill is set per element: it is a measured value, not a rule. */
+  width: var(--fill, 0%);
+  background: var(--brand-grad);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.sub-fill[data-over="true"] { background: linear-gradient(90deg, var(--up), var(--up-strong)); }
 
 /* FAQ */
 .faq { margin-top: 14px; }
@@ -871,6 +908,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
   padding: 22px 0; font-size: 0.76rem; color: var(--text-muted); margin-top: 36px;
 }
 .disclaimer strong { color: var(--text); }
+.disclaimer-text { margin: 0; }
 .footer-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin-top: 10px; }
 .footer-links { display: flex; gap: 14px; flex-wrap: wrap; }
 .footer-links a { font-weight: 600; }

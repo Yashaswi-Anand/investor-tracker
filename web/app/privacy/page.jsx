@@ -18,7 +18,7 @@ const EFFECTIVE_DATE = "20 August 2026";
 export default function PrivacyPage() {
   return (
     <div className="container page-pad">
-    <article className="card" style={{ maxWidth: 760, margin: "0 auto" }}>
+    <article className="card page-card">
       <h1>Privacy Policy</h1>
       <p className="subtitle">
         {SITE.name} ({SITE.url.replace("https://", "")}) · Effective{" "}
@@ -84,7 +84,7 @@ export default function PrivacyPage() {
         Play Store listing.
       </p>
 
-      <p style={{ marginTop: 24 }}>
+      <p className="back-row">
         <Link href="/">← Back to all IPOs</Link>
       </p>
     </article>

@@ -282,7 +282,7 @@ function HeadCell({ column, sort, onSort, pinned, pinEdge, left, onPin }) {
       data-dir={active ? sort.dir : undefined}
       data-pinned={pinned || undefined}
       data-pin-edge={pinEdge || undefined}
-      style={pinned ? { left } : undefined}
+      style={pinned ? { "--pin-left": `${left}px` } : undefined}
       aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}
     >
       <div className="th-inner">
@@ -699,7 +699,11 @@ export default function IpoList({ ipos }) {
                             data-pin-edge={
                               (lastPinned && lastPinned.key === column.key) || undefined
                             }
-                            style={isPinned ? { left: offsets[column.key] ?? 0 } : undefined}
+                            style={
+                              isPinned
+                                ? { "--pin-left": `${offsets[column.key] ?? 0}px` }
+                                : undefined
+                            }
                           >
                             {column.render(ipo, { timeline })}
                           </td>
