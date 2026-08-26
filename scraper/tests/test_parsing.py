@@ -558,6 +558,37 @@ def test_locked_gmp_counts_as_observed_every_run():
 
 
 # --------------------------------------------------------------------------
+# IPOs NSE has stopped listing
+# --------------------------------------------------------------------------
+def test_carried_row_cannot_blank_stored_columns():
+    """A skeleton row for an IPO NSE dropped must only ever ADD.
+
+    These rows are re-introduced so their timetable can be filled in and so
+    they can still reach 'listed'. They carry almost no fields, so the danger
+    is the opposite of the usual one: an over-eager payload would wipe the
+    price band, lot size and GMP already stored for that IPO.
+    """
+    carried = {
+        "slug": "tempsens",
+        "name": "Tempsens Instruments (India) Limited",
+        "status": "closed",
+        "updated_at": "2026-08-26T06:00:00+00:00",
+    }
+    payload = db.apply_locks([dict(carried)], {})[0]
+    assert set(payload) == {"slug", "name", "status", "updated_at"}
+    for column in ("gmp", "price_band_high", "lot_size", "subscription_total"):
+        assert column not in payload
+
+
+def test_carried_row_still_reaches_listed():
+    """The whole point: promotion works for an IPO NSE no longer returns."""
+    carried = {"slug": "tempsens", "name": "Tempsens", "status": "closed"}
+    existing = {"locked": [], "listing_date": "2026-08-28"}
+    pipeline.apply_listing_status(carried, existing, today="2026-08-28")
+    assert carried["status"] == "listed"
+
+
+# --------------------------------------------------------------------------
 # Timetable source
 # --------------------------------------------------------------------------
 def test_timetable_skips_ipos_that_already_have_everything():

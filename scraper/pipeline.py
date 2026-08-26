@@ -14,6 +14,8 @@ import datetime
 import time
 import traceback
 
+import requests
+
 import config
 import db
 import util
@@ -119,6 +121,19 @@ def run():
             db.log_run("nse", False, 0, message,
                        int((time.time() - started) * 1000))
             return False, message, 0
+
+        # NSE stops listing an IPO within a day or two of it closing, which
+        # is usually BEFORE it lists. Pull those back in, or they freeze at
+        # 'closed' forever with an empty timetable — every later stage works
+        # from this list.
+        try:
+            carried = db.fetch_unfinished([row["slug"] for row in rows])
+            if carried:
+                print(f"      + {len(carried)} still in flight, no longer listed by NSE")
+                rows.extend(carried)
+        except requests.RequestException as error:
+            # Enrichment, not the point of the run: NSE's own rows still write.
+            print(f"      (could not read in-flight IPOs: {error})")
 
         print(f"[2/6] GMP source: {config.GMP_SOURCE}")
         gmp_by_slug = gmp_source.fetch(rows)

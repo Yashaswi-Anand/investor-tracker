@@ -12,6 +12,7 @@ you curate by hand:
 import requests
 
 import config
+import util
 
 # Never sent to the database by the scraper, under any circumstance.
 PROTECTED_COLUMNS = {"manual", "locked", "created_at"}
@@ -142,6 +143,42 @@ def fetch_existing(slugs):
         }
         for row in response.json()
     }
+
+
+def fetch_unfinished(known_slugs, limit=200):
+    """IPOs still in flight that NSE has stopped returning.
+
+    NSE's list endpoints carry only current and upcoming issues, so an IPO
+    drops off them within a day or two of closing — usually BEFORE it lists.
+    Every stage of a run works from the rows NSE just handed us, so without
+    this those IPOs are never touched again: their timetable can never be
+    filled in, and because apply_listing_status only sees rows in the current
+    batch, they can never reach 'listed' no matter what listing_date says.
+    They would sit at 'closed' permanently.
+
+    Returns skeleton rows — slug, name and stored status. Everything else is
+    left out on purpose: apply_locks drops empty values, so a skeleton can
+    only ever add to a stored row, never blank part of it.
+    """
+    response = requests.get(
+        config.supabase_url("ipos")
+        + "?select=slug,name,status&status=in.(upcoming,open,closed)"
+        + f"&limit={limit}",
+        headers=_headers(),
+        timeout=config.REQUEST_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    known = set(known_slugs or ())
+    return [
+        {
+            "slug": row["slug"],
+            "name": row.get("name"),
+            "status": row.get("status"),
+            "updated_at": util.utc_now(),
+        }
+        for row in response.json()
+        if row.get("slug") not in known
+    ]
 
 
 def apply_locks(rows, existing):
