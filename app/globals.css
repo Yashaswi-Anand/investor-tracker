@@ -349,6 +349,138 @@ h2::before {
 .tab-sm { padding: 6px 12px; min-height: 32px; font-size: 0.78rem; }
 
 /* ==========================================================================
+   Toolbar — search, quick filter, sort
+   ========================================================================== */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 14px;
+}
+.search { position: relative; flex: 1 1 200px; max-width: 320px; }
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 30px 8px 34px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+/* The native search-field clear button is unstyleable and inconsistent
+   across browsers, so it is hidden in favour of .search-clear. */
+.search-input::-webkit-search-cancel-button { display: none; }
+.search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.search-clear:hover { background: var(--border-strong); }
+
+/* Same pill language as .tab, but a toggle rather than a tablist member. */
+.chip {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.chip:hover { transform: translateY(-1px); }
+.chip[data-active="true"] {
+  background: var(--warn-soft);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.sort-field { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+.sort-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.sort-select {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.sort-select:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
+
+/* Once the toolbar wraps, the auto margin would strand the sort control
+   right-aligned on a line of its own — give it the whole row instead. */
+@media (max-width: 560px) {
+  .sort-field { margin-left: 0; width: 100%; }
+  .sort-select { flex: 1; }
+}
+
+.result-note {
+  margin: -6px 0 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.link-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
    Cards (phone / app)
    ========================================================================== */
 .card-list { display: grid; gap: 10px; }
@@ -377,9 +509,39 @@ h2::before {
 .ipo-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .ipo-name { font-weight: 700; font-size: 0.98rem; letter-spacing: -0.01em; color: var(--text); }
 .ipo-meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 3px; }
+/* Status and, while bidding is open, how long is left — stacked so the
+   countdown reads as a qualifier on the badge rather than a separate flag. */
+.card-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.days-left {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+/* The last day to apply is the one worth alarming about. */
+.days-left[data-urgent="true"] { color: var(--down); background: var(--down-soft); }
+
+/* Second line inside a table cell, e.g. the countdown under Open – Close. */
+.cell-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--warn);
+}
+.cell-note[data-urgent="true"] { color: var(--down); }
+
+/* Sets no colour of its own: it sits beside .gmp-up / .gmp-down, which do. */
+.est-pct { margin-left: 4px; font-size: 0.88em; font-weight: 600; }
+
 .ipo-card-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Four stats: 2×2 on phones, one row once there is width for it. */
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-top: 12px;
   padding-top: 12px;
@@ -446,6 +608,40 @@ th {
   letter-spacing: 0.07em;
   font-weight: 700;
 }
+
+/* Sortable headers: the button carries the cell padding so the whole header
+   is a click target, not just the few pixels of text. */
+th[data-sortable] { padding: 0; }
+.th-sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.th-sort:hover { color: var(--text-2); }
+th[data-active="true"] .th-sort { color: var(--primary); }
+/* Triangle points up for ascending; the descending state rotates it. */
+.th-arrow {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 5px solid currentColor;
+  opacity: 0.28;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.th-sort:hover .th-arrow { opacity: 0.6; }
+th[data-active="true"] .th-arrow { opacity: 1; }
+th[data-dir="desc"] .th-arrow { transform: rotate(180deg); }
 tbody tr { border-top: 1px solid var(--border); transition: background 0.12s ease; }
 tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); }
 tbody tr:hover { background: var(--primary-soft); }
