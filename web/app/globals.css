@@ -78,7 +78,6 @@
     --primary: #d98a52;
     --primary-strong: #e8a370;
     --primary-soft: #2b1d13;
-  --theme-bar: #14100c;
     --theme-bar: #14100c;
     --bg: #14100c;
     --surface: #1e1811;
@@ -109,6 +108,7 @@
   --primary: #d98a52;
   --primary-strong: #e8a370;
   --primary-soft: #2b1d13;
+  --theme-bar: #14100c;
   --bg: #14100c;
   --surface: #1e1811;
   --surface-2: #272019;
@@ -245,12 +245,26 @@ button { font-family: inherit; }
   line-height: 1.15;
   text-wrap: balance;
 }
+/* The supporting half of the heading: its own line, quieter, so the two
+   read as statement then promise rather than one run-on sentence. */
+.hero-sub {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.6em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  opacity: 0.88;
+}
 .hero-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 18px;
 }
+/* Three tiles on a two-column phone grid would leave the third stranded
+   at half width. It is the one with two rows inside it, so give it the
+   whole line — it reads better wide anyway. */
+.stat-tile-wide { grid-column: 1 / -1; }
 .stat-tile {
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -321,7 +335,8 @@ a.top-gmp-row:active { background: rgba(255, 255, 255, 0.26); }
 @media (min-width: 760px) {
   .hero { padding: 40px 0 84px; }
   .hero h1 { font-size: 2.5rem; }
-  .hero-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 26px; }
+  .hero-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 26px; }
+  .stat-tile-wide { grid-column: auto; }
   .stat-tile .v { font-size: 1.5rem; }
 }
 
@@ -494,8 +509,15 @@ h2::before {
 
 /* Once the toolbar wraps, the auto margin would strand the sort control
    right-aligned on a line of its own — give it the whole row instead. */
+/* On a phone the search box was sharing its row with the filter chip and
+   ended up ~200px wide, too narrow to read a company name back. It takes
+   the whole first row now; the chip and the sort control share the next. */
 @media (max-width: 560px) {
-  .sort-select { margin-left: 0; width: 100%; }
+  .search { flex: 1 1 100%; max-width: none; }
+  /* flex-basis 0, not auto: the select's widest option is ~250px, so an
+     auto basis asks for more room than is left beside the chip and drops it
+     onto a third row. From zero it just takes whatever the chip leaves. */
+  .sort-select { margin-left: 0; flex: 1 1 0; width: auto; min-width: 0; }
 }
 
 .result-note {

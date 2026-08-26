@@ -176,6 +176,31 @@ const COLUMNS = [
   },
 ];
 
+/**
+ * Everything about a row that search should match.
+ *
+ * The placeholder promises lot size and price, so those have to be in here —
+ * an input that says it searches something it does not is worse than one that
+ * claims less. Numbers go in unformatted: a reader types 1200, not 1,200.
+ */
+function haystack(ipo) {
+  return [
+    ipo.name,
+    ipo.short_name,
+    ipo.symbol,
+    ipo.board,
+    ipo.status,
+    ipo.lot_size,
+    ipo.price_band_low,
+    ipo.price_band_high,
+    ipo.min_investment,
+    ipo.gmp,
+  ]
+    .filter((value) => value != null && value !== "")
+    .join(" ")
+    .toLowerCase();
+}
+
 /** The comparable value behind each sortable column. */
 function sortValue(ipo, key, today) {
   switch (key) {
@@ -431,13 +456,7 @@ export default function IpoList({ ipos }) {
 
     if (closingToday) rows = rows.filter((i) => i.close_date === today);
 
-    if (needle) {
-      rows = rows.filter((i) =>
-        `${i.name || ""} ${i.short_name || ""} ${i.symbol || ""}`
-          .toLowerCase()
-          .includes(needle)
-      );
-    }
+    if (needle) rows = rows.filter((i) => haystack(i).includes(needle));
 
     // The server already ordered by status then date; only re-sort when the
     // reader asked for a different column.
@@ -545,8 +564,8 @@ export default function IpoList({ ipos }) {
             className="search-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search company…"
-            aria-label="Search IPOs by company name"
+            placeholder="Search IPO, lot size, price…"
+            aria-label="Search IPOs by name, symbol, board, lot size or price"
           />
           {query ? (
             <button
