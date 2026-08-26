@@ -99,6 +99,24 @@ def apply_listing_status(row, existing_row, today=None):
     return row
 
 
+def merge_details(row, fallback, existing_row):
+    """The company/issue detail blob, merged rather than replaced.
+
+    Three sources feed one jsonb column and they fill DIFFERENT keys: NSE
+    carries the issue mechanics, the fallback carries what the business
+    actually is. A plain row.update() would let whichever ran last wipe the
+    other, and a source being down for one run would erase what it found
+    last week.
+
+    NSE wins any key both supply — the rule is NSE first, others only to fill
+    what it does not carry.
+    """
+    merged = dict((existing_row or {}).get("details") or {})
+    merged.update(fallback or {})
+    merged.update(row.get("details") or {})
+    return merged or None
+
+
 def compute_derived(row, gmp=None):
     """Fill in values we can calculate rather than fetch."""
     lot = row.get("lot_size")
@@ -154,7 +172,14 @@ def run():
         print("[4/7] Timetable + registrar (only for IPOs still missing it)...")
         timetable_by_slug = timetable_source.fetch(rows, existing)
         for row in rows:
-            row.update(timetable_by_slug.get(row["slug"], {}))
+            update = dict(timetable_by_slug.get(row["slug"], {}))
+            # Pulled out before the update so it cannot overwrite what NSE
+            # already put in row["details"] — see merge_details.
+            fallback_details = update.pop("details", None)
+            row.update(update)
+            details = merge_details(row, fallback_details, existing.get(row["slug"]))
+            if details:
+                row["details"] = details
         print(f"      {len(timetable_by_slug)} IPOs gained timetable data")
 
         # After the timetable, because it needs listing_date, and before the

@@ -18,5 +18,13 @@ export default async function sitemap() {
       changeFrequency: "hourly",
       priority: 0.8,
     })),
+    // Both are marked indexable, so leaving them out of the sitemap would be
+    // the two documents disagreeing about whether they should be found.
+    ...["/privacy", "/terms"].map((path) => ({
+      url: `${SITE.url}${path}`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    })),
   ];
 }

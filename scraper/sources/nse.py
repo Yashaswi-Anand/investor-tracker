@@ -109,6 +109,59 @@ def normalize_list_item(raw):
     }
 
 
+# Company and issue detail NSE publishes that has nowhere else to live.
+# Matched by the START of the title: NSE writes some of them at essay length
+# ("Cut-off time for UPI Mandate Confirmation by Investor..."), and an exact
+# match on those would break the first time a word changed.
+DETAIL_TITLES = (
+    ("issue_type", "Issue Type"),
+    ("discount", "Discount"),
+    ("tick_size", "Tick Size"),
+    ("sponsor_bank", "Sponsor Bank"),
+    ("upi_cutoff", "Cut-off time for UPI Mandate"),
+    ("categories", "Categories"),
+    ("max_retail", "Maximum Subscription Amount for Retail"),
+    ("max_employee", "Maximum Subscription Amount for El"),
+    ("registrar_address", "Address of the Registrar"),
+    ("registrar_contact", "Contact person name"),
+    ("market_timings", "IPO Market Timings"),
+)
+
+# Titles whose value is a document URL rather than prose.
+DETAIL_LINKS = (
+    ("rhp_url", "Red Herring Prospectus"),
+    ("ratios_url", "Ratios / Basis of Issue Price"),
+    ("anchor_url", "Anchor Allocation Report"),
+)
+
+_URL = re.compile(r"https?://\S+")
+
+
+def parse_company_details(info):
+    """The issue detail NSE carries beyond the columns we already store.
+
+    Values NSE writes as 'NA' are dropped rather than stored: a row reading
+    "Discount: NA" is noise, and an absent key lets the page leave the line
+    out entirely.
+    """
+    details = {}
+    for key, prefix in DETAIL_TITLES:
+        title = next((t for t in info if t.startswith(prefix)), None)
+        value = (info.get(title) or "").strip('" ').strip() if title else ""
+        # NSE writes long values as embedded quoted strings with newlines.
+        value = re.sub(r"\s+", " ", value)
+        if value and value.upper() not in ("NA", "N/A", "-"):
+            details[key] = value[:400]
+
+    for key, prefix in DETAIL_LINKS:
+        title = next((t for t in info if t.startswith(prefix)), None)
+        match = _URL.search(info.get(title) or "") if title else None
+        if match:
+            details[key] = match.group(0).rstrip('">,')
+
+    return details or None
+
+
 def parse_detail(detail):
     """Pull lot size / face value / issue size / lead managers out of ipo-detail.
 
@@ -146,6 +199,8 @@ def parse_detail(detail):
         "face_value": to_float(info.get("Face Value")),
         "issue_size": (info.get("Issue Size") or "").strip('" ') or None,
         "lead_managers": manager_list,
+        "registrar": (info.get("Name of the Registrar") or "").strip('" ') or None,
+        "details": parse_company_details(info),
     }
     if low is not None:
         fields["price_band_low"] = low

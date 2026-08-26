@@ -856,6 +856,18 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .kv-note { font-weight: 500; font-size: 0.8rem; }
 .kv dt { color: var(--text-muted); }
 .kv dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+/* Company & issue details: two columns of label/value rows once there is
+   room, one below that. The rows are .kv, so each already lays itself out —
+   this only decides how many of them sit side by side. */
+.detail-grid { margin: 0; }
+@media (min-width: 700px) {
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 22px;
+  }
+}
+
 .list { margin: 0; padding-left: 18px; font-size: 0.87rem; }
 .list li { margin-bottom: 7px; }
 

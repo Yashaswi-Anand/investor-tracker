@@ -101,6 +101,7 @@ export default function RootLayout({ children }) {
               <div className="footer-links">
                 <Link href="/">All IPOs</Link>
                 <Link href="/privacy">Privacy Policy</Link>
+                <Link href="/terms">Terms of Use</Link>
                 <a
                   href="https://www.nseindia.com/market-data/all-upcoming-issues-ipo"
                   target="_blank"

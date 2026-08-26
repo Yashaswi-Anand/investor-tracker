@@ -57,6 +57,18 @@ create table if not exists public.ipos (
   listing_price        numeric,
   listing_gain_pct     numeric,
 
+  -- Company and issue detail the scraper collects: issue type, discount,
+  -- sponsor bank, UPI cut-off, registrar address, prospectus link, and where
+  -- NSE does not carry it, the business description and promoters. Kept as
+  -- jsonb rather than twenty columns because the set differs per IPO and
+  -- grows as sources are added. Scraper-owned and merged, never replaced —
+  -- unlike `manual` below, which automation never touches.
+  --
+  -- ALREADY HAVE THE TABLE? Run this once:
+  --   alter table ipos add column if not exists details jsonb not null default '{}'::jsonb;
+  -- Until you do, the scraper drops the field and warns; nothing else breaks.
+  details              jsonb not null default '{}'::jsonb,
+
   -- Editorial content you control (about, financials, strengths, risks, faq)
   manual               jsonb not null default '{}'::jsonb,
   -- Column names the scraper must never overwrite, e.g. {gmp,lot_size}

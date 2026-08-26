@@ -9,6 +9,8 @@ you curate by hand:
      payload before the upsert, so those values survive every run.
 """
 
+import re
+
 import requests
 
 import config
@@ -47,6 +49,7 @@ KNOWN_COLUMNS = {
     "subscription_qib", "subscription_nii", "subscription_retail",
     "subscription_emp", "subscription_total",
     "listing_price", "listing_gain_pct",
+    "details",
     "source", "updated_at",
 }
 
@@ -118,8 +121,11 @@ TIMETABLE_COLUMNS = (
 # is never asked for it again.
 LISTING_COLUMNS = ("listing_price", "listing_gain_pct")
 
+# `details` comes back so the scraper can MERGE into it rather than
+# replacing it: each source fills different keys, and a source being down
+# must not erase what another one found last week.
 _EXISTING_COLUMNS = (
-    ("slug", "locked", "gmp") + TIMETABLE_COLUMNS + LISTING_COLUMNS
+    ("slug", "locked", "gmp", "details") + TIMETABLE_COLUMNS + LISTING_COLUMNS
 )
 
 
@@ -145,6 +151,7 @@ def fetch_existing(slugs):
         row["slug"]: {
             "locked": row.get("locked") or [],
             "gmp": row.get("gmp"),
+            "details": row.get("details") or {},
             **{
                 column: row.get(column)
                 for column in TIMETABLE_COLUMNS + LISTING_COLUMNS
@@ -258,23 +265,70 @@ def group_by_shape(rows):
     return list(groups.values())
 
 
+_MISSING_COLUMN = re.compile(r"'([a-z_]+)' column|column ['\"]?([a-z_]+)['\"]? of")
+
+
+def _column_not_in_database(response, sent_columns):
+    """The column name PostgREST just rejected, if that is what went wrong.
+
+    A brand-new column is written by the scraper before the migration that
+    creates it has necessarily been applied. Without this the whole batch
+    fails and the run loses its GMP, subscription and timetable data too —
+    one unmigrated column would take everything down with it.
+    """
+    if response.status_code not in (400, 404):
+        return None
+    body = (response.text or "").lower()
+    for match in _MISSING_COLUMN.finditer(body):
+        name = match.group(1) or match.group(2)
+        if name in sent_columns:
+            return name
+    # Some builds only echo the name, so fall back to looking for ours in it.
+    if "does not exist" in body or "schema cache" in body:
+        for name in sent_columns:
+            if f"'{name}'" in body or f'"{name}"' in body:
+                return name
+    return None
+
+
 def upsert_ipos(rows):
-    """Insert or update IPO rows, keyed on slug."""
+    """Insert or update IPO rows, keyed on slug.
+
+    A column the database does not have yet is dropped and the batch retried
+    once, loudly, rather than failing the run.
+    """
     if not rows:
         return 0
     written = 0
     for batch in group_by_shape(rows):
-        response = requests.post(
-            config.supabase_url("ipos") + "?on_conflict=slug",
-            headers=_headers(
-                {"Prefer": "resolution=merge-duplicates,return=minimal"}
-            ),
-            json=batch,
-            timeout=config.REQUEST_TIMEOUT_SECONDS,
-        )
+        response = _post_batch(batch)
+
+        sent = set(batch[0]) if batch else set()
+        missing = _column_not_in_database(response, sent)
+        if missing:
+            print(
+                f"  WARNING: the database has no '{missing}' column, so that "
+                f"field was NOT saved. Apply the migration in "
+                f"database/schema.sql, then it will fill in on the next run."
+            )
+            batch = [
+                {k: v for k, v in row.items() if k != missing} for row in batch
+            ]
+            response = _post_batch(batch)
+
         response.raise_for_status()
         written += len(batch)
     return written
+
+
+def _post_batch(batch):
+    """One merge-upsert request. Never raises — the caller decides."""
+    return requests.post(
+        config.supabase_url("ipos") + "?on_conflict=slug",
+        headers=_headers({"Prefer": "resolution=merge-duplicates,return=minimal"}),
+        json=batch,
+        timeout=config.REQUEST_TIMEOUT_SECONDS,
+    )
 
 
 def append_gmp_history(snapshots):

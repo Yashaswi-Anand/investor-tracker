@@ -149,6 +149,46 @@ def parse_registrar(flight):
     return (name.strip() if name else None), url
 
 
+# What the company actually does, which no exchange endpoint carries. NSE's
+# ipo-detail is all issue mechanics — it never says what the business is or
+# who owns it — so this is the fallback the brief asked for, used only to
+# fill gaps NSE leaves.
+COMPANY_KEYS = (
+    ("about", "company_desc"),
+    ("about", "about_company"),
+    ("sector", "company_sector"),
+    ("incorporated", "company_incorporation"),
+    ("promoters", "promoters"),
+    ("promoter_holding_pre", "promoter_shareholding_pre_issue"),
+    ("promoter_holding_post", "promoter_shareholding_post_issue"),
+    ("objects", "issue_objects"),
+)
+
+_TAGS = re.compile(r"<[^>]+>")
+
+
+def parse_company(flight):
+    """{key: text} of company-level detail from a detail page.
+
+    Several fields arrive as HTML fragments, so tags are stripped rather than
+    stored — this text is rendered as text, and passing markup through would
+    mean either escaping it visibly or trusting a third party's HTML.
+    """
+    found = {}
+    for key, source_key in COMPANY_KEYS:
+        if key in found:
+            continue  # first source key wins, so the order above is the priority
+        raw = json_string(flight, source_key)
+        if not raw:
+            continue
+        text = re.sub(r"\s+", " ", _TAGS.sub(" ", raw)).strip()
+        # A currency-code stub like "$26" is a template that never filled in.
+        if len(text) < 3 or re.fullmatch(r"[$₹]\d+", text):
+            continue
+        found[key] = text[:1200]
+    return found
+
+
 def _headers(source, accept):
     return {
         "User-Agent": config.SCRAPER_USER_AGENT,
@@ -227,6 +267,10 @@ def _fetch_detail(source, path):
         found["registrar"] = name
     if registrar_url:
         found["registrar_url"] = registrar_url
+
+    company = parse_company(flight)
+    if company:
+        found["details"] = company
     return found
 
 
@@ -290,7 +334,7 @@ def fetch(ipo_rows, existing=None):
         found = {
             column: value
             for column, value in detail.items()
-            if column in outstanding and value
+            if value and (column in outstanding or column == "details")
         }
         if found:
             results.setdefault(slug, {}).update(found)
