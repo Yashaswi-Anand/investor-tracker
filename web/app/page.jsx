@@ -6,15 +6,7 @@ import {
   gmpDeltas,
   gmpSparklines,
 } from "../lib/data";
-import {
-  fmtShortDate,
-  fmtTime,
-  gmpPercent,
-  inr,
-  istDateOf,
-  istToday,
-  safeJsonLd,
-} from "../lib/format";
+import { gmpPercent, inr, safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
 
 // Rendered on every request: a live tracker must never show a cached GMP.
@@ -36,21 +28,10 @@ export default async function HomePage() {
   // Day-over-day GMP movement + a 3-day sparkline per IPO for the dashboard.
   const deltas = gmpDeltas(snapshots);
   const sparks = gmpSparklines(snapshots);
-  // Per-row freshness is formatted HERE, not in IpoList: that component is a
-  // client component, and running toLocaleTimeString on both sides of the
-  // boundary invites a hydration mismatch between Node's ICU and the
-  // browser's. Today's premiums show a clock time; older ones show the day,
-  // which is the honest signal that a premium has not moved recently.
-  const today = istToday();
   const ipos = rawIpos.map((ipo) => ({
     ...ipo,
     gmp_delta: deltas[ipo.slug] ? deltas[ipo.slug].delta : null,
     gmp_spark: sparks[ipo.slug] || null,
-    gmp_stamp: ipo.gmp_updated_at
-      ? istDateOf(ipo.gmp_updated_at) === today
-        ? fmtTime(ipo.gmp_updated_at)
-        : fmtShortDate(ipo.gmp_updated_at)
-      : null,
   }));
 
   const open = ipos.filter((i) => i.status === "open");
