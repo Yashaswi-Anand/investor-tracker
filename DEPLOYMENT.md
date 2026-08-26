@@ -11,7 +11,7 @@ already own — zero extra cost). **Brand/app name:** Investor.
 | Piece | Where | Why |
 |---|---|---|
 | Website (Next.js) | Hostinger **Node.js Web App** on your Business/Cloud plan | [Officially supported](https://docs.hostinger.com/node.js/creating-an-app): Git connect, auto-deploy on push, Node 18/20/22/24. `next start` runs as a real server, so per-request rendering works |
-| Scraper (every 30 min) | **GitHub Actions** (free) | Hostinger web hosting has no supported Python runtime ([Hostinger recommends VPS for Python](https://www.hostinger.com/tutorials/install-pip-in-ubuntu/)); Actions is always-on and already wired up in `.github/workflows/scrape.yml` |
+| Scraper (hourly) | **GitHub Actions** (free) | Hostinger web hosting has no supported Python runtime ([Hostinger recommends VPS for Python](https://www.hostinger.com/tutorials/install-pip-in-ubuntu/)); Actions is always-on and already wired up in `.github/workflows/scrape.yml` |
 | Database | Supabase (free tier) | Postgres + REST, row-level security already in `database/schema.sql` |
 | Domain + DNS | Hostinger | You already have the account |
 
@@ -79,7 +79,7 @@ the web app in hPanel — nothing to buy, nothing to do now.
    `Done in …s — N IPOs, …`.
 6. Confirm in Supabase → **Table Editor → ipos** — rows are there.
 
-That's the scraper deployed: it now runs every 30 minutes forever, no
+That's the scraper deployed: it now runs hourly forever, no
 machine of yours involved. (`.github/workflows/scrape.yml` defines it.)
 
 ### Agar GitHub Actions se NSE block ho (403 / "NSE returned no records")
@@ -99,7 +99,7 @@ way, in order of preference:
    ```
    cd /home/YOUR_USER/scraper && SUPABASE_URL=... SUPABASE_SERVICE_KEY=... python3 run_once.py
    ```
-   Schedule: every 30 minutes.
+   Schedule: hourly, on the hour.
 3. **Cheapest Hostinger KVM VPS** (~₹300/mo) — you said you're open to
    buying one; a system cron there is bulletproof. Ask and I'll write the
    exact VPS runbook.
@@ -191,7 +191,7 @@ Full walkthrough with screenshots-level detail:
 ## Phase 5 — Day-2 operations (roz ka kaam)
 
 - **GMP is automatic** (`GMP_SOURCE=ipowatch` in the scrape workflow) and
-  refreshes every 30 minutes; the site shows it with a day-over-day change and
+  refreshes hourly; the site shows it with a day-over-day change and
   a per-IPO history table. To override one IPO by hand:
   ```sql
   update ipos set gmp = 62, locked = '{gmp}' where slug = 'company-slug';

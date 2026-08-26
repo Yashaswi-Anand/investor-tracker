@@ -8,7 +8,7 @@ the app changes — no rebuild, no Play Store review.
 
 ```
         ┌──────────────────────────────┐
-        │  scraper/  (runs every 30m)  │   NSE official API + optional GMP
+        │  scraper/  (runs hourly)     │   NSE official API + optional GMP
         └───────────────┬──────────────┘
                         │ writes
                         ▼
@@ -40,7 +40,7 @@ the app changes — no rebuild, no Play Store review.
 
 | Change | Website | Android app |
 |---|---|---|
-| New IPO, GMP, subscription figures | instant — pages render per request; data is at most 30 min old (scraper cadence) | same |
+| New IPO, GMP, subscription figures | instant — pages render per request; data is at most an hour old (scraper cadence) | same |
 | Page layout, colours, new pages, new features | on deploy | same, instantly |
 | App name, launcher icon, package id | — | needs an APK rebuild |
 
@@ -60,7 +60,7 @@ the app changes — no rebuild, no Play Store review.
 | `service_role` key | `scraper/.env` only | write access — **never** put it in `web/` |
 
 > The free tier pauses a project after ~1 week of no traffic. Once the
-> scheduler is running every 30 minutes this stops happening.
+> scheduler is running hourly this stops happening.
 
 ## 2. Scraper
 
@@ -82,7 +82,7 @@ Run it for real, once:
 python run_once.py
 ```
 
-Run it forever, every 30 minutes:
+Run it forever, once an hour:
 
 ```bash
 python scheduler.py
@@ -205,7 +205,7 @@ becomes a table on desktop.
 
 The site runs on **Hostinger Node.js Web Apps** (Business plan), auto-deployed
 from this repo on every push to `main`. The scraper runs on **GitHub
-Actions** every 30 minutes. Full step-by-step runbook: [`DEPLOYMENT.md`](DEPLOYMENT.md).
+Actions** hourly. Full step-by-step runbook: [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 Live: https://investor.socialriser.com
 
@@ -215,7 +215,7 @@ The scraper needs a machine that is always on. Cheapest options:
 
 | Option | Cost | Notes |
 |---|---|---|
-| **GitHub Actions cron (in use)** | free | `.github/workflows/scrape.yml`, every 30 min; secrets `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` |
+| **GitHub Actions cron (in use)** | free | `.github/workflows/scrape.yml`, hourly; secrets `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` |
 | Any small VPS | ~₹300/mo | run `scheduler.py` under `systemd` |
 | Your PC | free | fine while testing; data stops when the machine sleeps |
 

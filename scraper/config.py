@@ -158,8 +158,10 @@ REQUEST_TIMEOUT_SECONDS = int(os.environ.get("REQUEST_TIMEOUT_SECONDS", "30"))
 DELAY_SECONDS = float(os.environ.get("DELAY_SECONDS", "1.5"))
 MAX_RETRIES = int(os.environ.get("MAX_RETRIES", "3"))
 
-# Scheduler interval (minutes) used by scheduler.py
-INTERVAL_MINUTES = int(os.environ.get("INTERVAL_MINUTES", "30"))
+# Scheduler interval (minutes) used by scheduler.py. Matches the hourly
+# cron in .github/workflows/scrape.yml, which is what actually runs in
+# production; scheduler.py is the always-on alternative.
+INTERVAL_MINUTES = int(os.environ.get("INTERVAL_MINUTES", "60"))
 
 # Fetch per-IPO detail (lot size etc). One extra request per IPO.
 FETCH_DETAILS = os.environ.get("FETCH_DETAILS", "true").lower() == "true"

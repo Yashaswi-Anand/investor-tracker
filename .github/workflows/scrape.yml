@@ -21,18 +21,18 @@ name: scrape
 
 on:
   schedule:
-    # Asks for every 15 minutes; do NOT read that as a guarantee.
+    # Hourly, on the hour — 24 runs a day at most.
     #
-    # Measured over 166 runs across 4.5 days (26 Aug 2026): median gap 34
-    # minutes, mean 39, longest 94. GitHub runs scheduled workflows on a
-    # best-effort basis and delays them heavily under load, and a shorter
-    # cron does not buy a shorter gap — it only means more requests get
-    # dropped. Asking for 15 keeps the effective interval as low as GitHub
-    # is willing to go.
+    # "At most" is the honest word. Measured over 166 runs across 4.5 days
+    # (26 Aug 2026) while this asked for */15: median gap 34 minutes, mean
+    # 39, longest 94. GitHub runs scheduled workflows on a best-effort basis
+    # and silently drops firings under load, so the gap was never the 15
+    # minutes requested. Expect the same here: hourly is the ceiling, and
+    # some hours will be missed.
     #
-    # If the site genuinely needs a dependable interval, this has to move off
+    # If the site ever needs a dependable interval, this has to move off
     # Actions — a cron job on the Hostinger box would actually honour it.
-    - cron: "*/15 * * * *"
+    - cron: "0 * * * *"
   workflow_dispatch: {}        # manual run button, for testing
 
 concurrency:

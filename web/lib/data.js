@@ -3,7 +3,7 @@
  * (RLS allows SELECT only).
  *
  * Reads are deliberately UNCACHED (`cache: "no-store"`). This is a live
- * tracker: the scraper writes every 30 minutes and readers expect the
+ * tracker: the scraper writes hourly and readers expect the
  * latest GMP on every load. With ISR, low traffic + stale-while-revalidate
  * meant a page could keep serving a 10-minute-old render, and separate
  * server instances each held their own copy — so a reload could flip
@@ -130,7 +130,7 @@ export async function getAllSlugs() {
 /**
  * Most recent GMP snapshots across ALL IPOs — one query that lets the
  * dashboard show each IPO's day-over-day GMP change without a request per
- * row. 3000 rows ≈ 60 IPOs × 48 snapshots/day, i.e. comfortably more than
+ * row. 3000 rows ≈ 60 IPOs × 24 snapshots/day, i.e. comfortably more than
  * the two days we need.
  */
 export async function getRecentGmpSnapshots(limit = 3000) {
@@ -148,7 +148,7 @@ export async function getRecentGmpSnapshots(limit = 3000) {
  *
  * `delta` compares today's last value with the previous day's last value,
  * so it reads "GMP moved +₹12 since yesterday" — the number IPO readers
- * actually look for — rather than flickering on every 30-minute tick.
+ * actually look for — rather than flickering on every hourly tick.
  */
 /**
  * When the scraper last wrote to the database, as an ISO string.
