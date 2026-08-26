@@ -95,7 +95,7 @@ export default async function HomePage() {
           <p>
             Live GMP with daily history, subscription status, price band, lot
             size, minimum investment, allotment and listing dates for Mainboard
-            &amp; SME IPOs. Updated every 15 minutes.
+            &amp; SME IPOs.
           </p>
 
           <div className="hero-stats">
