@@ -79,7 +79,7 @@ export default function RootLayout({ children }) {
         <header className="site-header">
           <div className="container">
             <Link href="/" className="brand" aria-label={`${SITE.name} — home`}>
-              <Logo tagline="IPO Tracker · India" />
+              <Logo tagline="Track. Analyze. Invest" />
             </Link>
             <div className="header-actions">
               <ThemeToggle />

@@ -5,7 +5,6 @@ import {
   getRecentGmpSnapshots,
   gmpDeltas,
   gmpSparklines,
-  lastUpdatedAt,
 } from "../lib/data";
 import {
   fmtShortDate,
@@ -54,10 +53,6 @@ export default async function HomePage() {
       : null,
   }));
 
-  // When the scraper last refreshed the data — shown so readers can see the
-  // page is live, even on a run where no premium moved.
-  const lastRun = lastUpdatedAt(ipos);
-
   const open = ipos.filter((i) => i.status === "open");
   const upcoming = ipos.filter((i) => i.status === "upcoming");
 
@@ -105,11 +100,13 @@ export default async function HomePage() {
 
       <section className="hero">
         <div className="container">
-          {/* Short on purpose. The long-form keywords live in the page
-              metadata, so the one line on screen can lead with the two words
-              readers actually arrive searching for. */}
+          {/* Two lines, one heading: the second is a supporting clause, not a
+              separate thought, so splitting it into its own element would tell
+              a screen reader otherwise. The long-form keywords live in the
+              page metadata. */}
           <h1>
-            Live GMP. <span className="nowrap">Every IPO in India.</span>
+            IPO Insights.
+            <span className="hero-sub">Live Data. Smarter Decision</span>
           </h1>
 
           <div className="hero-stats">
@@ -131,7 +128,7 @@ export default async function HomePage() {
                   : "Nothing announced yet"}
               </div>
             </div>
-            <div className="stat-tile">
+            <div className="stat-tile stat-tile-wide">
               <div className="k">Top GMP (% of price)</div>
               <div className="top-gmp">
                 {[
@@ -161,17 +158,6 @@ export default async function HomePage() {
                     </div>
                   )
                 )}
-              </div>
-            </div>
-            <div className="stat-tile">
-              <div className="k">Last updated</div>
-              <div className="v num">
-                {lastRun ? fmtTime(lastRun) : "—"}
-              </div>
-              <div className="s">
-                {lastRun
-                  ? `${fmtShortDate(lastRun)} IST · ${ipos.length} IPOs tracked`
-                  : `${ipos.length} IPOs · Mainboard + SME`}
               </div>
             </div>
           </div>
