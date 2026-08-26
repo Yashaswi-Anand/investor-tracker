@@ -76,17 +76,73 @@ export function daysUntil(date, today = istToday()) {
 }
 
 /**
- * "Last day" / "2 days left" for an issue that is still accepting bids.
+ * The next thing about to happen to this IPO: {text, urgent} or null.
  *
- * Returns null for anything not currently open, so callers can render it
- * unconditionally without checking status themselves.
+ * Every stage gets a countdown, not just the open one — an upcoming issue
+ * counts down to its open date, a live one to its close, and a closed one to
+ * its listing. Which date matters depends entirely on where the IPO is, so
+ * reading a single date would be wrong for two thirds of the table.
+ *
+ * `urgent` marks the day it actually happens, which is the only one worth
+ * colouring differently.
  */
-export function closingLabel(ipo, today = istToday()) {
-  if (!ipo || String(ipo.status || "").toLowerCase() !== "open") return null;
-  const left = daysUntil(ipo.close_date, today);
-  if (left == null || left < 0) return null;
-  if (left === 0) return "Last day";
-  return left === 1 ? "1 day left" : `${left} days left`;
+export function timelineLabel(ipo, today = istToday()) {
+  if (!ipo) return null;
+  const status = String(ipo.status || "").toLowerCase();
+
+  const stage = {
+    upcoming: { date: ipo.open_date, today: "Opens today", one: "Opens tomorrow", many: (n) => `Opens in ${n} days` },
+    open: { date: ipo.close_date, today: "Last day", one: "1 day left", many: (n) => `${n} days left` },
+    closed: { date: ipo.listing_date, today: "Lists today", one: "Lists tomorrow", many: (n) => `Lists in ${n} days` },
+  }[status];
+  if (!stage) return null;
+
+  const days = daysUntil(stage.date, today);
+  // A date already past means the scraper has not caught up with the status
+  // yet; showing "-2 days left" would be worse than showing nothing.
+  if (days == null || days < 0) return null;
+
+  if (days === 0) return { text: stage.today, urgent: true };
+  return { text: days === 1 ? stage.one : stage.many(days), urgent: false };
+}
+
+/**
+ * Issue size in ₹ crore: {value, exact} or null.
+ *
+ * The issuer's own wording is preferred because it is exact. Failing that we
+ * derive it from shares x cap price, which lands close but not on the nose
+ * (the real figure depends on the final cut-off price) — hence `exact`, so
+ * the display can say so rather than presenting a guess as a fact.
+ */
+export function issueSizeCrore(ipo) {
+  const match = String(ipo?.issue_size || "").match(
+    /([\d,]+(?:\.\d+)?)\s*(million|billion|crore|lakh)/i
+  );
+  if (match) {
+    const amount = Number(match[1].replace(/,/g, ""));
+    const unit = match[2].toLowerCase();
+    const crore =
+      unit === "crore" ? amount
+      : unit === "million" ? amount / 10
+      : unit === "billion" ? amount * 100
+      : amount / 100;
+    if (Number.isFinite(crore) && crore > 0) return { value: crore, exact: true };
+  }
+  if (ipo?.issue_size_shares && ipo?.price_band_high) {
+    const crore =
+      (Number(ipo.issue_size_shares) * Number(ipo.price_band_high)) / 1e7;
+    if (Number.isFinite(crore) && crore > 0) return { value: crore, exact: false };
+  }
+  return null;
+}
+
+export function fmtIssueSize(ipo) {
+  const size = issueSizeCrore(ipo);
+  if (!size) return "—";
+  const rupees = `₹${size.value.toLocaleString("en-IN", {
+    maximumFractionDigits: size.value >= 100 ? 0 : 1,
+  })} Cr`;
+  return size.exact ? rupees : `≈${rupees}`;
 }
 
 /**

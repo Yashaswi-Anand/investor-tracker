@@ -185,26 +185,6 @@ button { font-family: inherit; }
 .brand-name { font-weight: 800; font-size: 1.12rem; letter-spacing: -0.02em; }
 .brand-tag { font-size: 0.68rem; opacity: 0.85; font-weight: 500; letter-spacing: 0.02em; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
-.live-pill {
-  display: none;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
-}
-.live-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #6ee7b7;
-  box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.3);
-  animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.45 } }
-@media (min-width: 640px) { .live-pill { display: inline-flex; } }
-
 /* Theme toggle */
 .theme-toggle {
   width: 38px; height: 38px;
@@ -434,15 +414,8 @@ h2::before {
   color: var(--warn);
 }
 
-.sort-field { display: flex; align-items: center; gap: 7px; margin-left: auto; }
-.sort-label {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  font-weight: 700;
-  color: var(--text-muted);
-}
 .sort-select {
+  margin-left: auto;
   min-height: 38px;
   padding: 8px 12px;
   border-radius: 999px;
@@ -460,8 +433,7 @@ h2::before {
 /* Once the toolbar wraps, the auto margin would strand the sort control
    right-aligned on a line of its own — give it the whole row instead. */
 @media (max-width: 560px) {
-  .sort-field { margin-left: 0; width: 100%; }
-  .sort-select { flex: 1; }
+  .sort-select { margin-left: 0; width: 100%; }
 }
 
 .result-note {
@@ -588,25 +560,29 @@ h2::before {
 }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* Pin the company name while the rest scrolls — otherwise you scroll right
-   to read Status and no longer know which IPO the row belongs to. Each
-   sticky cell repaints its own row background, since a transparent one
+/* Pinned columns stay put while the rest scrolls — otherwise you scroll right
+   to read Status and no longer know which IPO the row belongs to. Which
+   columns are pinned is the reader's choice (up to two); `left` is set
+   inline from measured widths so the second sits flush against the first.
+   Each sticky cell repaints its own row background, since a transparent one
    would let the scrolling columns show through underneath. */
-.table-wrap th:first-child,
-.table-wrap td:first-child {
+.table-wrap th[data-pinned],
+.table-wrap td[data-pinned] {
   position: sticky;
-  left: 0;
   z-index: 2;
   background: var(--surface);
-  /* Hairline + soft drop shadow so the pinned column reads as sitting above
-     the columns sliding underneath it. */
-  box-shadow: 1px 0 0 var(--border), 6px 0 10px -6px rgba(15, 23, 42, 0.18);
 }
-.table-wrap th:first-child { z-index: 3; background: var(--surface-2); }
-.table-wrap tbody tr:nth-child(even) td:first-child {
+.table-wrap th[data-pinned] { z-index: 3; background: var(--surface-2); }
+.table-wrap tbody tr:nth-child(even) td[data-pinned] {
   background: color-mix(in srgb, var(--surface-2) 45%, var(--surface));
 }
-.table-wrap tbody tr:hover td:first-child { background: var(--primary-soft); }
+.table-wrap tbody tr:hover td[data-pinned] { background: var(--primary-soft); }
+/* Only the rightmost pinned column casts the edge, so two pinned columns
+   read as one block rather than two stacked panels. */
+.table-wrap th[data-pin-edge],
+.table-wrap td[data-pin-edge] {
+  box-shadow: 1px 0 0 var(--border), 6px 0 10px -6px rgba(15, 23, 42, 0.18);
+}
 table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
 th, td { padding: 12px 14px; text-align: left; white-space: nowrap; }
 /* Not sticky: .table-wrap scrolls horizontally, not vertically, so a sticky
@@ -620,15 +596,18 @@ th {
   font-weight: 700;
 }
 
-/* Sortable headers: the button carries the cell padding so the whole header
-   is a click target, not just the few pixels of text. */
-th[data-sortable] { padding: 0; }
+/* The header's inner row carries the cell padding, so the sort button fills
+   the header rather than being a few pixels of text to aim at, and the pin
+   toggle sits beside it without a second row of padding. */
+.table-wrap th { padding: 0; }
+.th-inner { display: flex; align-items: center; gap: 4px; padding: 12px 14px; }
+.th-label { white-space: nowrap; }
 .th-sort {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 100%;
-  padding: 12px 14px;
+  flex: 1;
+  padding: 0;
   border: 0;
   background: none;
   font: inherit;
@@ -638,6 +617,31 @@ th[data-sortable] { padding: 0; }
   cursor: pointer;
   white-space: nowrap;
 }
+
+/* Kept out of the way until wanted: a pin on every header, always visible,
+   would compete with the column names it sits next to. */
+.th-pin {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+.th-pin svg { fill: currentColor; }
+th:hover .th-pin,
+.th-pin:focus-visible { opacity: 1; }
+.th-pin:hover { background: var(--surface-3); color: var(--text-2); }
+/* A pinned column keeps its toggle lit, otherwise the only way to find out
+   what is pinned is to scroll sideways and watch what fails to move. */
+.th-pin[data-on] { opacity: 1; color: var(--primary); }
 .th-sort:hover { color: var(--text-2); }
 th[data-active="true"] .th-sort { color: var(--primary); }
 /* Triangle points up for ascending; the descending state rotates it. */
