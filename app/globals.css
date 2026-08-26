@@ -300,6 +300,11 @@ a.top-gmp-row:active { background: rgba(255, 255, 255, 0.26); }
 .top-gmp-pct { flex: 0 0 auto; font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
 .top-gmp-row[data-empty="true"] { opacity: 0.6; }
 .top-gmp-row[data-empty="true"] .top-gmp-name { font-weight: 500; }
+/* On a phone these are thumb targets, not just text. The desktop padding
+   leaves them ~31px tall, well under a comfortable tap. */
+@media (max-width: 759px) {
+  .top-gmp-row { padding-top: 9px; padding-bottom: 9px; }
+}
 @media (min-width: 760px) {
   .hero { padding: 40px 0 84px; }
   .hero h1 { font-size: 2.25rem; }
