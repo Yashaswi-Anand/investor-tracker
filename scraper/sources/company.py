@@ -148,7 +148,14 @@ def parse_financials(raw_html):
     rows = []
     for chunk in re.split(r"</tr>", table, flags=re.I):
         cells = [_clean(c) for c in re.findall(r"<t[dh][^>]*>(.*?)(?=<t[dh]|$)", chunk, re.I | re.S)]
-        cells = [c for c in cells if c]
+        # Only the empties at the ends go. An empty cell BETWEEN figures is a
+        # year the issuer left blank, and dropping it slides every later
+        # figure one year older — a wrong number under a real year, with
+        # nothing to show anything went wrong.
+        while cells and not cells[0]:
+            cells.pop(0)
+        while cells and not cells[-1]:
+            cells.pop()
         if cells:
             rows.append(cells)
 
@@ -165,11 +172,15 @@ def parse_financials(raw_html):
 
     if not periods or not values:
         return None
-    # Trim every series to the number of periods actually named, so a stray
-    # footer cell can never shift a figure onto the wrong year.
+    # Every series ends up exactly as long as the period list — trimmed if a
+    # stray footer cell made it longer, padded if the issuer published fewer
+    # figures than periods. The chart pairs the two by index, so a length
+    # mismatch would put each figure under the wrong year.
     return {
         "periods": periods,
-        "rows": {k: v[: len(periods)] for k, v in values.items()},
+        "rows": {
+            k: (v + [None] * len(periods))[: len(periods)] for k, v in values.items()
+        },
         "unit": "cr",
     }
 

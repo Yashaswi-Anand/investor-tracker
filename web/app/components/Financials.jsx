@@ -64,7 +64,16 @@ export default function Financials({ financials }) {
   // Published newest-first; a chart reads left to right through time.
   const periods = [...financials.periods].reverse();
   const labels = periodLabels(periods);
-  const values = [...rows[metric.key]].reverse();
+  // Padded to the period count BEFORE reversing. Rows written before the
+  // scraper padded them can still be short, and reversing the two lists
+  // independently would put every figure under the wrong year.
+  const series = rows[metric.key];
+  const values = [
+    ...series,
+    ...Array(Math.max(0, periods.length - series.length)).fill(null),
+  ]
+    .slice(0, periods.length)
+    .reverse();
 
   // Scaled from zero, not from the smallest bar: starting an axis part-way up
   // makes a 5% rise look like a doubling, which is the oldest trick there is.

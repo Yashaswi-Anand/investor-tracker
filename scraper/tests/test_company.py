@@ -189,3 +189,43 @@ def test_parse_highlights_does_not_borrow_the_next_sections_bullets():
 
 def test_parse_highlights_returns_none_when_nothing_is_published():
     assert company.parse_highlights("<p>Nothing here.</p>") is None
+
+
+def test_parse_financials_keeps_an_interior_blank_in_place():
+    # A blank cell is a year the issuer left out. Dropping it slid every later
+    # figure one year older — a wrong number under a real year, silently.
+    html = """
+      <table>
+        <tr><th>Period Ended</th><th>31 Mar 2026</th><th>31 Mar 2025</th><th>31 Mar 2024</th></tr>
+        <tr><td>Total Income</td><td>193.44</td><td></td><td>141.17</td></tr>
+      </table>
+    """
+    parsed = company.parse_financials(html)
+    assert parsed["rows"]["revenue"] == [193.44, None, 141.17]
+
+
+def test_parse_financials_pads_a_series_shorter_than_the_periods():
+    # The chart pairs periods and values by index, so a short series must be
+    # padded rather than silently shifted.
+    html = """
+      <table>
+        <tr><th>Period Ended</th><th>31 Mar 2026</th><th>31 Mar 2025</th><th>31 Mar 2024</th></tr>
+        <tr><td>Total Income</td><td>193.44</td><td>166.71</td></tr>
+      </table>
+    """
+    parsed = company.parse_financials(html)
+    assert parsed["rows"]["revenue"] == [193.44, 166.71, None]
+    assert len(parsed["rows"]["revenue"]) == len(parsed["periods"])
+
+
+def test_parse_financials_still_ignores_padding_cells_around_a_row():
+    # Whitespace-only cells at the ends are layout, not data.
+    html = """
+      <table>
+        <tr><th></th><th>Period Ended</th><th>31 Mar 2026</th><th>31 Mar 2025</th></tr>
+        <tr><td></td><td>Total Income</td><td>193.44</td><td>166.71</td><td>  </td></tr>
+      </table>
+    """
+    parsed = company.parse_financials(html)
+    assert parsed["periods"] == ["31 Mar 2026", "31 Mar 2025"]
+    assert parsed["rows"]["revenue"] == [193.44, 166.71]
