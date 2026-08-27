@@ -63,11 +63,28 @@ export const viewport = {
 // empty and the meta tag is left as served.
 const THEME_INIT = `(function(){try{var t=localStorage.getItem("theme");if(t!=="dark"&&t!=="light")return;var r=document.documentElement;r.setAttribute("data-theme",t);var m=document.querySelector('meta[name="theme-color"]');if(!m)return;var b=getComputedStyle(r).getPropertyValue("--theme-bar").trim();if(b)m.setAttribute("content",b)}catch(e){}})();`;
 
+/**
+ * Recovers from a chunk that is no longer on the server.
+ *
+ * A deploy replaces every hashed filename, so HTML served moments before it
+ * asks for scripts that have just been deleted. React then cannot hydrate and
+ * the reader gets a blank page reading "Application error: a client-side
+ * exception has occurred". Reloading fixes it, because the fresh HTML names
+ * the files that now exist — so do that automatically instead of leaving a
+ * dead page on screen.
+ *
+ * Runs before React, because if hydration is what failed no effect of ours
+ * will ever run. Rate-limited rather than once-only: a tight loop would be
+ * worse than the bug, but a genuine second deploy an hour later still heals.
+ */
+const CHUNK_RECOVERY = `(function(){var K="ipo-chunk-reload";addEventListener("error",function(e){var el=e.target;if(!el||el.tagName!=="SCRIPT")return;if(String(el.src||"").indexOf("/_next/static/")<0)return;try{var last=parseInt(sessionStorage.getItem(K)||"0",10);if(Date.now()-last<15000)return;sessionStorage.setItem(K,String(Date.now()))}catch(err){return}location.reload()},true)})();`;
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <script dangerouslySetInnerHTML={{ __html: CHUNK_RECOVERY }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

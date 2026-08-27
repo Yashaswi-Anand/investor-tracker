@@ -1,24 +1,37 @@
 /* ==========================================================================
    Service worker — makes the site installable (required by the Android TWA)
-   and keeps it usable when the network drops.
+   and gives a real answer when the network drops.
 
    Strategy:
-     * navigation requests -> network first, fall back to cache, then to the
-       cached home page. IPO data changes constantly, so fresh always wins.
-     * static assets       -> stale-while-revalidate, so the shell is instant.
+     * navigation requests -> network only, with a static offline page as the
+       fallback. The HTML is NEVER cached; see below.
+     * static assets       -> cache first. Everything under /_next/static is
+       content-hashed, so a hit is always the right file.
 
-   Bump CACHE_VERSION whenever the caching rules themselves change; the old
-   cache is deleted on activate.
+   WHY NAVIGATION HTML IS NOT CACHED. Next.js embeds the build's chunk hashes
+   in its HTML, and a deploy deletes the previous build's chunks. A cached
+   page therefore stops working the moment the site is redeployed: the HTML
+   asks for chunks the server no longer has, hydration fails, and the reader
+   gets "Application error: a client-side exception has occurred" on a blank
+   screen. That is precisely what happened on a slow mobile connection during
+   a run of deploys — the navigation fetch timed out, the stale HTML was
+   served in its place, and its chunks 404'd.
+
+   Serving a stale IPO list would be the wrong trade anyway: a GMP from three
+   hours ago presented as current is worse than an honest "you are offline".
+
+   Bump CACHE_VERSION whenever these rules change; old caches are deleted on
+   activate — which is also how the previously cached HTML gets cleared.
    ========================================================================== */
 
-const CACHE_VERSION = "ipo-tracker-v1";
-const OFFLINE_URLS = ["/"];
+const CACHE_VERSION = "ipo-tracker-v2";
+const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_VERSION)
-      .then((cache) => cache.addAll(OFFLINE_URLS))
+      .then((cache) => cache.add(OFFLINE_URL))
       .then(() => self.skipWaiting())
       .catch(() => self.skipWaiting())
   );
@@ -43,39 +56,38 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  // Never cache cross-origin requests (e.g. the Supabase API).
+  // Never touch cross-origin requests (e.g. the Supabase API).
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          cachePut(request, response);
-          return response;
-        })
-        .catch(() =>
-          caches
-            .match(request)
-            .then((cached) => cached || caches.match("/"))
-        )
+      fetch(request).catch(() =>
+        caches
+          .match(OFFLINE_URL)
+          .then((cached) => cached || Response.error())
+      )
     );
     return;
   }
 
-  // Static assets: serve from cache immediately, refresh in the background.
+  // Static assets are content-hashed, so a cached copy is never the wrong
+  // version of the file — only ever the right one or absent.
   if (
     url.pathname.startsWith("/_next/static") ||
     url.pathname.startsWith("/icons/")
   ) {
     event.respondWith(
       caches.match(request).then((cached) => {
-        const network = fetch(request)
+        if (cached) return cached;
+        // On a miss, go to the network and hand back whatever it says.
+        // The old code returned the (undefined) cache entry when the fetch
+        // rejected, and respondWith(undefined) fails the request outright.
+        return fetch(request)
           .then((response) => {
             cachePut(request, response);
             return response;
           })
-          .catch(() => cached);
-        return cached || network;
+          .catch(() => Response.error());
       })
     );
   }
