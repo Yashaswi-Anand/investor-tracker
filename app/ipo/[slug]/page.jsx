@@ -528,6 +528,11 @@ export default async function IpoDetailPage({ params }) {
       </section>
 
       <div className="grid">
+        {/* Two short KV cards that read side by side on a wide screen and
+            stack on a phone. Inside a cluster rather than loose in the grid:
+            a cluster divides only the space it is given, so a missing card
+            widens its neighbour instead of leaving a hole. */}
+        <div className="grid-cluster">
         <section className="card">
           <h2>Issue Details</h2>
           <dl>
@@ -558,13 +563,14 @@ export default async function IpoDetailPage({ params }) {
           <h2>Timetable</h2>
           <Timeline ipo={ipo} />
         </section>
+        </div>
 
         <section className="card card-wide">
           <h2>GMP History</h2>
           <GmpHistory history={gmpHistory} ipo={ipo} />
         </section>
 
-        <section className="card">
+        <section className="card card-wide">
           <h2>Subscription</h2>
           {/* Gate on ANY figure being present. Category-wise numbers often
               arrive before the total, and gating on the total alone would
@@ -623,6 +629,10 @@ export default async function IpoDetailPage({ params }) {
           </section>
         )}
 
+        {/* Three short lists, any of which may be absent: the source does not
+            publish risks for every issue. Auto-fitting them together means
+            whichever exist divide the row between them. */}
+        <div className="grid-cluster">
         {Array.isArray(strengths) && strengths.length > 0 && (
           <section className="card">
             <h2>Strengths</h2>
@@ -654,6 +664,17 @@ export default async function IpoDetailPage({ params }) {
             )}
           </section>
         )}
+        {Array.isArray(ipo.lead_managers) && ipo.lead_managers.length > 0 && (
+          <section className="card">
+            <h2>Lead Managers</h2>
+            <ul className="list">
+              {ipo.lead_managers.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+        </div>
 
         {details.financials ? (
           <section className="card card-wide">
@@ -680,16 +701,6 @@ export default async function IpoDetailPage({ params }) {
             deciding, so the business comes first and the UPI cut-off after. */}
         <IssueDetails ipo={ipo} />
 
-        {Array.isArray(ipo.lead_managers) && ipo.lead_managers.length > 0 && (
-          <section className="card">
-            <h2>Lead Managers</h2>
-            <ul className="list">
-              {ipo.lead_managers.map((item, i) => (
-                <li key={i}>{item}</li>
-              ))}
-            </ul>
-          </section>
-        )}
       </div>
 
       {/* Visible counterpart of the FAQPage structured data above. */}
