@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SITE } from "../lib/config";
 import {
   getAllIpos,
@@ -6,8 +5,9 @@ import {
   gmpDeltas,
   gmpSparklines,
 } from "../lib/data";
-import { gmpPercent, inr, safeJsonLd } from "../lib/format";
+import { safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
+import TopGmp from "./components/TopGmp";
 
 // Rendered on every request: a live tracker must never show a cached GMP.
 // (See the note in lib/data.js for why ISR was removed.)
@@ -37,23 +37,6 @@ export default async function HomePage() {
   const open = ipos.filter((i) => i.status === "open");
   const upcoming = ipos.filter((i) => i.status === "upcoming");
 
-  // Ranked as a PERCENTAGE of the price band, not as rupees: a ₹60 premium
-  // on a ₹120 issue is a far better bet than ₹60 on a ₹900 one, and ranking
-  // by the rupee figure would put the expensive issue on top every time.
-  const topGmp = (status) => {
-    const candidates = ipos.filter(
-      (i) => i.status === status && gmpPercent(i) != null
-    );
-    if (!candidates.length) return null;
-    return candidates.reduce((best, i) =>
-      gmpPercent(i) > gmpPercent(best) ? i : best
-    );
-  };
-
-  // Split by stage, because they answer different questions: one is what you
-  // can still apply for today, the other what to watch for.
-  const topOpen = topGmp("open");
-  const topUpcoming = topGmp("upcoming");
 
   // Structured data helps Google show rich results for the listing page.
   // Only the IPOs actually emitted are counted — declaring a larger
@@ -109,38 +92,7 @@ export default async function HomePage() {
                   : "Nothing announced yet"}
               </div>
             </div>
-            <div className="stat-tile stat-tile-wide">
-              <div className="k">Top GMP (% of price)</div>
-              <div className="top-gmp">
-                {[
-                  ["Open", topOpen],
-                  ["Upcoming", topUpcoming],
-                ].map(([label, ipo]) =>
-                  ipo ? (
-                    <Link
-                      key={label}
-                      href={`/ipo/${ipo.slug}`}
-                      className="top-gmp-row"
-                      title={`${ipo.name} — GMP ${inr(ipo.gmp)} on ${inr(ipo.price_band_high)}`}
-                    >
-                      <span className="top-gmp-label">{label}</span>
-                      <span className="top-gmp-name">
-                        {ipo.short_name || ipo.name}
-                      </span>
-                      <span className="top-gmp-pct num">
-                        {gmpPercent(ipo) > 0 ? "+" : ""}
-                        {gmpPercent(ipo).toFixed(0)}%
-                      </span>
-                    </Link>
-                  ) : (
-                    <div key={label} className="top-gmp-row" data-empty="true">
-                      <span className="top-gmp-label">{label}</span>
-                      <span className="top-gmp-name">No premium yet</span>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
+            <TopGmp ipos={ipos} />
           </div>
         </div>
       </section>

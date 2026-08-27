@@ -20,6 +20,7 @@ import {
   safeJsonLd,
   times,
 } from "../../../lib/format";
+import Financials from "../../components/Financials";
 import GmpLineChart from "../../components/GmpLineChart";
 import {
   BoardBadge,
@@ -245,39 +246,16 @@ const DOCUMENT_ROWS = [
  *
  * Renders nothing at all when the blob is empty, rather than an empty card.
  */
-function CompanyDetails({ ipo }) {
+function IssueDetails({ ipo }) {
   const details = ipo.details || {};
   const issueRows = ISSUE_DETAIL_ROWS.filter(([key]) => details[key]);
   const documents = DOCUMENT_ROWS.filter(([key]) => details[key]);
-  const hasProse = details.about || details.sector || details.promoters;
 
-  if (!hasProse && !issueRows.length && !documents.length) return null;
+  if (!details.objects && !issueRows.length && !documents.length) return null;
 
   return (
     <section className="card card-wide">
-      <h2>Company &amp; Issue Details</h2>
-
-      {details.about && <p className="about-text">{details.about}</p>}
-
-      {(details.sector || details.incorporated || details.promoters) && (
-        <dl className="detail-grid">
-          {details.sector && <KV label="Sector">{details.sector}</KV>}
-          {details.incorporated && (
-            <KV label="Incorporated">{details.incorporated}</KV>
-          )}
-          {details.promoters && <KV label="Promoters">{details.promoters}</KV>}
-          {details.promoter_holding_pre && (
-            <KV label="Promoter holding (pre-issue)">
-              {details.promoter_holding_pre}
-            </KV>
-          )}
-          {details.promoter_holding_post && (
-            <KV label="Promoter holding (post-issue)">
-              {details.promoter_holding_post}
-            </KV>
-          )}
-        </dl>
-      )}
+      <h2>Issue Details</h2>
 
       {details.objects && (
         <>
@@ -459,6 +437,12 @@ export default async function IpoDetailPage({ params }) {
   if (!ipo) notFound();
 
   const manual = ipo.manual || {};
+  // Hand-written content always wins over anything scraped.
+  const details = ipo.details || {};
+  const about = manual.about || details.about;
+  const strengths = Array.isArray(manual.strengths) && manual.strengths.length
+    ? manual.strengths
+    : details.strengths;
 
   // The same Q&A drives both the visible FAQ section and the JSON-LD.
   // Google requires structured-data content to be visible on the page, so
@@ -569,6 +553,11 @@ export default async function IpoDetailPage({ params }) {
           <Timeline ipo={ipo} />
         </section>
 
+        <section className="card card-wide">
+          <h2>GMP History</h2>
+          <GmpHistory history={gmpHistory} ipo={ipo} />
+        </section>
+
         <section className="card">
           <h2>Subscription</h2>
           {/* Gate on ANY figure being present. Category-wise numbers often
@@ -596,28 +585,51 @@ export default async function IpoDetailPage({ params }) {
           <SubscriptionHistory history={subscriptionHistory} />
         </section>
 
-        <section className="card card-wide">
-          <h2>GMP History</h2>
-          <GmpHistory history={gmpHistory} ipo={ipo} />
-        </section>
-
-        <CompanyDetails ipo={ipo} />
-
-        {manual.about && (
-          <section className="card">
-            <h2>About the Company</h2>
-            <p className="about-text">{manual.about}</p>
+        {about && (
+          <section className="card card-wide">
+            <h2>About {ipo.short_name || ipo.name}</h2>
+            <p className="about-text">{about}</p>
+            {(details.sector ||
+              details.incorporated ||
+              details.promoters ||
+              details.promoter_holding_pre ||
+              details.promoter_holding_post) && (
+              <dl className="detail-grid about-meta">
+                {details.sector && <KV label="Sector">{details.sector}</KV>}
+                {details.incorporated && (
+                  <KV label="Incorporated">{details.incorporated}</KV>
+                )}
+                {details.promoters && (
+                  <KV label="Promoters">{details.promoters}</KV>
+                )}
+                {details.promoter_holding_pre && (
+                  <KV label="Promoter holding (pre-issue)">
+                    {details.promoter_holding_pre}
+                  </KV>
+                )}
+                {details.promoter_holding_post && (
+                  <KV label="Promoter holding (post-issue)">
+                    {details.promoter_holding_post}
+                  </KV>
+                )}
+              </dl>
+            )}
           </section>
         )}
 
-        {Array.isArray(manual.strengths) && manual.strengths.length > 0 && (
+        {Array.isArray(strengths) && strengths.length > 0 && (
           <section className="card">
             <h2>Strengths</h2>
             <ul className="list">
-              {manual.strengths.map((item, i) => (
+              {strengths.map((item, i) => (
                 <li key={i}>{item}</li>
               ))}
             </ul>
+            {!manual.strengths && (
+              <p className="subtitle sub-hist-caption">
+                As stated by the company in its prospectus — not our assessment.
+              </p>
+            )}
           </section>
         )}
 
@@ -632,18 +644,30 @@ export default async function IpoDetailPage({ params }) {
           </section>
         )}
 
-        {manual.financials && typeof manual.financials === "object" && (
-          <section className="card">
+        {details.financials ? (
+          <section className="card card-wide">
             <h2>Financials</h2>
-            <dl>
-              {Object.entries(manual.financials).map(([key, value]) => (
-                <KV key={key} label={key}>
-                  {String(value)}
-                </KV>
-              ))}
-            </dl>
+            <Financials financials={details.financials} />
           </section>
+        ) : (
+          manual.financials &&
+          typeof manual.financials === "object" && (
+            <section className="card">
+              <h2>Financials</h2>
+              <dl>
+                {Object.entries(manual.financials).map(([key, value]) => (
+                  <KV key={key} label={key}>
+                    {String(value)}
+                  </KV>
+                ))}
+              </dl>
+            </section>
+          )
         )}
+
+        {/* Mechanics last: they matter at the moment of applying, not while
+            deciding, so the business comes first and the UPI cut-off after. */}
+        <IssueDetails ipo={ipo} />
 
         {Array.isArray(ipo.lead_managers) && ipo.lead_managers.length > 0 && (
           <section className="card">

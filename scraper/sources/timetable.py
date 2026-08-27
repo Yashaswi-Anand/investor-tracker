@@ -43,6 +43,7 @@ import requests
 
 import config
 import util
+from sources import company
 from sources.gmp import fiscal_year, match_to_ipos, robots_allows
 
 SOURCE_NAME = "timetable"
@@ -82,6 +83,17 @@ def _missing_columns(existing_row):
         for column in COLUMNS
         if column not in locked and not existing_row.get(column)
     }
+
+
+def _needs_company(existing_row):
+    """True when we have no description for this company yet.
+
+    Without this the detail page is fetched only while a DATE is missing, so
+    an IPO whose timetable arrived complete from the list payload would never
+    have its page opened and would never get a description.
+    """
+    details = (existing_row or {}).get("details") or {}
+    return not details.get("about")
 
 
 def flight_payload(html):
@@ -149,46 +161,6 @@ def parse_registrar(flight):
     return (name.strip() if name else None), url
 
 
-# What the company actually does, which no exchange endpoint carries. NSE's
-# ipo-detail is all issue mechanics — it never says what the business is or
-# who owns it — so this is the fallback the brief asked for, used only to
-# fill gaps NSE leaves.
-COMPANY_KEYS = (
-    ("about", "company_desc"),
-    ("about", "about_company"),
-    ("sector", "company_sector"),
-    ("incorporated", "company_incorporation"),
-    ("promoters", "promoters"),
-    ("promoter_holding_pre", "promoter_shareholding_pre_issue"),
-    ("promoter_holding_post", "promoter_shareholding_post_issue"),
-    ("objects", "issue_objects"),
-)
-
-_TAGS = re.compile(r"<[^>]+>")
-
-
-def parse_company(flight):
-    """{key: text} of company-level detail from a detail page.
-
-    Several fields arrive as HTML fragments, so tags are stripped rather than
-    stored — this text is rendered as text, and passing markup through would
-    mean either escaping it visibly or trusting a third party's HTML.
-    """
-    found = {}
-    for key, source_key in COMPANY_KEYS:
-        if key in found:
-            continue  # first source key wins, so the order above is the priority
-        raw = json_string(flight, source_key)
-        if not raw:
-            continue
-        text = re.sub(r"\s+", " ", _TAGS.sub(" ", raw)).strip()
-        # A currency-code stub like "$26" is a template that never filled in.
-        if len(text) < 3 or re.fullmatch(r"[$₹]\d+", text):
-            continue
-        found[key] = text[:1200]
-    return found
-
-
 def _headers(source, accept):
     return {
         "User-Agent": config.SCRAPER_USER_AGENT,
@@ -254,7 +226,8 @@ def _fetch_detail(source, path):
         timeout=config.REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
-    flight = flight_payload(response.text)
+    page = response.text
+    flight = flight_payload(page)
 
     found = {}
     for column, key in DETAIL_DATE_KEYS.items():
@@ -268,10 +241,43 @@ def _fetch_detail(source, path):
     if registrar_url:
         found["registrar_url"] = registrar_url
 
-    company = parse_company(flight)
-    if company:
-        found["details"] = company
+    found_company = _company_blob(page, flight)
+    if found_company:
+        found["details"] = found_company
     return found
+
+
+def _company_blob(page, flight):
+    """What the business is, what it earns, what it claims about itself.
+
+    All of it comes out of the page already downloaded above, so none of it
+    costs another request.
+    """
+    offsets = company.chunk_index(flight)
+    blob = {}
+
+    about = company._clean(
+        company.resolve(json_string(flight, "about_company"), flight, offsets)
+        or company.resolve(json_string(flight, "company_desc"), flight, offsets)
+        or ""
+    )
+    if len(about) > 40:
+        blob["about"] = about[:2000]
+
+    for key, field in (("sector", "company_sector"), ("promoters", "promoters")):
+        value = company._clean(json_string(flight, field) or "")
+        if len(value) > 2:
+            blob[key] = value[:300]
+
+    financials = company.parse_financials(page)
+    if financials:
+        blob["financials"] = financials
+
+    highlights = company.parse_highlights(page)
+    if highlights:
+        blob.update(highlights)
+
+    return blob
 
 
 def fetch(ipo_rows, existing=None):
@@ -289,8 +295,9 @@ def fetch(ipo_rows, existing=None):
     existing = existing or {}
     needed = {}
     for row in ipo_rows:
-        missing = _missing_columns(existing.get(row["slug"]))
-        if missing:
+        existing_row = existing.get(row["slug"])
+        missing = _missing_columns(existing_row)
+        if missing or _needs_company(existing_row):
             needed[row["slug"]] = missing
     if not needed:
         return {}  # steady state — not a single request
@@ -323,7 +330,8 @@ def fetch(ipo_rows, existing=None):
             break
         outstanding = missing - set(results.get(slug, {}))
         entry = listed.get(slug)
-        if not outstanding or not entry:
+        wants_company = _needs_company(existing.get(slug))
+        if (not outstanding and not wants_company) or not entry:
             continue
         budget -= 1
         try:

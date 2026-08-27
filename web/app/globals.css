@@ -324,6 +324,31 @@ button { font-family: inherit; }
    apply for, and the best among those still to open. One headline number
    would hide whichever of the two the reader came for. Each row links to
    that IPO. */
+/* Heading and the board toggle share the tile's top line. */
+.top-gmp-head { display: flex; align-items: center; gap: 8px; }
+.top-gmp-boards { display: flex; gap: 4px; margin-left: auto; }
+.board-chip {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--on-brand);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  transition: background 0.12s ease;
+}
+.board-chip:hover { background: rgba(255, 255, 255, 0.2); }
+/* The selected board is filled, not merely brighter: on a gradient band a
+   difference in opacity alone is not a reliable signal. */
+.board-chip[data-active="true"] {
+  background: var(--on-brand);
+  border-color: transparent;
+  color: var(--brand-1);
+}
+
 .top-gmp { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
 .top-gmp-row {
   display: flex;
@@ -971,3 +996,62 @@ td a:hover { color: var(--primary); text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ==========================================================================
+   Financials — one metric at a time, as bars
+   ========================================================================== */
+.fin-tabs { margin-bottom: 2px; }
+.fin-unit { margin: 0 0 14px; font-size: 0.78rem; }
+.fin-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 210px;
+  padding-top: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.fin-col {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.fin-value { font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
+/* Takes whatever height the labels leave, and is what the bar's percentage
+   is measured against — so 100% means the tallest bar, every time. */
+.fin-track {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+/* --h is the measured share of the tallest bar; the rule lives here, only
+   the number comes from the component. */
+.fin-bar {
+  width: 100%;
+  max-width: 46px;
+  height: var(--h, 0%);
+  border-radius: 6px 6px 0 0;
+  background: var(--up);
+  transition: height 0.3s ease;
+}
+.fin-bar[data-negative="true"] { background: var(--down); }
+@media (prefers-reduced-motion: reduce) {
+  .fin-bar { transition: none; }
+}
+/* Sits below the axis rule, so it reads as a label rather than a value. */
+.fin-year {
+  margin-bottom: -22px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.fin-chart + * { margin-top: 30px; }
+
+.about-meta { margin-top: 14px; }
