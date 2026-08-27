@@ -443,6 +443,12 @@ export default async function IpoDetailPage({ params }) {
   const strengths = Array.isArray(manual.strengths) && manual.strengths.length
     ? manual.strengths
     : details.strengths;
+  // Same rule as strengths: hand-written wins, scraped fills the gap. The
+  // source publishes risks for some issues and not others, so this section
+  // simply does not appear when neither has any.
+  const risks = Array.isArray(manual.risks) && manual.risks.length
+    ? manual.risks
+    : details.risks;
 
   // The same Q&A drives both the visible FAQ section and the JSON-LD.
   // Google requires structured-data content to be visible on the page, so
@@ -625,7 +631,7 @@ export default async function IpoDetailPage({ params }) {
                 <li key={i}>{item}</li>
               ))}
             </ul>
-            {!manual.strengths && (
+            {!(Array.isArray(manual.strengths) && manual.strengths.length) && (
               <p className="subtitle sub-hist-caption">
                 As stated by the company in its prospectus — not our assessment.
               </p>
@@ -633,14 +639,19 @@ export default async function IpoDetailPage({ params }) {
           </section>
         )}
 
-        {Array.isArray(manual.risks) && manual.risks.length > 0 && (
+        {Array.isArray(risks) && risks.length > 0 && (
           <section className="card">
             <h2>Risks</h2>
             <ul className="list">
-              {manual.risks.map((item, i) => (
+              {risks.map((item, i) => (
                 <li key={i}>{item}</li>
               ))}
             </ul>
+            {!(Array.isArray(manual.risks) && manual.risks.length) && (
+              <p className="subtitle sub-hist-caption">
+                As stated by the company in its prospectus — not our assessment.
+              </p>
+            )}
           </section>
         )}
 
