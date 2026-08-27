@@ -21,10 +21,26 @@ const METRICS = [
   { key: "net_worth", label: "Net Worth" },
 ];
 
-/** "31 Mar 2026" -> "2026"; anything unexpected is left as published. */
-function shortPeriod(period) {
-  const year = String(period || "").match(/(\d{4})/);
-  return year ? year[1] : period;
+/** "31 Mar 2026" -> "2026", keeping the month only when the year alone
+ *  would be ambiguous.
+ *
+ *  Issuers often publish a stub period alongside the full years — "30 Jun
+ *  2026" next to "31 Mar 2026" — and labelling both "2026" put two bars
+ *  under the same year with a quarter's revenue sitting beside a full
+ *  year's, which reads as a collapse rather than a shorter period.
+ */
+function periodLabels(periods) {
+  const years = periods.map((p) => {
+    const year = String(p || "").match(/(\d{4})/);
+    return year ? year[1] : String(p || "");
+  });
+  const ambiguous = new Set(years).size !== years.length;
+  if (!ambiguous) return years;
+
+  return periods.map((p, i) => {
+    const month = String(p || "").match(/([A-Za-z]{3})/);
+    return month ? `${month[1]} ${years[i].slice(2)}` : years[i];
+  });
 }
 
 const fmt = (n) =>
@@ -47,6 +63,7 @@ export default function Financials({ financials }) {
   const metric = available.find((m) => m.key === active) || available[0];
   // Published newest-first; a chart reads left to right through time.
   const periods = [...financials.periods].reverse();
+  const labels = periodLabels(periods);
   const values = [...rows[metric.key]].reverse();
 
   // Scaled from zero, not from the smallest bar: starting an axis part-way up
@@ -91,7 +108,7 @@ export default function Financials({ financials }) {
                   style={{ "--h": `${height}%` }}
                 />
               </div>
-              <span className="fin-year">{shortPeriod(period)}</span>
+              <span className="fin-year">{labels[index]}</span>
             </div>
           );
         })}
