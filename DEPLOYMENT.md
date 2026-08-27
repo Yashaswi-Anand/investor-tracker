@@ -147,10 +147,17 @@ auto-updates → app auto-updates.** No republishing, ever.
 **Verified live on 20 Aug 2026:** all endpoints 200, service worker
 `activated` on HTTPS, manifest valid (3 icons, standalone), JSON-LD valid.
 One note: Hostinger's proxy does not forward the custom `Cache-Control`
-header on `/sw.js` (it arrives with none). Registration still works; the
-only effect is that Chrome may cache `sw.js` for up to 24 h, so service
-worker *logic* changes can take up to a day to reach installed apps. Site
-content is unaffected.
+header on `/sw.js` (it arrives with none, and the CDN reports
+`x-hcdn-cache-status: HIT`). With no header the browser is free to apply
+heuristic caching, so a replaced worker need not reach installed apps
+promptly — and a broken worker is the one thing on the site that shipping
+new HTML cannot fix, because the worker is what decides whether that HTML
+is ever fetched.
+
+Registration therefore passes `updateViaCache: "none"` and calls
+`registration.update()` explicitly, which takes the HTTP cache out of the
+question rather than relying on the header arriving. See
+`web/app/components/ServiceWorker.jsx`.
 
 ## Phase 4 — Play Store app (1–3 days incl. Google review)
 
