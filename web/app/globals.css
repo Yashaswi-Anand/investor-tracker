@@ -861,8 +861,45 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .hero-stats-detail .stat-value { font-size: 1.05rem; }
 .hero-stats-detail .stat-gmp .stat-value { font-size: 1.3rem; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
+/* One column of full-width rows. Cards that genuinely belong side by side
+   go in a .grid-cluster instead.
+
+   The grid used to auto-fit at 290px, which gave three columns on a desktop
+   and left two of them empty behind every card that was not full width —
+   most of the page. Auto-fitting the whole page cannot fix that, because a
+   full-width card forces a row break either way; only the small cards
+   knowing about each other can. */
+/* minmax(0, 1fr), not a bare implicit column: an implicit column's minimum
+   is min-content, so one unshrinkable child — the four Financials tabs in a
+   row — widened the column past the phone and pushed the whole page sideways.
+   A zero minimum makes wide content scroll inside its own card, which is
+   what the tabs row and the tables were already set up to do. */
+.grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .card-wide { grid-column: 1 / -1; }
+
+/* A row of short cards, sized against each other rather than the page. Any
+   of them may be absent — the source publishes risks for some issues only —
+   and auto-fit means whichever survive divide the row between them instead
+   of leaving a hole where the missing one would have been. */
+.grid-cluster {
+  display: grid;
+  gap: 14px;
+  /* min() so a phone narrower than the 300px ideal falls back to the
+     full width rather than overflowing it. */
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  align-items: start;
+}
+/* A lone list stretched to the full page runs to unreadable line lengths,
+   so let the bullets flow into columns instead of the text.
+
+   Keyed to the CARD's width, not the viewport's: on a wide screen a card
+   sharing its cluster is only half the row, and splitting a 530px card into
+   two columns makes the lines worse, not better. */
+.grid-cluster > .card { container-type: inline-size; }
+@container (min-width: 620px) {
+  .list { columns: 2; column-gap: 26px; }
+  .list > li { break-inside: avoid; }
+}
 /* Side-by-side chart + table on wide screens; stacked on phones. */
 .hist-layout { display: grid; grid-template-columns: 1fr; gap: 14px; }
 /* The table now carries five columns, so give it a bit more room. */
@@ -1000,14 +1037,28 @@ td a:hover { color: var(--primary); text-decoration: none; }
 /* ==========================================================================
    Financials — one metric at a time, as bars
    ========================================================================== */
+:root { --fin-label-h: 24px; }
 .fin-tabs { margin-bottom: 2px; }
 .fin-unit { margin: 0 0 14px; font-size: 0.78rem; }
+/* The axis rule is drawn by ::after at exactly the label row's height, so
+   the labels sit below the line while staying inside the chart box. They
+   used to be pulled down with a negative margin, which put them outside it
+   and hard against the bottom of the card. */
 .fin-chart {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  height: 210px;
+  height: 240px;
   padding-top: 6px;
+  margin-bottom: 4px;
+}
+.fin-chart::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--fin-label-h);
   border-bottom: 1px solid var(--border);
 }
 .fin-col {
@@ -1033,25 +1084,32 @@ td a:hover { color: var(--primary); text-decoration: none; }
 }
 /* --h is the measured share of the tallest bar; the rule lives here, only
    the number comes from the component. */
+/* Brand, not the up-green used for a rising premium: these bars are a
+   quantity, not a verdict, and green next to the GMP figures above read as
+   "good" when it only ever meant "revenue". */
 .fin-bar {
   width: 100%;
   max-width: 46px;
   height: var(--h, 0%);
-  border-radius: 6px 6px 0 0;
-  background: var(--up);
+  border-radius: 7px 7px 0 0;
+  background: linear-gradient(180deg, var(--brand-3) 0%, var(--primary) 100%);
   transition: height 0.3s ease;
 }
-.fin-bar[data-negative="true"] { background: var(--down); }
+/* A loss is the one case where colour should carry meaning. */
+.fin-bar[data-negative="true"] {
+  background: linear-gradient(180deg, var(--down) 0%, var(--down) 100%);
+}
 @media (prefers-reduced-motion: reduce) {
   .fin-bar { transition: none; }
 }
-/* Sits below the axis rule, so it reads as a label rather than a value. */
+/* Height is fixed because ::after positions the axis rule against it. */
 .fin-year {
-  margin-bottom: -22px;
+  flex: 0 0 var(--fin-label-h);
+  height: var(--fin-label-h);
+  line-height: var(--fin-label-h);
   font-size: 0.74rem;
   font-weight: 600;
   color: var(--text-muted);
 }
-.fin-chart + * { margin-top: 30px; }
 
 .about-meta { margin-top: 14px; }
