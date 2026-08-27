@@ -30,9 +30,16 @@ on:
     # minutes requested. Expect the same here: hourly is the ceiling, and
     # some hours will be missed.
     #
+    # Minute 37, not 0, and that is the whole reason for the odd number.
+    # The top of the hour is the most heavily contended slot on GitHub's
+    # shared scheduler — everybody writes "0 * * * *" — and it is the first
+    # thing dropped under load. On 26-27 Aug 2026 this asked for the hour
+    # and got 11:43, 12:04, 13:58, 14:55, 16:24, 19:11, 23:16, then a
+    # 4h45m silence. Still hourly, still 24 a day: only the minute moved.
+    #
     # If the site ever needs a dependable interval, this has to move off
     # Actions — a cron job on the Hostinger box would actually honour it.
-    - cron: "0 * * * *"
+    - cron: "37 * * * *"
   workflow_dispatch: {}        # manual run button, for testing
 
 concurrency:
