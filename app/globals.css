@@ -1061,6 +1061,10 @@ td a:hover { color: var(--primary); text-decoration: none; }
   bottom: var(--fin-label-h);
   border-bottom: 1px solid var(--border);
 }
+/* No column gap: a gap here also lands between the track and the year label,
+   which lifted every bar 6px clear of the axis line and left it floating.
+   The breathing room the value needs is put on the value itself, above the
+   track, so the bar's bottom edge and the baseline are the same line. */
 .fin-col {
   flex: 1 1 0;
   min-width: 0;
@@ -1069,9 +1073,14 @@ td a:hover { color: var(--primary); text-decoration: none; }
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 0;
 }
-.fin-value { font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
+.fin-value {
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
 /* Takes whatever height the labels leave, and is what the bar's percentage
    is measured against — so 100% means the tallest bar, every time. */
 .fin-track {
