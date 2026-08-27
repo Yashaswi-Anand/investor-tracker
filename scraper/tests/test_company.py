@@ -60,6 +60,36 @@ def test_chunk_index_ignores_ids_that_are_not_at_a_record_boundary():
 
 
 # --------------------------------------------------------------------------
+# Trimming
+# --------------------------------------------------------------------------
+def test_trim_leaves_short_text_alone():
+    assert company.trim("A short description.", 2000) == "A short description."
+
+
+def test_trim_ends_on_a_sentence_when_one_is_near_the_limit():
+    text = "First sentence here. " + "x" * 60 + ". Second sentence follows."
+    trimmed = company.trim(text, 85)
+    assert trimmed.endswith(".")
+    assert "…" not in trimmed
+
+
+def test_trim_never_cuts_mid_word():
+    # The bug this exists for: a hard slice produced "including DIN-me".
+    text = "Incorporated in December 1978, the company supplies hydraulic fittings"
+    trimmed = company.trim(text, 40)
+    assert not text.startswith(trimmed.rstrip("…") + "x")
+    assert trimmed.endswith("…")
+    assert trimmed.rstrip("…").split()[-1] in text.split()
+
+
+def test_trim_ignores_a_sentence_break_too_early_to_use():
+    # A full stop in the first quarter would throw away most of the text.
+    text = "Ltd. " + "word " * 200
+    trimmed = company.trim(text, 100)
+    assert len(trimmed) > 50
+
+
+# --------------------------------------------------------------------------
 # Financials
 # --------------------------------------------------------------------------
 FINANCIALS_HTML = """

@@ -262,12 +262,12 @@ def _company_blob(page, flight):
         or ""
     )
     if len(about) > 40:
-        blob["about"] = about[:2000]
+        blob["about"] = company.trim(about, 2000)
 
     for key, field in (("sector", "company_sector"), ("promoters", "promoters")):
         value = company._clean(json_string(flight, field) or "")
         if len(value) > 2:
-            blob[key] = value[:300]
+            blob[key] = company.trim(value, 300)
 
     financials = company.parse_financials(page)
     if financials:

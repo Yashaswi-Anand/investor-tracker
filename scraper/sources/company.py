@@ -80,6 +80,28 @@ def resolve(value, flight, offsets):
     return raw.decode("utf-8", "ignore")
 
 
+def trim(text, limit=2000):
+    """Shorten to `limit`, ending on a sentence if one is close enough.
+
+    A hard slice ends mid-word — "including DIN-me" — which reads as a bug
+    rather than an excerpt. Prefer the last full stop, fall back to the last
+    space, and only cut mid-word if the text has neither.
+    """
+    text = (text or "").strip()
+    if len(text) <= limit:
+        return text
+
+    window = text[:limit]
+    # Only accept a sentence break in the last quarter; an early one would
+    # throw away most of the description to save a few characters.
+    stop = max(window.rfind(". "), window.rfind("? "), window.rfind("! "))
+    if stop >= limit * 0.75:
+        return window[: stop + 1]
+
+    space = window.rfind(" ")
+    return (window[:space] if space > 0 else window).rstrip(" ,;:-") + "…"
+
+
 def unescape_page(raw_html):
     """Undo the \\u003c-style escaping the page uses for embedded markup."""
     return (
