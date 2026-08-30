@@ -8,8 +8,13 @@ import { fmtDate, fmtDateTime, fmtShortDate, inr } from "../../lib/format";
  * Pass points shaped {date: 'YYYY-MM-DD', gmp}. mode="intraday" plots raw
  * timestamps instead ({recorded_at, gmp}).
  *
- * Area fill, a dot per point, the latest value labelled, ₹ gridlines and
- * date ticks. Colours come from CSS tokens so it follows light/dark mode.
+ * Area fill, a dot per point, the latest value labelled, gridlines and date
+ * ticks. Colours come from CSS tokens so it follows light/dark mode.
+ *
+ * `valueKey` and `format` make it a line chart rather than a GMP chart: the
+ * subscription card plots the same shape from the same daily rows, and two
+ * near-identical SVG components would drift apart the first time either was
+ * touched.
  */
 
 const W = 640;
@@ -29,14 +34,20 @@ function niceTicks(lo, hi) {
   return [round(lo), round(mid), round(hi)];
 }
 
-export default function GmpLineChart({ points, mode = "daily", ariaLabel = "GMP trend" }) {
+export default function GmpLineChart({
+  points,
+  mode = "daily",
+  ariaLabel = "GMP trend",
+  valueKey = "gmp",
+  format = inr,
+}) {
   const daily = mode === "daily";
 
   const data = downsample(
     (points || [])
-      .filter((p) => p && p.gmp != null && (daily ? p.date : p.recorded_at))
+      .filter((p) => p && p[valueKey] != null && (daily ? p.date : p.recorded_at))
       .map((p) => {
-        const v = Number(p.gmp);
+        const v = Number(p[valueKey]);
         if (daily) {
           // Calendar day as UTC midnight purely for x-spacing; labels use the date string.
           const t = new Date(`${p.date}T00:00:00Z`).getTime();
@@ -103,7 +114,7 @@ export default function GmpLineChart({ points, mode = "daily", ariaLabel = "GMP 
         className="chart"
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`${ariaLabel}: from ${inr(first.v)} on ${first.short} to ${inr(last.v)} on ${last.short}`}
+        aria-label={`${ariaLabel}: from ${format(first.v)} on ${first.short} to ${format(last.v)} on ${last.short}`}
       >
         <defs>
           <linearGradient id="gmpFill" x1="0" y1="0" x2="0" y2="1">
@@ -153,7 +164,7 @@ export default function GmpLineChart({ points, mode = "daily", ariaLabel = "GMP 
           y={lastY - 10}
           textAnchor={labelAnchor}
         >
-          {inr(last.v)}
+          {format(last.v)}
         </text>
 
         {/* date ticks */}

@@ -6,6 +6,8 @@ import {
   getIpoBySlug,
   getSubscriptionHistory,
 } from "../../../lib/data";
+import { getNews, matchNews } from "../../../lib/news";
+import { NEWS } from "../../../lib/config";
 import {
   dailyLatest,
   dailySeries,
@@ -22,6 +24,7 @@ import {
   times,
 } from "../../../lib/format";
 import Financials from "../../components/Financials";
+import NewsList from "../../components/NewsList";
 import GmpLineChart from "../../components/GmpLineChart";
 import {
   BoardBadge,
@@ -189,13 +192,24 @@ function SubscriptionHistory({ history }) {
   const days = dailyLatest(history, ["qib", "nii", "retail", "total"]);
   if (days.length < 2) return null;
 
-  const rows = days.slice(-15).reverse();
+  const recent = days.slice(-15);
+  const rows = [...recent].reverse();
 
   return (
     <>
       <p className="subtitle sub-hist-caption">
         Day-wise subscription
       </p>
+      {/* Laid out like GMP History above it: how demand built on the left,
+          the figures that shape is made of on the right. The two cards
+          answer the same kind of question and now look like it. */}
+      <div className="hist-layout">
+      <GmpLineChart
+        points={recent}
+        valueKey="total"
+        format={times}
+        ariaLabel="Total subscription trend"
+      />
       <div className="hist-wrap">
         <table className="hist">
           <thead>
@@ -219,6 +233,7 @@ function SubscriptionHistory({ history }) {
             ))}
           </tbody>
         </table>
+      </div>
       </div>
     </>
   );
@@ -436,10 +451,13 @@ function buildFaq(ipo) {
 
 export default async function IpoDetailPage({ params }) {
   const { slug } = await params;
-  const [ipo, gmpHistory, subscriptionHistory] = await Promise.all([
+  const [ipo, gmpHistory, subscriptionHistory, allNews] = await Promise.all([
     getIpoBySlug(slug),
     getGmpHistory(slug),
     getSubscriptionHistory(slug),
+    // Shares the cached feed with /news, so a detail page costs the
+    // publisher nothing of its own.
+    getNews(),
   ]);
   if (!ipo) notFound();
 
@@ -456,6 +474,10 @@ export default async function IpoDetailPage({ params }) {
   const risks = Array.isArray(manual.risks) && manual.risks.length
     ? manual.risks
     : details.risks;
+  // Only stories that name this company. The feed is general IPO coverage,
+  // so most of it is about other issues and showing it here would be worse
+  // than showing nothing.
+  const news = matchNews(allNews, ipo);
 
   // The same Q&A drives both the visible FAQ section and the JSON-LD.
   // Google requires structured-data content to be visible on the page, so
@@ -580,6 +602,21 @@ export default async function IpoDetailPage({ params }) {
           <GmpHistory history={gmpHistory} ipo={ipo} />
         </section>
 
+        {news.length > 0 && (
+          <section className="card card-wide news-card">
+            <h2>
+              In the news
+              <span className="news-count">{news.length}</span>
+            </h2>
+            <NewsList articles={news} limit={6} />
+            <p className="subtitle sub-hist-caption">
+              Headlines from {NEWS.publisher}, matched to this company by
+              name. Reproduced as published — not our reporting, and not
+              investment advice.
+            </p>
+          </section>
+        )}
+
         <section className="card card-wide">
           <h2>Subscription</h2>
           {/* Gate on ANY figure being present. Category-wise numbers often
@@ -608,19 +645,32 @@ export default async function IpoDetailPage({ params }) {
         </section>
 
         {about && (
-          <section className="card card-wide">
+          <section className="card card-wide about-card">
             <h2>About {ipo.short_name || ipo.name}</h2>
-            <p className="about-text">{about}</p>
-            {(details.sector ||
-              details.incorporated ||
-              details.promoters ||
+
+            {/* The sector sits under the heading as a label rather than as a
+                row in the table below, because it is the one fact that frames
+                everything the paragraph then says. */}
+            {details.sector && (
+              <p className="about-tags">
+                <span className="chip">{details.sector}</span>
+                {details.incorporated && (
+                  <span className="chip chip-quiet">
+                    Incorporated {details.incorporated}
+                  </span>
+                )}
+              </p>
+            )}
+
+            {/* Capped measure: the card runs the full width of the page and
+                unbroken prose across 1,100px is genuinely hard to track back
+                from at the end of a line. */}
+            <p className="about-text about-prose">{about}</p>
+
+            {(details.promoters ||
               details.promoter_holding_pre ||
               details.promoter_holding_post) && (
               <dl className="detail-grid about-meta">
-                {details.sector && <KV label="Sector">{details.sector}</KV>}
-                {details.incorporated && (
-                  <KV label="Incorporated">{details.incorporated}</KV>
-                )}
                 {details.promoters && (
                   <KV label="Promoters">{details.promoters}</KV>
                 )}
@@ -636,6 +686,12 @@ export default async function IpoDetailPage({ params }) {
                 )}
               </dl>
             )}
+
+            {/* Said out loud, because a reader deserves to know whose
+                description of the company they are reading. */}
+            <p className="subtitle sub-hist-caption">
+              As published in the company's own offer documents.
+            </p>
           </section>
         )}
 

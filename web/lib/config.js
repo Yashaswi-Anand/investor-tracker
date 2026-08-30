@@ -27,6 +27,32 @@ export const SUPABASE = {
   },
 };
 
+/**
+ * IPO news.
+ *
+ * The Economic Times IPO feed, which is published for syndication and whose
+ * robots.txt allows it (`User-agent: *` / `Allow: /`; none of its disallow
+ * rules touch /rssfeeds/). Checked before this was wired up.
+ *
+ * Google News RSS was the obvious first choice and is NOT used: its
+ * robots.txt is `Disallow: /` with an allow-list that does not include
+ * /rss/, and this project honours robots.txt everywhere else.
+ *
+ * `revalidateSeconds` is the whole politeness story on the web side. The
+ * pages are force-dynamic, so without it every visitor would cost the
+ * publisher a request; with it they cost at most four an hour between them.
+ */
+export const NEWS = {
+  feedUrl:
+    process.env.NEWS_FEED_URL ||
+    "https://economictimes.indiatimes.com/markets/ipos/fpos/rssfeeds/14655708.cms",
+  publisher: "The Economic Times",
+  publisherUrl: "https://economictimes.indiatimes.com/markets/ipos/fpos",
+  revalidateSeconds: 900,
+  userAgent:
+    "InvestorTracker/1.0 (+https://investor.socialriser.com; contact via site)",
+};
+
 export function supabaseUrl(key) {
   return SUPABASE.url + SUPABASE.endpoints[key];
 }
