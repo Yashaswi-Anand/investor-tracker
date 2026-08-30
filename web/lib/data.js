@@ -41,8 +41,16 @@ function enrich(ipo) {
   if (out.min_investment == null && out.lot_size && out.price_band_high) {
     out.min_investment = Math.round(out.lot_size * out.price_band_high);
   }
-  if (out.estimated_listing == null && out.gmp != null && out.price_band_high) {
-    out.estimated_listing = Number(out.price_band_high) + Number(out.gmp);
+  // Always recomputed, never read from the stored column, because the two can
+  // disagree and the page is where that shows. An IPO leaves NSE's set once
+  // bidding closes, so the scraper stops deriving for it; whatever estimate
+  // was last written then freezes, and a later correction to the price band
+  // leaves an estimate that no longer matches its own inputs — the table
+  // showed "▲ ₹43 → ₹98" against a ₹53 band. Derived here, the arrow cannot
+  // contradict the two numbers either side of it whatever the scraper did.
+  if (out.gmp != null && out.price_band_high) {
+    out.estimated_listing =
+      Math.round((Number(out.price_band_high) + Number(out.gmp)) * 100) / 100;
   }
   return out;
 }
