@@ -12,6 +12,7 @@ import {
   fmtDate,
   fmtDateTime,
   fmtDelta,
+  fmtIssueSize,
   fmtShortDate,
   fmtTime,
   inr,
@@ -127,6 +128,9 @@ function GmpHistory({ history, ipo }) {
             <tr>
               <th>Date</th>
               <th>GMP</th>
+              {/* The premium as a share of the price band: the only form of
+                  it that is comparable with any other issue. */}
+              <th>GMP %</th>
               <th>Change</th>
               <th>Est. Listing</th>
               {/* Each row is a day; the time is that day's last recorded
@@ -142,6 +146,9 @@ function GmpHistory({ history, ipo }) {
                   <td>{fmtDate(row.date)}</td>
                   <td className={row.gmp > 0 ? "gmp-up" : row.gmp < 0 ? "gmp-down" : "gmp-flat"}>
                     {inr(row.gmp)}
+                  </td>
+                  <td className={row.gmp > 0 ? "gmp-up" : row.gmp < 0 ? "gmp-down" : "gmp-flat"}>
+                    {high ? `${row.gmp > 0 ? "+" : ""}${((row.gmp / high) * 100).toFixed(1)}%` : "—"}
                   </td>
                   <td>
                     {delta ? (
@@ -515,6 +522,9 @@ export default async function IpoDetailPage({ params }) {
             </Stat>
           </div>
           <Stat label="Price Band">{priceBand(ipo)}</Stat>
+          {/* Next to the band because both describe the offer rather than
+              what one application costs. */}
+          <Stat label="Issue Size">{fmtIssueSize(ipo)}</Stat>
           <Stat label="Lot Size">{ipo.lot_size ?? "—"}</Stat>
           <Stat label="Min Investment">{inr(ipo.min_investment)}</Stat>
           {ipo.listing_price != null ? (

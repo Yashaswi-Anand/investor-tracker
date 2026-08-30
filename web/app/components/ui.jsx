@@ -95,6 +95,67 @@ export function ListingResult({ ipo, showPercent = true }) {
   );
 }
 
+/**
+ * The premium and the listing price it implies, in one cell.
+ *
+ * These were two columns, and both printed the same number: the GMP as a share
+ * of the price band IS the implied gain on the estimated listing price, so
+ * every row said "(+83.0%)" twice. One cell states the premium, what it
+ * implies, and the percentage once.
+ *
+ * Once an issue has actually listed the estimate disappears rather than
+ * sitting beside the fact — what it did list at is the only figure that still
+ * means anything, and an estimate next to it invites reading both as live.
+ */
+export function GmpEstimate({ ipo }) {
+  if (ipo.listing_price != null) return <ListingResult ipo={ipo} />;
+  if (ipo.gmp == null) return <span className="gmp-flat">—</span>;
+
+  const value = Number(ipo.gmp);
+  const pct = gmpPercent(ipo);
+  // enrich() normally derives this; the same arithmetic as a fallback so the
+  // component works on any row it is handed.
+  const est =
+    ipo.estimated_listing != null
+      ? Number(ipo.estimated_listing)
+      : ipo.price_band_high
+        ? Number(ipo.price_band_high) + value
+        : null;
+  const cls = value > 0 ? "gmp-up" : value < 0 ? "gmp-down" : "gmp-flat";
+  const arrow = value > 0 ? "▲" : value < 0 ? "▼" : "";
+  const delta = fmtDelta(ipo.gmp_delta);
+
+  return (
+    <span className="gmp-est">
+      <span className={cls}>
+        {arrow} {inr(Math.abs(value))}
+      </span>
+      {est != null && (
+        <>
+          {/* Decorative: the sentence is carried by the two figures and the
+              column heading, so a screen reader gains nothing from "arrow". */}
+          <span className="gmp-est-sep" aria-hidden="true">→</span>
+          <span className="num">{inr(Math.round(est))}</span>
+        </>
+      )}
+      {pct != null && (
+        <span className={`est-pct ${cls}`}>
+          ({pct > 0 ? "+" : ""}
+          {pct.toFixed(1)}%)
+        </span>
+      )}
+      {delta && (
+        <span
+          className={`gmp-delta ${ipo.gmp_delta > 0 ? "gmp-delta-up" : "gmp-delta-down"}`}
+          title="Change since yesterday"
+        >
+          {delta}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function StatusBadge({ status }) {
   const key = (status || "upcoming").toLowerCase();
   return (
