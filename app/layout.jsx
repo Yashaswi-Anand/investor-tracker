@@ -99,6 +99,13 @@ export default function RootLayout({ children }) {
               <Logo tagline="Track. Analyze. Invest" />
             </Link>
             <div className="header-actions">
+              {/* One tab, not a nav bar: the site has exactly two places to
+                  be, and a row of links where two would do is noise. */}
+              <nav className="site-nav" aria-label="Sections">
+                <Link href="/news" className="nav-link">
+                  News
+                </Link>
+              </nav>
               <ThemeToggle />
             </div>
           </div>

@@ -1144,3 +1144,128 @@ td a:hover { color: var(--primary); text-decoration: none; }
 /* On a phone card the cell has a column to itself and no sideways scroll to
    fall back on, so let it wrap rather than overflow. */
 .ipo-card-grid .gmp-est { white-space: normal; }
+
+/* ==========================================================================
+   About the company
+   ========================================================================== */
+.about-card h2 { margin-bottom: 8px; }
+.about-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.chip {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 11px;
+  border-radius: 999px;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+.chip-quiet { color: var(--text-muted); background: var(--surface-2); font-weight: 600; }
+/* ~68 characters, the width prose stops being tiring to read at. The card
+   itself stays full width; only the paragraph inside it is capped. */
+.about-prose { max-width: 68ch; line-height: 1.72; font-size: 0.92rem; }
+
+/* Company names run long — "Rays of Belief Limited-" and the like — and with
+   the table's blanket nowrap one of them stretched the column far past what
+   the rest of the row needed. This is the one cell that wraps. */
+td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
+
+/* ==========================================================================
+   News
+   ========================================================================== */
+.site-nav { display: flex; gap: 2px; }
+.nav-link {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--on-brand);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+  transition: background 0.15s ease;
+}
+.nav-link:hover { background: rgba(255, 255, 255, 0.26); text-decoration: none; }
+
+.news-head { margin-bottom: 18px; }
+.news-head h1 { margin-bottom: 4px; }
+
+/* Numbered in source order so the newest is 1, but the marker is hidden:
+   the list is a stack of stories, not a ranking. */
+.news-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+@media (min-width: 900px) {
+  .news-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.news-item { display: flex; }
+/* The whole card is the link, so the target is the card rather than the
+   headline inside it — this is read on phones. */
+.news-link {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 15px 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: inherit;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.news-link:hover {
+  text-decoration: none;
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+  border-left-color: var(--primary-strong);
+  box-shadow: var(--shadow);
+}
+.news-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.news-summary {
+  margin: 0;
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.news-meta {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.news-source { color: var(--primary); }
+.news-dot { opacity: 0.6; }
+.news-disclaimer { margin-top: 18px; }
+
+/* Inside a card the list is already framed, so the items lose their own. */
+.news-card .news-link {
+  border: none;
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 10px 0 10px 14px;
+}
+.news-card .news-link:hover {
+  transform: none;
+  border-left-color: var(--primary);
+  background: var(--surface-2);
+}
+.news-card .news-list { gap: 4px; }
+.news-count {
+  margin-left: 8px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
