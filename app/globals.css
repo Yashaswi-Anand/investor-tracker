@@ -857,7 +857,11 @@ td a:hover { color: var(--primary); text-decoration: none; }
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
   margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border);
 }
-@media (min-width: 640px) { .hero-stats-detail { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+/* Six stats now that issue size is among them, so the counts divide evenly
+   at every breakpoint — 2x3, 3x2, then one row. Five columns with six stats
+   left a single stat alone on a second row with four empty cells beside it. */
+@media (min-width: 640px) { .hero-stats-detail { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .hero-stats-detail { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .hero-stats-detail .stat-value { font-size: 1.05rem; }
 .hero-stats-detail .stat-gmp .stat-value { font-size: 1.3rem; }
 
@@ -1122,3 +1126,21 @@ td a:hover { color: var(--primary); text-decoration: none; }
 }
 
 .about-meta { margin-top: 14px; }
+
+/* ==========================================================================
+   GMP and the listing price it implies, in one cell
+   ========================================================================== */
+/* Kept on one line: the cell reads as a single sentence — this premium
+   implies this price — and wrapping it mid-arrow breaks the sentence. The
+   table already scrolls sideways inside .table-wrap, so nothing is lost. */
+.gmp-est { white-space: nowrap; }
+/* Muted and thin, because the arrow is punctuation between two figures, not
+   a third thing to read. */
+.gmp-est-sep {
+  margin: 0 5px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+/* On a phone card the cell has a column to itself and no sideways scroll to
+   fall back on, so let it wrap rather than overflow. */
+.ipo-card-grid .gmp-est { white-space: normal; }

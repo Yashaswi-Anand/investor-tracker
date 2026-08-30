@@ -27,7 +27,7 @@ import {
   timelineLabel,
 } from "../../lib/format";
 import Sparkline from "./Sparkline";
-import { EstListing, GmpValue, ListingResult, Stat, StatusBadge } from "./ui";
+import { GmpEstimate, Stat, StatusBadge } from "./ui";
 
 const TABS = [
   { key: "all", label: "All" },
@@ -107,24 +107,18 @@ const COLUMNS = [
   },
   {
     key: "gmp",
-    label: "GMP",
-    sort: "gmp",
-    render: (ipo) => <GmpValue ipo={ipo} showPercent />,
-  },
-  {
-    key: "est",
-    // The column answers "what will it list at" until it lists, then "what
-    // did it". One column, because a reader only ever wants whichever of the
-    // two still applies, and an estimate beside a fact invites comparing them
-    // as though both were live.
-    label: "Est. / Actual Listing",
+    // One column, not two. The premium and the price it implies are the same
+    // fact stated twice, and both used to print the same percentage, so every
+    // row carried "(+83.0%)" in adjacent cells. Once an issue lists, this
+    // becomes what it actually listed at — a reader only ever wants whichever
+    // of the two still applies, and an estimate beside a fact invites reading
+    // both as live.
+    label: "GMP → Est. Listing",
+    // Sorted by percentage rather than rupees: both figures in the cell are
+    // absolute, and a premium of 60 on a 120 issue is not the proposition a
+    // premium of 60 on a 900 issue is. Raw GMP is still in the sort menu.
     sort: "gmp_pct",
-    render: (ipo) =>
-      ipo.listing_price != null ? (
-        <ListingResult ipo={ipo} />
-      ) : (
-        <EstListing ipo={ipo} />
-      ),
+    render: (ipo) => <GmpEstimate ipo={ipo} />,
   },
   {
     key: "dates",
@@ -668,13 +662,14 @@ export default function IpoList({ ipos }) {
                     </div>
                   </div>
                   <div className="ipo-card-grid">
-                    <Stat label="GMP">
-                      <GmpValue ipo={ipo} showPercent />
-                    </Stat>
-                    <Stat label="Est. Listing">
-                      <EstListing ipo={ipo} />
+                    {/* Merged for the same reason as the table column, and
+                        the freed cell takes issue size rather than leaving a
+                        hole in the 2x2 grid. */}
+                    <Stat label="GMP → Est.">
+                      <GmpEstimate ipo={ipo} />
                     </Stat>
                     <Stat label="Price Band">{priceBand(ipo)}</Stat>
+                    <Stat label="Issue Size">{fmtIssueSize(ipo)}</Stat>
                     <Stat label="Min Invest">{inr(ipo.min_investment)}</Stat>
                   </div>
                 </Link>
