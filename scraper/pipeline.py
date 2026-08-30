@@ -117,10 +117,22 @@ def merge_details(row, fallback, existing_row):
     return merged or None
 
 
-def compute_derived(row, gmp=None):
-    """Fill in values we can calculate rather than fetch."""
-    lot = row.get("lot_size")
-    high = row.get("price_band_high")
+def compute_derived(row, gmp=None, existing_row=None):
+    """Fill in values we can calculate rather than fetch.
+
+    The price band and lot size fall back to what is already STORED when this
+    run's scrape did not carry them, exactly as effective_gmp falls back.
+
+    Reading only the fresh row was a real bug. NSE omits the band on some
+    runs; on such a run `high` was None, so estimated_listing was left alone
+    while gmp was written anyway. The two then drifted apart and stayed apart:
+    Hy-Tech showed a ₹43 premium against a ₹53 band with an estimated listing
+    of ₹98 — a figure that is 53 + 45, the premium from two days earlier.
+    Nothing flagged it, because each number was individually plausible.
+    """
+    stored = existing_row or {}
+    lot = row.get("lot_size") or stored.get("lot_size")
+    high = row.get("price_band_high") or stored.get("price_band_high")
     if row.get("min_investment") is None and lot and high:
         row["min_investment"] = round(lot * high)
     if gmp is not None and high:
@@ -199,7 +211,7 @@ def run():
             effective[row["slug"]] = value
             if gmp_is_observed(row, existing_row):
                 observed.add(row["slug"])
-            compute_derived(row, value)
+            compute_derived(row, value, existing_row)
             apply_listing_status(row, existing_row)
 
         print("[7/7] Writing to Supabase...")

@@ -834,3 +834,31 @@ def test_listing_headers_may_be_padded():
         archive.writestr("BhavCopy.csv", padded)
     parsed = listing.parse_bhavcopy(buf.getvalue())
     assert parsed["ARDEE"]["open"] == 72.0
+
+
+def test_estimated_listing_uses_the_stored_band_when_this_run_lacks_one():
+    # NSE omits the price band on some runs. Reading only the fresh row left
+    # estimated_listing untouched while gmp was written anyway, so the two
+    # drifted apart and stayed apart — a ₹43 premium on a ₹53 band showing an
+    # estimated listing of ₹98 (which is 53 + 45, two days stale).
+    row = {"slug": "acme", "gmp": 43}
+    existing = {"price_band_high": 53, "lot_size": 283}
+    pipeline.compute_derived(row, 43, existing)
+    assert row["estimated_listing"] == 96
+
+
+def test_derived_still_prefers_this_runs_band_over_the_stored_one():
+    # A band that genuinely changed must win over the stored copy.
+    row = {"slug": "acme", "price_band_high": 60, "gmp": 10}
+    existing = {"price_band_high": 53}
+    pipeline.compute_derived(row, 10, existing)
+    assert row["estimated_listing"] == 70
+
+
+def test_min_investment_also_falls_back_to_the_stored_band_and_lot():
+    row = {"slug": "acme"}
+    existing = {"price_band_high": 53, "lot_size": 283}
+    pipeline.compute_derived(row, None, existing)
+    assert row["min_investment"] == 14999
+    # Still no gmp, so still no estimate rather than a guess.
+    assert "estimated_listing" not in row
