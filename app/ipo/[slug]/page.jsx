@@ -607,21 +607,6 @@ export default async function IpoDetailPage({ params }) {
           <GmpHistory history={gmpHistory} ipo={ipo} />
         </section>
 
-        {news.length > 0 && (
-          <section className="card card-wide news-card">
-            <h2>
-              In the news
-              <span className="news-count">{news.length}</span>
-            </h2>
-            <NewsList articles={news} limit={6} />
-            <p className="subtitle sub-hist-caption">
-              Headlines from {NEWS.publisher}, matched to this company by
-              name. Reproduced as published — not our reporting, and not
-              investment advice.
-            </p>
-          </section>
-        )}
-
         <section className="card card-wide">
           <h2>Subscription</h2>
           {/* Gate on ANY figure being present. Category-wise numbers often
@@ -775,6 +760,22 @@ export default async function IpoDetailPage({ params }) {
         <IssueDetails ipo={ipo} />
 
       </div>
+
+        {news.length > 0 && (
+          <section className="card card-wide news-card">
+            <h2>In the news</h2>
+            {/* Two, not six, and no match count beside the heading. This now
+                sits at the end of a long page: it is context rather than the
+                reason anyone came, and the News tab has the rest. */}
+            <NewsList articles={news} limit={2} />
+            <p className="subtitle sub-hist-caption">
+              Headlines from {NEWS.publisher}, matched to this company by
+              name. Reproduced as published — not our reporting, and not
+              investment advice.{" "}
+              <Link href="/news">More IPO news</Link>
+            </p>
+          </section>
+        )}
 
       {/* Visible counterpart of the FAQPage structured data above. */}
       <section className="card faq">
