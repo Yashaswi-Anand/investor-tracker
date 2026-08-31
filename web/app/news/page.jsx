@@ -46,14 +46,18 @@ export default async function NewsPage() {
   return (
     <div className="container page-pad">
       <section className="news-head">
-        <h1>IPO News</h1>
-        <p className="subtitle">
-          Headlines from{" "}
+        <p className="news-kicker">
+          <span className="news-pulse" aria-hidden="true" />
+          Updated through the day
+        </p>
+        <h1 className="news-h1">IPO News</h1>
+        <p className="subtitle news-lede">
+          Every Indian IPO story worth reading, in one place — new issues,
+          listings, subscription and grey market coverage. Headlines from{" "}
           <a href={NEWS.publisherUrl} target="_blank" rel="noopener noreferrer nofollow">
             {NEWS.publisher}
           </a>
-          , refreshed through the day. Each headline opens the full story on
-          their site.
+          ; each one opens the full story on their site.
         </p>
       </section>
 
