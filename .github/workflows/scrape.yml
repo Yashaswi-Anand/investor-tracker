@@ -21,25 +21,32 @@ name: scrape
 
 on:
   schedule:
-    # Hourly, on the hour — 24 runs a day at most.
+    # Every two hours at minute 37 — 12 runs a day at most.
     #
-    # "At most" is the honest word. Measured over 166 runs across 4.5 days
-    # (26 Aug 2026) while this asked for */15: median gap 34 minutes, mean
-    # 39, longest 94. GitHub runs scheduled workflows on a best-effort basis
-    # and silently drops firings under load, so the gap was never the 15
-    # minutes requested. Expect the same here: hourly is the ceiling, and
-    # some hours will be missed.
+    # "At most" is the honest word, and the gap between what is asked for and
+    # what arrives is the whole story of this file. Measured here, in order:
     #
-    # Minute 37, not 0, and that is the whole reason for the odd number.
-    # The top of the hour is the most heavily contended slot on GitHub's
-    # shared scheduler — everybody writes "0 * * * *" — and it is the first
-    # thing dropped under load. On 26-27 Aug 2026 this asked for the hour
-    # and got 11:43, 12:04, 13:58, 14:55, 16:24, 19:11, 23:16, then a
-    # 4h45m silence. Still hourly, still 24 a day: only the minute moved.
+    #   */15  -> median gap 34 min over 166 runs (26 Aug 2026)
+    #   0 * * -> 11:43, 12:04, 13:58, 14:55, 16:24, 19:11, 23:16, then 4h45m
+    #   37 *  -> gaps of 158, 174, 179, 285, 360 and 384 minutes (30-31 Aug)
+    #
+    # GitHub runs scheduled workflows on a best-effort basis and silently
+    # drops firings under load. Asking for the hour produced about five runs
+    # a day, so this now asks for twelve rather than twenty-four. That is a
+    # deliberate experiment, not a fix: fewer requests may or may not be
+    # delivered more reliably, and it could equally end up as three a day.
+    # Whatever happens, the numbers above are how to tell.
+    #
+    # Minute 37, not 0, and that is the reason for the odd number: the top of
+    # the hour is the most contended slot on GitHub's shared scheduler —
+    # everybody writes "0 * * * *" — and it is the first thing dropped.
     #
     # If the site ever needs a dependable interval, this has to move off
-    # Actions — a cron job on the Hostinger box would actually honour it.
-    - cron: "37 * * * *"
+    # Actions. A cron job on the Hostinger box calling the workflow_dispatch
+    # API would actually honour it, costs nothing (cron is included in the
+    # Business plan, Actions is free on a public repo), and needs only a
+    # fine-grained token with Actions: read and write.
+    - cron: "37 */2 * * *"
   workflow_dispatch: {}        # manual run button, for testing
 
 concurrency:
