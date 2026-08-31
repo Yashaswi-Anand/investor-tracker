@@ -135,7 +135,11 @@ export default function GmpLineChart({
 
         {/* area + line */}
         <path className="gmp-area" d={areaPath} />
-        <path className="gmp-line" data-down={down} d={linePath} />
+        {/* pathLength="1" so the draw-in animation can dash from 1 to 0
+            without anyone measuring the path — the length is whatever the
+            data made it, and measuring would mean reading layout back out
+            of the DOM on every render. */}
+        <path className="gmp-line" data-down={down} d={linePath} pathLength="1" />
 
         {/* points with tooltips */}
         {showDots &&
@@ -147,6 +151,9 @@ export default function GmpLineChart({
               cx={x(d.t)}
               cy={y(d.v)}
               r={i === data.length - 1 ? 5 : 3}
+              /* Its position along the line, so each dot can appear as the
+                 line reaches it rather than all of them at once. */
+              style={{ "--i": data.length > 1 ? i / (data.length - 1) : 0 }}
             >
               <title>{`₹${d.v} — ${d.long}`}</title>
             </circle>

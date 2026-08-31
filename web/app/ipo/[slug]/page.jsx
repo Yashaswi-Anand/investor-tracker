@@ -25,6 +25,7 @@ import {
 } from "../../../lib/format";
 import Financials from "../../components/Financials";
 import NewsList from "../../components/NewsList";
+import Reveal from "../../components/Reveal";
 import GmpLineChart from "../../components/GmpLineChart";
 import {
   BoardBadge,
@@ -118,7 +119,9 @@ function GmpHistory({ history, ipo }) {
           table beside it lists the same days newest-first. */}
       <div className="hist-layout">
       {recent.length >= 2 ? (
-        <GmpLineChart points={recent} mode="daily" ariaLabel={`${ipo.name} GMP trend`} />
+        <Reveal className="chart-reveal">
+          <GmpLineChart points={recent} mode="daily" ariaLabel={`${ipo.name} GMP trend`} />
+        </Reveal>
       ) : (
         <p className="subtitle subtitle-flush">
           The graph appears from the second day of GMP data.
@@ -204,12 +207,14 @@ function SubscriptionHistory({ history }) {
           the figures that shape is made of on the right. The two cards
           answer the same kind of question and now look like it. */}
       <div className="hist-layout">
-      <GmpLineChart
-        points={recent}
-        valueKey="total"
-        format={times}
-        ariaLabel="Total subscription trend"
-      />
+      <Reveal className="chart-reveal">
+        <GmpLineChart
+          points={recent}
+          valueKey="total"
+          format={times}
+          ariaLabel="Total subscription trend"
+        />
+      </Reveal>
       <div className="hist-wrap">
         <table className="hist">
           <thead>
@@ -537,7 +542,7 @@ export default async function IpoDetailPage({ params }) {
           {fmtDate(ipo.open_date, true)} – {fmtDate(ipo.close_date, true)}
         </p>
 
-        <div className="hero-stats-detail">
+        <Reveal className="hero-stats-detail" count>
           <div className="stat-gmp">
             <Stat label="GMP">
               <GmpValue ipo={ipo} showPercent />
@@ -556,7 +561,7 @@ export default async function IpoDetailPage({ params }) {
           ) : (
             <Stat label="Est. Listing">{inr(ipo.estimated_listing)}</Stat>
           )}
-        </div>
+        </Reveal>
       </section>
 
       <div className="grid">
@@ -634,11 +639,13 @@ export default async function IpoDetailPage({ params }) {
             </p>
           ) : (
             <>
+              <Reveal className="sub-bars" count>
               <SubscriptionBar label="QIB" value={ipo.subscription_qib} />
               <SubscriptionBar label="NII / HNI" value={ipo.subscription_nii} />
               <SubscriptionBar label="Retail" value={ipo.subscription_retail} />
               <SubscriptionBar label="Employee" value={ipo.subscription_emp} />
               <SubscriptionBar label="Total" value={ipo.subscription_total} />
+              </Reveal>
             </>
           )}
           <SubscriptionHistory history={subscriptionHistory} />
