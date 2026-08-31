@@ -1,7 +1,7 @@
 import { NEWS, SITE } from "../../lib/config";
-import { getNews } from "../../lib/news";
-import { fmtDateTime } from "../../lib/format";
-import NewsList from "../components/NewsList";
+import { getAllIpos } from "../../lib/data";
+import { getNews, matchNews } from "../../lib/news";
+import NewsFilter from "../components/NewsFilter";
 
 // Same reasoning as every other page here: the feed moves during the day and
 // a build-time snapshot would show yesterday's headlines. The fetch inside
@@ -15,8 +15,33 @@ export const metadata = {
   alternates: { canonical: "/news" },
 };
 
+/**
+ * Which companies have a story, and which stories.
+ *
+ * Matching happens here, once, with the same matchNews() the detail pages use.
+ * The filter in the browser only ever picks from this — one implementation of
+ * "is this article about this company", not two.
+ *
+ * Companies with nothing are left out: a dropdown of names that all lead to an
+ * empty list is worse than a shorter list that always answers.
+ */
+function companiesInTheNews(articles, ipos) {
+  const index = new Map(articles.map((a, i) => [a.link, i]));
+  return ipos
+    .map((ipo) => ({
+      slug: ipo.slug,
+      name: ipo.short_name || ipo.name,
+      indices: matchNews(articles, ipo)
+        .map((a) => index.get(a.link))
+        .filter((i) => i != null),
+    }))
+    .filter((c) => c.indices.length > 0)
+    .sort((a, b) => b.indices.length - a.indices.length || a.name.localeCompare(b.name));
+}
+
 export default async function NewsPage() {
-  const articles = await getNews();
+  const [articles, ipos] = await Promise.all([getNews(), getAllIpos()]);
+  const companies = articles.length ? companiesInTheNews(articles, ipos) : [];
 
   return (
     <div className="container page-pad">
@@ -40,7 +65,7 @@ export default async function NewsPage() {
           </p>
         </section>
       ) : (
-        <NewsList articles={articles} />
+        <NewsFilter articles={articles} companies={companies} />
       )}
 
       <p className="disclaimer news-disclaimer">

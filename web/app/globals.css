@@ -1185,81 +1185,230 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 }
 .nav-link:hover { background: rgba(255, 255, 255, 0.26); text-decoration: none; }
 
-.news-head { margin-bottom: 18px; }
+.news-head { margin-bottom: 16px; }
 .news-head h1 { margin-bottom: 4px; }
 
-/* Numbered in source order so the newest is 1, but the marker is hidden:
-   the list is a stack of stories, not a ranking. */
+/* ---- the filter ---- */
+.news-filter { position: relative; max-width: 460px; margin-bottom: 18px; }
+.news-filter-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.news-filter-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.news-filter-field:focus-within { border-color: var(--primary); box-shadow: var(--ring); }
+.news-filter-icon { color: var(--text-muted); flex: 0 0 auto; }
+.news-filter-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 11px 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.news-filter-input:focus { outline: none; }
+.news-filter-input::placeholder { color: var(--text-muted); }
+.news-filter-clear {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.news-filter-clear:hover { background: var(--surface-3); }
+
+.news-filter-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.news-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 0.87rem;
+  cursor: pointer;
+}
+/* Keyboard and pointer share one highlight, so arrowing down looks the same
+   as hovering — two different "current" styles in one list is confusing. */
+.news-filter-option[data-active] { background: var(--primary-soft); }
+.news-filter-name { flex: 1 1 auto; min-width: 0; font-weight: 600; }
+.news-filter-count {
+  flex: 0 0 auto;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+.news-filter-option[data-active] .news-filter-count { background: var(--surface); }
+.news-filter-empty { padding: 12px; font-size: 0.85rem; color: var(--text-muted); }
+.news-filter-status { margin: 0 0 14px; font-size: 0.85rem; color: var(--text-2); }
+.linkish {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---- the cards ---- */
 .news-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 @media (min-width: 900px) {
   .news-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* One story carrying more weight than the rest is what stops a feed of
+     identical cards reading as a list with no way in. */
+  .news-item[data-lead] { grid-column: 1 / -1; }
 }
 .news-item { display: flex; }
 /* The whole card is the link, so the target is the card rather than the
    headline inside it — this is read on phones. */
 .news-link {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   width: 100%;
-  padding: 15px 16px;
+  padding: 16px 18px;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--primary);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: inherit;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  overflow: hidden;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+/* A hairline of brand down the left edge, grown on hover. Cheaper to read
+   than a full border in the accent colour, which competes with the text. */
+.news-link::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--brand-grad);
+  opacity: 0.55;
+  transition: opacity 0.16s ease, width 0.16s ease;
 }
 .news-link:hover {
   text-decoration: none;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: var(--border-strong);
-  border-left-color: var(--primary-strong);
   box-shadow: var(--shadow);
+}
+.news-link:hover::before { opacity: 1; width: 4px; }
+
+.news-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.news-source { color: var(--primary); }
+.news-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
 }
 .news-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.97rem;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.38;
   letter-spacing: -0.01em;
   text-wrap: balance;
 }
 .news-summary {
   margin: 0;
   font-size: 0.83rem;
-  line-height: 1.55;
+  line-height: 1.58;
   color: var(--text-2);
 }
-.news-meta {
-  margin: 2px 0 0;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  display: flex;
+/* Sits quiet until the card is hovered or focused, then steps forward — an
+   affordance, not a second call to action shouting on every card. */
+.news-go {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--primary);
+  opacity: 0.6;
+  transition: opacity 0.16s ease;
 }
-.news-source { color: var(--primary); }
-.news-dot { opacity: 0.6; }
-.news-disclaimer { margin-top: 18px; }
+.news-go svg { transition: transform 0.16s ease; }
+.news-link:hover .news-go,
+.news-link:focus-visible .news-go { opacity: 1; }
+.news-link:hover .news-go svg { transform: translateX(3px); }
+
+/* The lead story gets the space, so it gets the type to match. */
+.news-item[data-lead] .news-link { padding: 22px 24px; gap: 9px; }
+.news-item[data-lead] .news-title { font-size: 1.28rem; line-height: 1.28; }
+.news-item[data-lead] .news-summary { font-size: 0.9rem; max-width: 68ch; }
+
+.news-disclaimer { margin-top: 20px; }
 
 /* Inside a card the list is already framed, so the items lose their own. */
 .news-card .news-link {
   border: none;
-  border-left: 3px solid var(--border-strong);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  padding: 10px 0 10px 14px;
+  padding: 11px 0 11px 14px;
 }
+.news-card .news-link::before { opacity: 0.35; }
 .news-card .news-link:hover {
   transform: none;
-  border-left-color: var(--primary);
   background: var(--surface-2);
 }
-.news-card .news-list { gap: 4px; }
+.news-card .news-link:hover::before { opacity: 1; }
+.news-card .news-list { gap: 2px; }
+.news-card .news-title { font-size: 0.92rem; }
 
 /* ==========================================================================
    Reveal — charts draw in and figures count up as they scroll into view

@@ -10,6 +10,11 @@ import { fmtDate } from "../../lib/format";
  *
  * `rel="nofollow"` because these are third-party links we did not choose
  * individually, and `noopener` because they open in a new tab.
+ *
+ * `lead` gives the first story on the news page the width of the page and a
+ * larger setting. A feed of twenty identical cards has no shape and nothing to
+ * enter it by; one story carrying more weight than the rest is what makes it
+ * read as a page rather than a list.
  */
 
 /** "3 hours ago" — the only form of a timestamp anyone reads on news. */
@@ -27,35 +32,56 @@ function ago(iso) {
   return days <= 2 ? `${days} day${days === 1 ? "" : "s"} ago` : fmtDate(iso.slice(0, 10));
 }
 
-export default function NewsList({ articles, limit }) {
+function Article({ article, lead }) {
+  const when = ago(article.published);
+  return (
+    <li className="news-item" data-lead={lead || undefined}>
+      <a
+        className="news-link"
+        href={article.link}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+      >
+        <span className="news-eyebrow">
+          <span className="news-source">{NEWS.publisher}</span>
+          {when && (
+            <>
+              <span className="news-dot" aria-hidden="true" />
+              <time dateTime={article.published}>{when}</time>
+            </>
+          )}
+        </span>
+
+        <h3 className="news-title">{article.title}</h3>
+        {article.summary && <p className="news-summary">{article.summary}</p>}
+
+        {/* Decorative: the anchor already says where it goes, and its own
+            text is the headline. */}
+        <span className="news-go" aria-hidden="true">
+          Read the story
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none">
+            <path
+              d="M3 8h9M8.5 4l4 4-4 4"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </a>
+    </li>
+  );
+}
+
+export default function NewsList({ articles, limit, lead = false }) {
   const items = limit ? (articles || []).slice(0, limit) : articles || [];
   if (!items.length) return null;
 
   return (
     <ol className="news-list">
-      {items.map((article) => (
-        <li key={article.link} className="news-item">
-          <a
-            className="news-link"
-            href={article.link}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-          >
-            <h3 className="news-title">{article.title}</h3>
-            {article.summary && <p className="news-summary">{article.summary}</p>}
-            <p className="news-meta">
-              <span className="news-source">{NEWS.publisher}</span>
-              {ago(article.published) && (
-                <>
-                  <span className="news-dot" aria-hidden="true">
-                    ·
-                  </span>
-                  <time dateTime={article.published}>{ago(article.published)}</time>
-                </>
-              )}
-            </p>
-          </a>
-        </li>
+      {items.map((article, i) => (
+        <Article key={article.link} article={article} lead={lead && i === 0} />
       ))}
     </ol>
   );
