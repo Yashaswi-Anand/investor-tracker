@@ -249,5 +249,8 @@ export const STATUS_LABEL = {
   open: "Open",
   upcoming: "Upcoming",
   closed: "Closed",
+  // Between the close and the listing, which is the stretch readers care
+  // about most — it is when they find out whether they got any.
+  allotment: "Allotment",
   listed: "Listed",
 };

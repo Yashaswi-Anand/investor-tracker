@@ -55,7 +55,7 @@ function enrich(ipo) {
   return out;
 }
 
-const ORDER = { open: 0, upcoming: 1, closed: 2, listed: 3 };
+const ORDER = { open: 0, upcoming: 1, allotment: 2, closed: 3, listed: 4 };
 
 /**
  * Every IPO, sorted so live issues appear first and, within each group, the

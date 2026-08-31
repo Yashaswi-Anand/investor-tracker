@@ -94,9 +94,13 @@ def normalize_list_item(raw):
         "short_name": short_name(name),
         "symbol": raw.get("symbol"),
         "board": "SME" if series in ("SME", "ST") else "Mainboard",
-        "status": "open"
-        if (raw.get("status") or "").lower() == "active"
-        else derive_status(open_date, close_date, None),
+        # Dates first, always. NSE reports an issue as "active" past its
+        # close date, and trusting that over the timetable is exactly how
+        # issues got stuck showing as open days after bidding ended. The flag
+        # is kept only for the case where NSE gave us no dates at all.
+        "status": derive_status(open_date, close_date, None)
+        if (open_date or close_date)
+        else ("open" if (raw.get("status") or "").lower() == "active" else "upcoming"),
         "price_band_low": low,
         "price_band_high": high,
         "issue_size_shares": to_int(raw.get("issueSize")),

@@ -93,13 +93,46 @@ def parse_lot_size(text):
     return to_int(match.group(1)) if match else None
 
 
-def derive_status(open_date, close_date, listing_date, today=None):
-    """upcoming -> open -> closed -> listed, from the timetable."""
-    today = today or datetime.date.today().isoformat()
+# Bidding ends at 5pm IST on the final day and the UPI mandate cut-off is
+# 5pm too, so by 6pm nobody can still apply. Before that hour the issue is
+# genuinely still open on its closing date.
+CLOSE_HOUR_IST = 18
+
+
+def derive_status(
+    open_date,
+    close_date,
+    listing_date,
+    allotment_date=None,
+    today=None,
+    hour=None,
+):
+    """upcoming -> open -> closed -> allotment -> listed, from the timetable.
+
+    Read top down: the furthest milestone a date says we have reached wins.
+    That ordering is what makes this safe to run on EVERY row of EVERY run,
+    which is the point — the previous version only ever promoted to 'listed',
+    so an issue that NSE stopped returning kept whatever status it had when it
+    fell off the list. Four issues were sitting on the site as 'open' with
+    closing dates one to five days in the past.
+
+    Dates decide, not the source's own flag. NSE keeps an issue marked
+    'active' past its close date, and believing that over the timetable is how
+    those four got stuck.
+    """
+    now = datetime.datetime.now(IST)
+    today = today or now.date().isoformat()
+    hour = now.hour if hour is None else hour
+
     if listing_date and today >= listing_date:
         return "listed"
-    if close_date and today > close_date:
-        return "closed"
+    if allotment_date and today >= allotment_date:
+        return "allotment"
+    if close_date:
+        if today > close_date:
+            return "closed"
+        if today == close_date and hour >= CLOSE_HOUR_IST:
+            return "closed"
     if open_date and today >= open_date:
         return "open"
     return "upcoming"

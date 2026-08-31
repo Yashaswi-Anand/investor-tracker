@@ -76,12 +76,17 @@ def effective_listing_date(row, existing_row):
     return util.to_date(row.get("listing_date")) or stored
 
 
-def apply_listing_status(row, existing_row, today=None):
-    """Promote a closed IPO to 'listed' once its listing date has passed.
+def apply_status(row, existing_row, today=None):
+    """Recompute status from the timetable, every row, every run.
 
-    NSE's list endpoints never return a listing date, so status derived from
-    them alone can only ever reach 'closed'. A scraped or stored listing_date
-    is what allows the final transition.
+    This used to only ever promote to 'listed'. Everything else was whatever
+    the source said when it last saw the issue — and NSE keeps an issue marked
+    'active' past its close date, then drops it from the list entirely. The
+    result was four issues sitting on the site as 'open' with closing dates
+    one to five days gone, with nothing in the system able to correct them.
+
+    Deriving the whole ladder here instead means the timetable is the single
+    authority, and a stored status can never outlive the dates it came from.
     """
     # Keep what we store in the column ISO too, so a source that hands us a
     # regional format can never reach Postgres ambiguously (03/04 is April 3
@@ -90,12 +95,35 @@ def apply_listing_status(row, existing_row, today=None):
     if normalised:
         row["listing_date"] = normalised
 
+    stored = existing_row or {}
+    # Each date falls back to what is stored, so a run that carries only a
+    # skeleton row still reasons about the full timetable.
     listing_date = effective_listing_date(row, existing_row)
-    if not listing_date:
+    open_date = util.to_date(row.get("open_date")) or stored.get("open_date")
+    close_date = util.to_date(row.get("close_date")) or stored.get("close_date")
+    allotment_date = (
+        util.to_date(row.get("allotment_date")) or stored.get("allotment_date")
+    )
+
+    # With no timetable at all there is nothing to derive from, and the
+    # source's own guess is better than overwriting it with "upcoming".
+    if not any((open_date, close_date, allotment_date, listing_date)):
         return row
-    today = today or datetime.date.today().isoformat()
-    if today >= listing_date and row.get("status") in ("closed", "open"):
-        row["status"] = "listed"
+
+    derived = util.derive_status(
+        open_date,
+        close_date,
+        listing_date,
+        allotment_date,
+        today=today or util.ist_today(),
+    )
+    # "upcoming" is the ladder's fallback, not a finding. Reaching it without
+    # an open or close date means only that no later milestone had a date to
+    # match against — which is no reason to tell a reader that a closed issue
+    # has not opened yet. Keep what we had.
+    if derived == "upcoming" and not (open_date or close_date):
+        return row
+    row["status"] = derived
     return row
 
 
@@ -212,7 +240,7 @@ def run():
             if gmp_is_observed(row, existing_row):
                 observed.add(row["slug"])
             compute_derived(row, value, existing_row)
-            apply_listing_status(row, existing_row)
+            apply_status(row, existing_row)
 
         print("[7/7] Writing to Supabase...")
         payload = db.apply_locks(rows, existing)

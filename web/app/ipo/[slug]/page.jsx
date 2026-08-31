@@ -24,6 +24,7 @@ import {
   times,
 } from "../../../lib/format";
 import Financials from "../../components/Financials";
+import ListingResultChart from "../../components/ListingResultChart";
 import NewsList from "../../components/NewsList";
 import Reveal from "../../components/Reveal";
 import GmpLineChart from "../../components/GmpLineChart";
@@ -595,6 +596,16 @@ export default async function IpoDetailPage({ params }) {
             </KV>
           </dl>
         </section>
+
+        {/* For an issue that has already listed this is the only question
+            left, so it comes before the timetable and the premium history
+            rather than after them. */}
+        {ipo.listing_price != null && (
+          <section className="card card-wide">
+            <h2>Listing Result</h2>
+            <ListingResultChart ipo={ipo} />
+          </section>
+        )}
 
         <section className="card">
           <h2>Timetable</h2>

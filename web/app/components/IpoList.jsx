@@ -34,6 +34,7 @@ const TABS = [
   { key: "open", label: "Open" },
   { key: "upcoming", label: "Upcoming" },
   { key: "closed", label: "Closed" },
+  { key: "allotment", label: "Allotment" },
   { key: "listed", label: "Listed" },
 ];
 
@@ -75,7 +76,7 @@ const FIRST_DIR = {
 };
 
 /** Lifecycle order, so sorting by Status walks the timeline. */
-const STATUS_RANK = { open: 0, upcoming: 1, closed: 2, listed: 3 };
+const STATUS_RANK = { open: 0, upcoming: 1, closed: 2, allotment: 3, listed: 4 };
 
 /** At most two columns may be pinned; more would leave nothing to scroll. */
 const MAX_PINNED = 2;
@@ -93,17 +94,18 @@ const boardOf = (ipo) => (ipo.board || "Mainboard").toLowerCase();
 const COLUMNS = [
   {
     key: "name",
+    // Company and status in one cell. They were adjacent columns and the
+    // status is not a fact about the row so much as a fact about the name —
+    // "Hy-Tech Engineers, closed" is one thing a reader takes in, not two.
+    // It also buys back a column on a table that already has eleven.
     label: "Company",
     sort: "name",
     render: (ipo) => (
-      <Link href={`/ipo/${ipo.slug}`}>{ipo.short_name || ipo.name}</Link>
+      <Link href={`/ipo/${ipo.slug}`} className="cell-company">
+        <span className="cell-company-name">{ipo.short_name || ipo.name}</span>
+        <StatusBadge status={ipo.status} />
+      </Link>
     ),
-  },
-  {
-    key: "status",
-    label: "Status",
-    sort: "status",
-    render: (ipo) => <StatusBadge status={ipo.status} />,
   },
   {
     key: "gmp",
@@ -113,7 +115,7 @@ const COLUMNS = [
     // becomes what it actually listed at — a reader only ever wants whichever
     // of the two still applies, and an estimate beside a fact invites reading
     // both as live.
-    label: "GMP → Est. Listing",
+    label: "GMP → Listing",
     // Sorted by percentage rather than rupees: both figures in the cell are
     // absolute, and a premium of 60 on a 120 issue is not the proposition a
     // premium of 60 on a 900 issue is. Raw GMP is still in the sort menu.

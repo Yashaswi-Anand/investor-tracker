@@ -181,9 +181,14 @@ def fetch_unfinished(known_slugs, limit=200):
     evening, after the flip has already happened. Once the price is stored
     the row stops matching and costs nothing again.
 
-    Returns skeleton rows — slug, name, stored status and symbol. Everything
-    else is left out on purpose: apply_locks drops empty values, so a
-    skeleton can only ever add to a stored row, never blank part of it.
+    Returns skeleton rows — slug, name, stored status, symbol and the
+    timetable. Everything else is left out on purpose: apply_locks drops empty
+    values, so a skeleton can only ever add to a stored row, never blank part
+    of it, and writing a date back over itself is a no-op.
+
+    The dates are not decoration. Status is derived from them on every run,
+    and a carried row without them could only ever keep the status it had when
+    NSE stopped returning it.
     """
     unfinished = (
         "or=("
@@ -193,7 +198,8 @@ def fetch_unfinished(known_slugs, limit=200):
     )
     response = requests.get(
         config.supabase_url("ipos")
-        + f"?select=slug,name,status,symbol,listing_date&{unfinished}&limit={limit}",
+        + "?select=slug,name,status,symbol,open_date,close_date,"
+        + f"allotment_date,listing_date&{unfinished}&limit={limit}",
         headers=_headers(),
         timeout=config.REQUEST_TIMEOUT_SECONDS,
     )
@@ -205,6 +211,9 @@ def fetch_unfinished(known_slugs, limit=200):
             "name": row.get("name"),
             "status": row.get("status"),
             "symbol": row.get("symbol"),
+            "open_date": row.get("open_date"),
+            "close_date": row.get("close_date"),
+            "allotment_date": row.get("allotment_date"),
             "listing_date": row.get("listing_date"),
             "updated_at": util.utc_now(),
         }

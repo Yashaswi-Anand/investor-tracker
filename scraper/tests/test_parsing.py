@@ -104,7 +104,12 @@ def test_normalize_list_item():
     assert row["slug"] == "gaja-alternative-asset-management-limited"
     assert row["symbol"] == "GAJA"
     assert row["board"] == "Mainboard"
-    assert row["status"] == "open"
+    # Whatever today is, the status must agree with the ladder rather than
+    # with NSE's own "Active" flag — asserting a fixed value here is what let
+    # the flag-beats-dates bug live in the first place.
+    assert row["status"] == util.derive_status(
+        row["open_date"], row["close_date"], None
+    )
     assert row["price_band_low"] == 152.0
     assert row["price_band_high"] == 160.0
     assert row["open_date"] == "2026-08-19"
@@ -479,20 +484,20 @@ def test_empty_strings_do_not_blank_existing_data():
 def test_status_reaches_listed_using_stored_listing_date():
     row = {"slug": "a", "status": "closed"}
     existing = {"listing_date": "2026-08-18"}
-    pipeline.apply_listing_status(row, existing, today="2026-08-20")
+    pipeline.apply_status(row, existing, today="2026-08-20")
     assert row["status"] == "listed"
 
 
 def test_status_not_promoted_before_listing_date():
     row = {"slug": "a", "status": "closed"}
     existing = {"listing_date": "2026-08-25"}
-    pipeline.apply_listing_status(row, existing, today="2026-08-20")
+    pipeline.apply_status(row, existing, today="2026-08-20")
     assert row["status"] == "closed"
 
 
 def test_status_promotion_noop_without_listing_date():
     row = {"slug": "a", "status": "closed"}
-    pipeline.apply_listing_status(row, None, today="2026-08-20")
+    pipeline.apply_status(row, None, today="2026-08-20")
     assert row["status"] == "closed"
 
 
@@ -506,7 +511,7 @@ def test_locked_listing_date_does_not_leak_into_status():
     row = {"slug": "f", "name": "F", "status": "closed",
            "listing_date": "2026-08-20"}
     existing = {"locked": ["listing_date"], "listing_date": None}
-    pipeline.apply_listing_status(row, existing, today="2026-08-26")
+    pipeline.apply_status(row, existing, today="2026-08-26")
     assert row["status"] == "closed"
 
     payload = db.apply_locks([dict(row)], {"f": existing})[0]
@@ -522,13 +527,13 @@ def test_non_iso_future_listing_date_does_not_promote():
     """
     for value in ("01/09/2026", "15-Sep-2026", "1st Sep 2026"):
         row = {"slug": "x", "status": "closed", "listing_date": value}
-        pipeline.apply_listing_status(row, None, today="2026-08-26")
+        pipeline.apply_status(row, None, today="2026-08-26")
         assert row["status"] == "closed", f"{value} wrongly promoted"
 
 
 def test_listing_date_is_normalised_to_iso_before_storage():
     row = {"slug": "x", "status": "closed", "listing_date": "1st Sep 2026"}
-    pipeline.apply_listing_status(row, None, today="2026-08-26")
+    pipeline.apply_status(row, None, today="2026-08-26")
     assert row["listing_date"] == "2026-09-01"
 
 
@@ -584,7 +589,7 @@ def test_carried_row_still_reaches_listed():
     """The whole point: promotion works for an IPO NSE no longer returns."""
     carried = {"slug": "tempsens", "name": "Tempsens", "status": "closed"}
     existing = {"locked": [], "listing_date": "2026-08-28"}
-    pipeline.apply_listing_status(carried, existing, today="2026-08-28")
+    pipeline.apply_status(carried, existing, today="2026-08-28")
     assert carried["status"] == "listed"
 
 
@@ -862,3 +867,79 @@ def test_min_investment_also_falls_back_to_the_stored_band_and_lot():
     assert row["min_investment"] == 14999
     # Still no gmp, so still no estimate rather than a guess.
     assert "estimated_listing" not in row
+
+
+# --------------------------------------------------------------------------
+# Status ladder: upcoming -> open -> closed -> allotment -> listed
+# --------------------------------------------------------------------------
+def test_status_closes_at_six_pm_on_the_closing_day():
+    # Bidding and the UPI mandate both end at 5pm IST, so by 6pm nobody can
+    # still apply — but before that the issue really is still open.
+    args = ("2026-08-24", "2026-08-27", None)
+    assert util.derive_status(*args, today="2026-08-27", hour=9) == "open"
+    assert util.derive_status(*args, today="2026-08-27", hour=17) == "open"
+    assert util.derive_status(*args, today="2026-08-27", hour=18) == "closed"
+    assert util.derive_status(*args, today="2026-08-27", hour=23) == "closed"
+
+
+def test_status_reaches_allotment_then_listing():
+    args = ("2026-08-24", "2026-08-27", "2026-09-01", "2026-08-28")
+    assert util.derive_status(*args, today="2026-08-27", hour=9) == "open"
+    assert util.derive_status(*args, today="2026-08-27", hour=20) == "closed"
+    assert util.derive_status(*args, today="2026-08-28", hour=9) == "allotment"
+    assert util.derive_status(*args, today="2026-08-31", hour=9) == "allotment"
+    assert util.derive_status(*args, today="2026-09-01", hour=9) == "listed"
+
+
+def test_status_never_leaves_a_closed_issue_showing_as_open():
+    # The bug this exists for: Lumino, Sumax, ABH Healthcare and Madhur Knit
+    # all sat on the site as "open" with closing dates one to five days past,
+    # because nothing recomputed a row once NSE stopped returning it.
+    for close in ("2026-08-27", "2026-08-28", "2026-08-31"):
+        assert (
+            util.derive_status("2026-08-24", close, None, today="2026-09-01", hour=0)
+            == "closed"
+        )
+
+
+def test_status_without_any_dates_falls_back_to_upcoming():
+    assert util.derive_status(None, None, None, today="2026-09-01", hour=12) == "upcoming"
+
+
+def test_apply_status_demotes_a_carried_row_using_stored_dates():
+    # A carried skeleton brings its stored timetable; the ladder must use it.
+    row = {"slug": "lumino", "status": "open"}
+    existing = {"open_date": "2026-08-27", "close_date": "2026-08-31", "locked": []}
+    pipeline.apply_status(row, existing, today="2026-09-01")
+    assert row["status"] == "closed"
+
+
+def test_apply_status_leaves_a_row_alone_when_it_has_no_timetable():
+    # Nothing to derive from: the source's own guess beats overwriting it.
+    row = {"slug": "acme", "status": "open"}
+    pipeline.apply_status(row, {}, today="2026-09-01")
+    assert row["status"] == "open"
+
+
+def test_apply_status_still_honours_a_locked_listing_date():
+    # effective_listing_date already guards this; the ladder must not slip
+    # past it and promote from the scraped value.
+    row = {"slug": "acme", "status": "closed", "listing_date": "2026-09-01"}
+    existing = {
+        "listing_date": "2026-12-01",
+        "close_date": "2026-08-27",
+        "locked": ["listing_date"],
+    }
+    pipeline.apply_status(row, existing, today="2026-09-02")
+    assert row["status"] == "closed"
+
+
+def test_nse_active_flag_does_not_beat_a_past_close_date():
+    # NSE keeps an issue marked "Active" after bidding has ended. Believing
+    # that over the timetable is how four issues sat on the site as open with
+    # closing dates days in the past.
+    stale = dict(NSE_LIST_ROW, issueStartDate="19-Aug-2026", issueEndDate="21-Aug-2026")
+    row = nse.normalize_list_item(stale)
+    assert stale["status"] == "Active"
+    assert util.derive_status(row["open_date"], row["close_date"], None,
+                              today="2026-09-01", hour=0) == "closed"

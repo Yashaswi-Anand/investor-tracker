@@ -1555,3 +1555,59 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
   [data-anim="on"] .fin-bar { height: var(--h, 0%); transition: none; }
   [data-anim="on"] .sub-fill { width: var(--fill, 0%); transition: none; }
 }
+
+/* Company and status share one cell, stacked: the name is what a reader
+   scans for and the badge qualifies it, so the badge sits under rather than
+   beside — beside would push the name around as statuses change width. */
+.cell-company { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.cell-company:hover { text-decoration: none; }
+.cell-company-name { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.cell-company:hover .cell-company-name { text-decoration-thickness: 2px; }
+
+/* Between the close and the listing. Warmer than closed, quieter than open —
+   it is a waiting room, not a result. */
+.badge-allotment { background: var(--primary-soft); color: var(--primary); }
+
+/* ==========================================================================
+   Listing result — what a listed issue actually did
+   ========================================================================== */
+.listing-result { display: flex; flex-wrap: wrap; align-items: center; gap: 24px 40px; }
+.listing-bars { display: flex; align-items: flex-end; gap: 26px; height: 150px; flex: 0 0 auto; }
+.listing-col { display: flex; flex-direction: column; align-items: center; height: 100%; }
+.listing-value { font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; white-space: nowrap; }
+/* The bar measures against this, not against the column, so the labels
+   cannot compete with it for height. */
+.listing-track { flex: 1 1 auto; min-height: 0; display: flex; align-items: flex-end; width: 76px; }
+.listing-bar {
+  width: 100%;
+  height: var(--h, 0%);
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, var(--brand-3), var(--primary));
+  transition: height 0.3s ease;
+}
+.listing-bar[data-tone="up"] { background: linear-gradient(180deg, var(--up-strong), var(--up)); }
+.listing-bar[data-tone="down"] { background: linear-gradient(180deg, var(--down), var(--down)); }
+.listing-label {
+  height: 26px;
+  line-height: 26px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.listing-move { display: flex; flex-direction: column; gap: 2px; }
+.listing-move-pct { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+.listing-move[data-tone="up"] .listing-move-pct { color: var(--up); }
+.listing-move[data-tone="down"] .listing-move-pct { color: var(--down); }
+.listing-move-note { font-size: 0.8rem; color: var(--text-muted); max-width: 22ch; }
+
+/* Bars grow from the baseline with the rest of the reveals. */
+[data-anim="on"] .listing-bar { height: 0; }
+[data-anim="on"][data-inview] .listing-bar {
+  height: var(--h, 0%);
+  transition: height 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-anim="on"][data-inview] .listing-col:nth-child(2) .listing-bar { transition-delay: 110ms; }
+@media (prefers-reduced-motion: reduce) {
+  [data-anim="on"] .listing-bar { height: var(--h, 0%); transition: none; }
+}
