@@ -1260,15 +1260,6 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
   background: var(--surface-2);
 }
 .news-card .news-list { gap: 4px; }
-.news-count {
-  margin-left: 8px;
-  padding: 1px 9px;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: var(--primary);
-  background: var(--primary-soft);
-}
 
 /* ==========================================================================
    Reveal — charts draw in and figures count up as they scroll into view
