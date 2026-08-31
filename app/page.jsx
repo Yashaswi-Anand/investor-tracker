@@ -7,6 +7,7 @@ import {
 } from "../lib/data";
 import { safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
+import Reveal from "./components/Reveal";
 import TopGmp from "./components/TopGmp";
 
 // Rendered on every request: a live tracker must never show a cached GMP.
@@ -73,11 +74,11 @@ export default async function HomePage() {
             <span className="hero-sub">Live Data. Smarter Decision</span>
           </h1>
 
-          <div className="hero-stats">
+          <Reveal className="hero-stats" count>
             <div className="stat-tile">
               <div className="k">Open now</div>
               <div className="v num">{open.length}</div>
-              <div className="s">
+              <div className="s" data-nocount>
                 {open.length
                   ? open.slice(0, 2).map((i) => i.short_name || i.name).join(" · ")
                   : "No issue open today"}
@@ -86,14 +87,14 @@ export default async function HomePage() {
             <div className="stat-tile">
               <div className="k">Upcoming</div>
               <div className="v num">{upcoming.length}</div>
-              <div className="s">
+              <div className="s" data-nocount>
                 {upcoming.length
                   ? `Next: ${upcoming[0].short_name || upcoming[0].name}`
                   : "Nothing announced yet"}
               </div>
             </div>
             <TopGmp ipos={ipos} />
-          </div>
+          </Reveal>
         </div>
       </section>
 

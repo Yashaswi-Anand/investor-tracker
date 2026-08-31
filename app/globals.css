@@ -1269,3 +1269,81 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
   color: var(--primary);
   background: var(--primary-soft);
 }
+
+/* ==========================================================================
+   Reveal — charts draw in and figures count up as they scroll into view
+
+   Everything here hangs off [data-anim="on"], which Reveal.jsx sets only
+   AFTER mount and only when the reader has not asked for reduced motion.
+   Without it — no JavaScript, reduced motion, a crawler — the server's
+   finished state is what renders. None of these rules may hide content in
+   a way that survives with JS off.
+   ========================================================================== */
+
+/* ---- line chart: the line draws, then the fill and the dots follow ---- */
+[data-anim="on"] .gmp-line { stroke-dasharray: 1; stroke-dashoffset: 1; }
+[data-anim="on"] .gmp-area,
+[data-anim="on"] .gmp-dot,
+[data-anim="on"] .gmp-dot-last,
+[data-anim="on"] .gmp-last-label { opacity: 0; }
+
+[data-anim="on"][data-inview] .gmp-line {
+  animation: reveal-draw 1000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+[data-anim="on"][data-inview] .gmp-area {
+  animation: reveal-fade 700ms 220ms ease forwards;
+}
+/* --i is the dot's position along the line (0 to 1), so each one appears as
+   the line reaches it rather than the whole row arriving at once. */
+[data-anim="on"][data-inview] .gmp-dot,
+[data-anim="on"][data-inview] .gmp-dot-last {
+  animation: reveal-pop 300ms ease forwards;
+  animation-delay: calc(var(--i, 0) * 900ms);
+  /* Without fill-box an SVG circle scales about the viewBox origin and flies
+     in from the corner. */
+  transform-box: fill-box;
+  transform-origin: center;
+}
+[data-anim="on"][data-inview] .gmp-last-label {
+  animation: reveal-fade 400ms 950ms ease forwards;
+}
+
+@keyframes reveal-draw { to { stroke-dashoffset: 0; } }
+@keyframes reveal-fade { to { opacity: 1; } }
+@keyframes reveal-pop {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ---- financial bars grow from the baseline, left to right ---- */
+[data-anim="on"] .fin-bar { height: 0; }
+[data-anim="on"][data-inview] .fin-bar {
+  height: var(--h, 0%);
+  transition: height 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-anim="on"][data-inview] .fin-col:nth-child(2) .fin-bar { transition-delay: 90ms; }
+[data-anim="on"][data-inview] .fin-col:nth-child(3) .fin-bar { transition-delay: 180ms; }
+[data-anim="on"][data-inview] .fin-col:nth-child(4) .fin-bar { transition-delay: 270ms; }
+
+/* ---- subscription bars fill from empty ---- */
+[data-anim="on"] .sub-fill { width: 0; }
+[data-anim="on"][data-inview] .sub-fill {
+  width: var(--fill, 0%);
+  transition: width 800ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-anim="on"][data-inview] .sub-row:nth-child(2) .sub-fill { transition-delay: 70ms; }
+[data-anim="on"][data-inview] .sub-row:nth-child(3) .sub-fill { transition-delay: 140ms; }
+[data-anim="on"][data-inview] .sub-row:nth-child(4) .sub-fill { transition-delay: 210ms; }
+[data-anim="on"][data-inview] .sub-row:nth-child(5) .sub-fill { transition-delay: 280ms; }
+
+/* A second guard. Reveal already refuses to arm under reduced motion, but the
+   setting can change after mount and nothing should keep moving when it does. */
+@media (prefers-reduced-motion: reduce) {
+  [data-anim="on"] .gmp-line { stroke-dasharray: none; stroke-dashoffset: 0; }
+  [data-anim="on"] .gmp-area,
+  [data-anim="on"] .gmp-dot,
+  [data-anim="on"] .gmp-dot-last,
+  [data-anim="on"] .gmp-last-label { opacity: 1; animation: none; }
+  [data-anim="on"] .fin-bar { height: var(--h, 0%); transition: none; }
+  [data-anim="on"] .sub-fill { width: var(--fill, 0%); transition: none; }
+}

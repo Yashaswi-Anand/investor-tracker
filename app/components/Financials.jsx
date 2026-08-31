@@ -13,6 +13,7 @@
  */
 
 import { useState } from "react";
+import Reveal from "./Reveal";
 
 const METRICS = [
   { key: "revenue", label: "Revenue" },
@@ -99,7 +100,7 @@ export default function Financials({ financials }) {
 
       <p className="subtitle fin-unit">All values in ₹ crore</p>
 
-      <div className="fin-chart">
+      <Reveal className="fin-chart" count>
         {periods.map((period, index) => {
           const value = values[index];
           const height = value == null ? 0 : Math.max(2, (Math.abs(value) / peak) * 100);
@@ -117,11 +118,11 @@ export default function Financials({ financials }) {
                   style={{ "--h": `${height}%` }}
                 />
               </div>
-              <span className="fin-year">{labels[index]}</span>
+              <span className="fin-year" data-nocount>{labels[index]}</span>
             </div>
           );
         })}
-      </div>
+      </Reveal>
     </>
   );
 }
