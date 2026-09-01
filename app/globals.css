@@ -1569,45 +1569,140 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 .badge-allotment { background: var(--primary-soft); color: var(--primary); }
 
 /* ==========================================================================
-   Listing result — what a listed issue actually did
+   Price since listing - daily candles
    ========================================================================== */
-.listing-result { display: flex; flex-wrap: wrap; align-items: center; gap: 24px 40px; }
-.listing-bars { display: flex; align-items: flex-end; gap: 26px; height: 150px; flex: 0 0 auto; }
-.listing-col { display: flex; flex-direction: column; align-items: center; height: 100%; }
-.listing-value { font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; white-space: nowrap; }
-/* The bar measures against this, not against the column, so the labels
-   cannot compete with it for height. */
-.listing-track { flex: 1 1 auto; min-height: 0; display: flex; align-items: flex-end; width: 76px; }
-.listing-bar {
-  width: 100%;
-  height: var(--h, 0%);
-  border-radius: 8px 8px 0 0;
-  background: linear-gradient(180deg, var(--brand-3), var(--primary));
-  transition: height 0.3s ease;
-}
-.listing-bar[data-tone="up"] { background: linear-gradient(180deg, var(--up-strong), var(--up)); }
-.listing-bar[data-tone="down"] { background: linear-gradient(180deg, var(--down), var(--down)); }
-.listing-label {
-  height: 26px;
-  line-height: 26px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-.listing-move { display: flex; flex-direction: column; gap: 2px; }
-.listing-move-pct { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
-.listing-move[data-tone="up"] .listing-move-pct { color: var(--up); }
-.listing-move[data-tone="down"] .listing-move-pct { color: var(--down); }
-.listing-move-note { font-size: 0.8rem; color: var(--text-muted); max-width: 22ch; }
+.price-chart-wrap { margin-top: 4px; }
+.price-caption { margin: 0 0 10px; }
+.price-chart { width: 100%; height: auto; display: block; overflow: visible; }
 
-/* Bars grow from the baseline with the rest of the reveals. */
-[data-anim="on"] .listing-bar { height: 0; }
-[data-anim="on"][data-inview] .listing-bar {
-  height: var(--h, 0%);
-  transition: height 700ms cubic-bezier(0.22, 1, 0.36, 1);
+/* Green closed up, red closed down: on a price chart these two colours mean
+   one thing only and everyone already knows what. The wick is the same hue
+   as its body so a candle reads as one object. */
+.candle-body { fill: var(--down); }
+.candle-wick { stroke: var(--down); stroke-width: 1.3; }
+.candle[data-up="true"] .candle-body { fill: var(--up); }
+.candle[data-up="true"] .candle-wick { stroke: var(--up); }
+
+/* Candles arrive left to right, in the order they happened. --i is the bar's
+   position through the series, so the reveal traces the story rather than
+   flashing the whole chart at once. */
+[data-anim="on"] .candle { opacity: 0; }
+[data-anim="on"][data-inview] .candle {
+  animation: reveal-fade 260ms ease forwards;
+  animation-delay: calc(var(--i, 0) * 700ms);
 }
-[data-anim="on"][data-inview] .listing-col:nth-child(2) .listing-bar { transition-delay: 110ms; }
 @media (prefers-reduced-motion: reduce) {
-  [data-anim="on"] .listing-bar { height: var(--h, 0%); transition: none; }
+  [data-anim="on"] .candle { opacity: 1; animation: none; }
 }
+
+/* ==========================================================================
+   Account menu
+   ========================================================================== */
+.user-menu { position: relative; }
+.user-button {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--on-brand);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.user-button:hover { background: rgba(255, 255, 255, 0.24); }
+.user-button:active { transform: scale(0.95); }
+.user-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.user-initials { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.02em; }
+
+.user-pop {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 272px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+.user-head { display: flex; flex-direction: column; gap: 2px; padding: 2px 4px 12px; }
+.user-name { font-weight: 700; font-size: 0.92rem; }
+.user-mail { font-size: 0.76rem; color: var(--text-muted); word-break: break-word; }
+
+/* Google's button keeps Google's own surface: a white ground with their mark
+   is what people have been trained to look for, and restyling it into our
+   palette would make it harder to find, not more ours. */
+.user-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: #1f1f1f;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+.user-google:hover { box-shadow: var(--shadow-sm); }
+.user-google:disabled { opacity: 0.7; cursor: default; }
+.user-error { margin: 8px 4px 0; font-size: 0.76rem; color: var(--down); }
+.user-note { margin: 8px 4px 0; font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; }
+
+.user-soon { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); display: grid; gap: 2px; }
+/* Disabled and labelled, not hidden: the shape of what is coming is worth
+   showing, a button that silently does nothing is not. */
+.user-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 8px;
+  width: 100%;
+  padding: 8px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+.user-item-label { font-size: 0.85rem; font-weight: 600; }
+.user-item-note { grid-column: 1; font-size: 0.72rem; color: var(--text-muted); }
+.user-soon-tag {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+.user-signout {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.user-signout:hover { background: var(--surface-3); }
