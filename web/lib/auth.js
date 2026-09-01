@@ -15,6 +15,14 @@
  * page as cacheable and as fast as it is today. The day there is a watchlist
  * to render on the server, this moves to @supabase/ssr and cookies; that is a
  * deliberate later step, not an oversight.
+ *
+ * WHICH METHODS ARE OFFERED IS NOT HARDCODED. The project publishes what it
+ * has enabled at /auth/v1/settings, and the menu asks. Email costs nothing and
+ * is on by default; Google is free too but needs an OAuth client set up in
+ * Google Cloud first, and until that is done Supabase answers any attempt with
+ * "provider is not enabled". Reading the truth from the server means the menu
+ * can never offer a button that is going to fail, and Google appears by itself
+ * the moment it is switched on — no deploy needed.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -41,18 +49,57 @@ export function supabase() {
 }
 
 /**
- * Start Google sign-in.
+ * What this project will actually accept, straight from the server.
  *
- * `redirectTo` is this origin rather than a hardcoded one so the same build
- * works on localhost and in production — the allowed list is configured in
- * Supabase, which is the only place that should decide it.
+ * Fails closed to email only: it is the one method enabled by default, and
+ * offering nothing at all because a settings call failed would be worse than
+ * offering the method that almost certainly works.
  */
+export async function enabledMethods() {
+  const fallback = { email: true, google: false };
+  if (!SUPABASE.url || !SUPABASE.anonKey) return { email: false, google: false };
+  try {
+    const res = await fetch(`${SUPABASE.url}/auth/v1/settings`, {
+      headers: { apikey: SUPABASE.anonKey },
+    });
+    if (!res.ok) return fallback;
+    const body = await res.json();
+    const external = body?.external || {};
+    return {
+      email: external.email !== false,
+      google: external.google === true,
+      // Confirmation being on means a new account cannot sign in until the
+      // reader clicks a link in their inbox, and the form has to say so.
+      confirmEmail: body?.mailer_autoconfirm === false,
+      signupsOpen: body?.disable_signup !== true,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 export async function signInWithGoogle() {
   const client = supabase();
   if (!client) throw new Error("Supabase is not configured");
   return client.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: `${window.location.origin}/auth/callback` },
+  });
+}
+
+export async function signInWithEmail(email, password) {
+  const client = supabase();
+  if (!client) throw new Error("Supabase is not configured");
+  return client.auth.signInWithPassword({ email, password });
+}
+
+export async function signUpWithEmail(email, password) {
+  const client = supabase();
+  if (!client) throw new Error("Supabase is not configured");
+  return client.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
   });
 }
 

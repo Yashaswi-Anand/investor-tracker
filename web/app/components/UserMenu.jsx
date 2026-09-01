@@ -3,23 +3,35 @@
 /**
  * The account button in the header, and the menu behind it.
  *
- * Signed out it offers Google; signed in it names you and offers a way out.
- * Either way it lists what is coming — a watchlist and allotment alerts —
- * marked plainly as not built yet. Showing the shape of a product is useful;
- * showing a button that silently does nothing is not, so those rows are
- * disabled and say so rather than looking live.
+ * Signed out it offers whatever the project has actually enabled — email
+ * always, Google only once an OAuth client exists for it. Nothing here is
+ * hardcoded: asking the server which methods work means the menu can never
+ * show a button that answers "provider is not enabled".
  *
- * Renders nothing at all when Supabase is not configured. A sign-in button
- * that cannot sign anyone in is worse than no button.
+ * Signed in it names you and offers a way out. Either way it lists what is
+ * coming — a watchlist and allotment alerts — marked plainly as not built
+ * yet. Showing the shape of a product is useful; showing a button that
+ * silently does nothing is not, so those rows are disabled and say so.
  */
 
 import { useEffect, useRef, useState } from "react";
-import { displayName, initials, signInWithGoogle, signOut, supabase } from "../../lib/auth";
+import {
+  displayName,
+  enabledMethods,
+  initials,
+  signInWithEmail,
+  signInWithGoogle,
+  signOut,
+  signUpWithEmail,
+  supabase,
+} from "../../lib/auth";
 
 const COMING_SOON = [
   { key: "watchlist", label: "Watchlist", note: "Follow the issues you care about" },
   { key: "alerts", label: "Allotment alerts", note: "Know the moment allotment is out" },
 ];
+
+const MIN_PASSWORD = 8;
 
 function GoogleMark() {
   return (
@@ -36,8 +48,15 @@ export default function UserMenu() {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
+  const [methods, setMethods] = useState(null);
+
+  const [mode, setMode] = useState("signin"); // signin | signup
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
+
   const rootRef = useRef(null);
 
   useEffect(() => {
@@ -61,6 +80,13 @@ export default function UserMenu() {
     };
   }, []);
 
+  // Asked once, and only when the menu is first opened — there is no reason
+  // to spend a request on someone who never opens it.
+  useEffect(() => {
+    if (!open || methods) return;
+    enabledMethods().then(setMethods);
+  }, [open, methods]);
+
   useEffect(() => {
     if (!open) return;
     const away = (event) => {
@@ -75,7 +101,6 @@ export default function UserMenu() {
     };
   }, [open]);
 
-  // Nothing to offer without Supabase, so nothing is rendered.
   if (!supabase()) return null;
 
   const onGoogle = async () => {
@@ -83,17 +108,50 @@ export default function UserMenu() {
     setError(null);
     try {
       const { error } = await signInWithGoogle();
-      // On success the browser is already navigating away; only a failure
-      // ever gets this far.
       if (error) throw error;
     } catch (err) {
-      setError(err?.message || "Could not start sign-in. Please try again.");
+      setError(err?.message || "Could not start sign-in.");
+      setBusy(false);
+    }
+  };
+
+  const onEmail = async (event) => {
+    event.preventDefault();
+    setError(null);
+    setNotice(null);
+
+    if (!email.trim()) return setError("Enter your email address.");
+    if (password.length < MIN_PASSWORD) {
+      return setError(`Password must be at least ${MIN_PASSWORD} characters.`);
+    }
+
+    setBusy(true);
+    try {
+      if (mode === "signup") {
+        const { data, error } = await signUpWithEmail(email.trim(), password);
+        if (error) throw error;
+        // With confirmation on there is no session yet — saying "you're in"
+        // when the reader is not would be the wrong message entirely.
+        if (!data?.session) {
+          setNotice(`Check ${email.trim()} for a link to confirm your account.`);
+          setPassword("");
+        }
+      } else {
+        const { error } = await signInWithEmail(email.trim(), password);
+        if (error) throw error;
+        setPassword("");
+        setOpen(false);
+      }
+    } catch (err) {
+      setError(err?.message || "Something went wrong. Please try again.");
+    } finally {
       setBusy(false);
     }
   };
 
   const name = displayName(user);
   const avatar = user?.user_metadata?.avatar_url;
+  const signedOut = ready && !user;
 
   return (
     <div className="user-menu" ref={rootRef}>
@@ -133,30 +191,84 @@ export default function UserMenu() {
               </>
             ) : (
               <>
-                <span className="user-name">Not signed in</span>
+                <span className="user-name">
+                  {mode === "signup" ? "Create your account" : "Sign in"}
+                </span>
                 <span className="user-mail">
-                  Sign in to keep your watchlist across devices
+                  Keep your watchlist across devices
                 </span>
               </>
             )}
           </div>
 
-          {ready && !user && (
+          {signedOut && (
             <>
+              {methods?.google && (
+                <>
+                  <button
+                    type="button"
+                    className="user-google"
+                    onClick={onGoogle}
+                    disabled={busy}
+                  >
+                    <GoogleMark />
+                    {busy ? "Opening Google…" : "Continue with Google"}
+                  </button>
+                  <p className="user-or">
+                    <span>or</span>
+                  </p>
+                </>
+              )}
+
+              <form className="user-form" onSubmit={onEmail}>
+                <label className="user-field">
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                  />
+                </label>
+                <label className="user-field">
+                  <span>Password</span>
+                  <input
+                    type="password"
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={`At least ${MIN_PASSWORD} characters`}
+                    minLength={MIN_PASSWORD}
+                    required
+                  />
+                </label>
+                <button type="submit" className="user-submit" disabled={busy}>
+                  {busy
+                    ? "Working…"
+                    : mode === "signup"
+                      ? "Create account"
+                      : "Sign in"}
+                </button>
+              </form>
+
+              {error && <p className="user-error">{error}</p>}
+              {notice && <p className="user-notice">{notice}</p>}
+
               <button
                 type="button"
-                className="user-google"
-                onClick={onGoogle}
-                disabled={busy}
+                className="user-switch"
+                onClick={() => {
+                  setMode(mode === "signup" ? "signin" : "signup");
+                  setError(null);
+                  setNotice(null);
+                }}
               >
-                <GoogleMark />
-                {busy ? "Opening Google…" : "Continue with Google"}
+                {mode === "signup"
+                  ? "Already have an account? Sign in"
+                  : "New here? Create an account"}
               </button>
-              {error && <p className="user-error">{error}</p>}
-              <p className="user-note">
-                Signing in creates your account — there is no separate
-                registration step.
-              </p>
             </>
           )}
 
