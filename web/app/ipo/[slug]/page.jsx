@@ -24,7 +24,7 @@ import {
   times,
 } from "../../../lib/format";
 import Financials from "../../components/Financials";
-import ListingResultChart from "../../components/ListingResultChart";
+import PriceChart from "../../components/PriceChart";
 import NewsList from "../../components/NewsList";
 import Reveal from "../../components/Reveal";
 import GmpLineChart from "../../components/GmpLineChart";
@@ -93,7 +93,12 @@ function GmpHistory({ history, ipo }) {
     );
   }
 
-  const recent = days.slice(-30);
+  // Nothing after the listing day. The scraper stops recording there now,
+  // but snapshots written before it learned to are still in the table, and a
+  // premium plotted past the listing is a guess drawn over a fact.
+  const listingDay = ipo.listing_date ? String(ipo.listing_date).slice(0, 10) : null;
+  const upToListing = listingDay ? days.filter((d) => d.date < listingDay) : days;
+  const recent = upToListing.slice(-30);
   const high = ipo.price_band_high != null ? Number(ipo.price_band_high) : null;
 
   // Newest first for the table, with change vs the previous day.
@@ -597,13 +602,21 @@ export default async function IpoDetailPage({ params }) {
           </dl>
         </section>
 
-        {/* For an issue that has already listed this is the only question
-            left, so it comes before the timetable and the premium history
-            rather than after them. */}
-        {ipo.listing_price != null && (
+        {/* Once it trades there is a real price, quoted all day, and that is
+            the only chart worth showing — so it comes before the timetable
+            and before the premium history, which by then is a record of what
+            the grey market guessed. */}
+        {ipo.status === "listed" && (
           <section className="card card-wide">
-            <h2>Listing Result</h2>
-            <ListingResultChart ipo={ipo} />
+            <h2>Price Since Listing</h2>
+            {(ipo.details || {}).prices?.length >= 2 ? (
+              <PriceChart ipo={ipo} />
+            ) : (
+              <p className="subtitle subtitle-flush">
+                Daily prices appear once NSE publishes the day&apos;s closing
+                data, which is in the evening.
+              </p>
+            )}
           </section>
         )}
 

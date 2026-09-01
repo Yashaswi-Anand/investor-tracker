@@ -22,6 +22,7 @@ import util
 from sources import gmp as gmp_source
 from sources import nse
 from sources import listing as listing_source
+from sources import prices as prices_source
 from sources import timetable as timetable_source
 
 
@@ -38,7 +39,7 @@ def effective_gmp(row, existing_row):
     return scraped if scraped is not None else (existing_row or {}).get("gmp")
 
 
-def gmp_is_observed(row, existing_row):
+def gmp_is_observed(row, existing_row, today=None):
     """Whether this run actually has a premium worth recording in history.
 
     A locked GMP is maintained by hand and is authoritative on every run, so
@@ -48,7 +49,18 @@ def gmp_is_observed(row, existing_row):
     had been observed today, drawing a confident flat line straight through
     an outage. The GMP history is the one dataset nobody else has; it must
     not contain values we never saw.
+
+    Nothing is recorded once the issue has listed. A grey market premium is a
+    guess about a price that does not exist yet; the moment the share trades
+    there IS a price, quoted all day, and the guess is not a second opinion
+    about it. The source keeps publishing a number for a week or so after
+    listing and recording it would draw the chart past the only point on it
+    that was ever going to matter.
     """
+    listing_date = effective_listing_date(row, existing_row)
+    if listing_date and (today or util.ist_today()) >= listing_date:
+        return False
+
     locked = set((existing_row or {}).get("locked") or [])
     if "gmp" in locked:
         return True
@@ -230,19 +242,37 @@ def run():
             row.update(listing_by_slug.get(row["slug"], {}))
         print(f"      {len(listing_by_slug)} IPOs gained a listing price")
 
-        print("[6/7] Computing derived fields from the effective GMP...")
+        # After the listing price, because it shares the same archive and the
+        # same listing_date, and before the write so the bars go out with the
+        # rest of the row.
+        print("[6/8] Daily prices for IPOs that have already listed...")
+        try:
+            prices_by_slug = prices_source.fetch(rows, existing)
+        except Exception as error:  # noqa: BLE001 - a chart is not worth a run
+            print(f"      (prices unavailable: {error})")
+            prices_by_slug = {}
+        for row in rows:
+            bars = prices_by_slug.get(row["slug"])
+            if bars:
+                merged = dict(row.get("details") or {})
+                merged["prices"] = bars
+                row["details"] = merged
+        print(f"      {len(prices_by_slug)} IPOs gained daily bars")
+
+        print("[7/8] Computing derived fields from the effective GMP...")
         effective = {}
         observed = set()
+        today = util.ist_today()
         for row in rows:
             existing_row = existing.get(row["slug"])
             value = effective_gmp(row, existing_row)
             effective[row["slug"]] = value
-            if gmp_is_observed(row, existing_row):
+            if gmp_is_observed(row, existing_row, today):
                 observed.add(row["slug"])
             compute_derived(row, value, existing_row)
             apply_status(row, existing_row)
 
-        print("[7/7] Writing to Supabase...")
+        print("[8/8] Writing to Supabase...")
         payload = db.apply_locks(rows, existing)
         written = db.upsert_ipos(payload)
 

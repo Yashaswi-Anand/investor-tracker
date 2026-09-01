@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa: E402
 import db  # noqa: E402
 import util  # noqa: E402
-from sources import gmp, listing, nse, timetable  # noqa: E402
+from sources import gmp, listing, nse, prices, timetable  # noqa: E402
 
 
 # --------------------------------------------------------------------------
@@ -943,3 +943,70 @@ def test_nse_active_flag_does_not_beat_a_past_close_date():
     assert stale["status"] == "Active"
     assert util.derive_status(row["open_date"], row["close_date"], None,
                               today="2026-09-01", hour=0) == "closed"
+
+
+# --------------------------------------------------------------------------
+# GMP stops at listing; daily prices take over
+# --------------------------------------------------------------------------
+def test_gmp_history_stops_once_the_issue_has_listed():
+    # The source keeps publishing a premium for a week after listing. Once a
+    # real price exists the guess is not a second opinion about it.
+    row = {"slug": "a", "gmp": 12}
+    existing = {"listing_date": "2026-08-26", "locked": []}
+    assert pipeline.gmp_is_observed(row, existing, today="2026-08-25") is True
+    assert pipeline.gmp_is_observed(row, existing, today="2026-08-26") is False
+    assert pipeline.gmp_is_observed(row, existing, today="2026-09-01") is False
+
+
+def test_locked_gmp_also_stops_at_listing():
+    # A hand-maintained premium is authoritative right up to the listing and
+    # not one day past it.
+    row = {"slug": "a"}
+    existing = {"listing_date": "2026-08-26", "locked": ["gmp"], "gmp": 40}
+    assert pipeline.gmp_is_observed(row, existing, today="2026-08-25") is True
+    assert pipeline.gmp_is_observed(row, existing, today="2026-08-27") is False
+
+
+def test_gmp_history_continues_when_there_is_no_listing_date():
+    row = {"slug": "a", "gmp": 12}
+    assert pipeline.gmp_is_observed(row, {}, today="2026-09-01") is True
+
+
+def test_prices_parse_reads_ohlc_and_skips_non_equity():
+    header = (
+        "TradDt,BizDt,Sgmt,Src,FinInstrmTp,FinInstrmId,ISIN,TckrSymb,SctySrs,"
+        "XpryDt,FininstrmActlXpryDt,StrkPric,OptnTp,FinInstrmNm,OpnPric,HghPric,"
+        "LwPric,ClsPric,LastPric,PrvsClsgPric,UndrlygPric,SttlmPric,OpnIntrst,"
+        "ChngInOpnIntrst,TtlTradgVol,TtlTrfVal,TtlNbOfTxsExctd,SsnId,NewBrdLotQty,Rmks"
+    )
+    equity = (
+        "2026-08-31,2026-08-31,CM,NSE,STK,765396,INE18UN01038,GAJA,EQ,,,,,GAJA LTD,"
+        "157.91,158.66,149.55,150.97,151.70,158.66,,151.07,,,3306446,504804205.72,24227,F1,1,"
+    )
+    debt = equity.replace(",GAJA,EQ,", ",SOMEBOND,N1,")
+    import zipfile, io as _io
+
+    buf = _io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("day.csv", "\n".join([header, equity, debt]))
+
+    bars = prices.parse_day(buf.getvalue())
+    assert set(bars) == {"GAJA"}, "only cash-market equity series belong in a price chart"
+    bar = bars["GAJA"]
+    assert (bar["o"], bar["h"], bar["l"], bar["c"]) == (157.91, 158.66, 149.55, 150.97)
+    assert bar["v"] == 3306446
+    assert bar["d"] == "2026-08-31"
+
+
+def test_prices_asks_for_nothing_when_nothing_has_listed():
+    rows = [{"slug": "a", "symbol": "AAA", "listing_date": None}]
+    assert prices.fetch(rows, {}, today="2026-09-01") == {}
+
+
+def test_prices_never_asks_for_today_or_a_weekend():
+    # 2026-09-01 is a Tuesday; the day before is Monday, then the weekend.
+    rows = [{"slug": "a", "symbol": "AAA", "listing_date": "2026-08-26"}]
+    days, _ = prices._wanted_days(rows, {}, "2026-09-01")
+    assert "2026-09-01" not in days, "today's file is not published until the evening"
+    weekend = {"2026-08-29", "2026-08-30"}
+    assert not (set(days) & weekend), "no bhavcopy exists on a Saturday or Sunday"
