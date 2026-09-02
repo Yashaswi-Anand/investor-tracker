@@ -2207,6 +2207,66 @@ body.has-sheet .scroll-jump { display: none; }
    ========================================================================== */
 .allot-head { margin-bottom: 18px; }
 
+/* The one thing on this page nobody must skim past. Bordered and tinted
+   rather than set as another paragraph, because the first version said the
+   same thing in the lede and a reader still took an unmarked row for a "no". */
+.allot-notice {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--warn);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--warn-soft);
+  color: var(--text);
+}
+.allot-notice-title {
+  margin: 0 0 8px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--warn);
+}
+.allot-notice-title::before { content: none; }
+.allot-notice p { margin: 0 0 8px; font-size: 0.86rem; line-height: 1.65; }
+.allot-notice p:last-child { margin-bottom: 0; }
+.allot-notice strong { font-weight: 800; }
+.allot-notice-alt { font-size: 0.82rem; opacity: 0.9; }
+
+/* Numbered because it is a sequence and the order is the whole instruction. */
+.result-steps {
+  display: grid;
+  gap: 3px;
+  margin: 10px 0 0;
+  padding-left: 20px;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+/* The row's own answer in words, so "nothing pressed" reads as "not looked
+   at yet" instead of as a negative result. */
+.result-state {
+  margin-right: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  align-self: center;
+}
+.result-row[data-outcome="allotted"] .result-state { color: var(--up); }
+
+.result-copy-name {
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .pan-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; }
 .pan-input {
   flex: 1 1 180px;
@@ -2397,7 +2457,7 @@ body.has-sheet .scroll-jump { display: none; }
   text-transform: uppercase;
   color: var(--primary);
 }
-.result-marks { display: flex; gap: 6px; }
+.result-marks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .result-mark {
   padding: 6px 12px;
   border: 1px solid var(--border);

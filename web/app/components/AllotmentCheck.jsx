@@ -131,13 +131,13 @@ export default function AllotmentCheck({ ipos }) {
       return next;
     });
 
-  const copyPan = async (pan) => {
+  const copyText = async (text, token) => {
     try {
-      await navigator.clipboard.writeText(pan);
-      setCopied(pan);
+      await navigator.clipboard.writeText(text);
+      setCopied(token);
       setTimeout(() => setCopied(null), 1600);
     } catch {
-      /* clipboard refused; the PAN is on screen to read */
+      /* clipboard refused; everything here is on screen to read */
     }
   };
 
@@ -284,18 +284,19 @@ export default function AllotmentCheck({ ipos }) {
           onClick={() => setChecking(true)}
         >
           {canCheck
-            ? `Check ${total} ${total === 1 ? "status" : "statuses"}`
+            ? `Build my checklist (${total} to check)`
             : "Add a PAN and pick an IPO"}
         </button>
       </section>
 
       {checking && canCheck ? (
         <section className="card card-wide" id="allotment-results">
-          <h2>Allotment status</h2>
+          <h2>Your checklist</h2>
           <p className="subtitle">
-            Each registrar asks for its own CAPTCHA, so the last step is yours:
-            open the registrar, paste the PAN, and tap what you find. We keep
-            the answer here so you do not check the same one twice.
+            One row per PAN per issue. For each one: open the registrar, paste
+            the PAN, answer their CAPTCHA, then tap what their page said. The
+            two buttons are yours to set — they record what you saw, they are
+            not a result this site worked out.
           </p>
 
           <p className="check-summary" role="status">
@@ -316,6 +317,17 @@ export default function AllotmentCheck({ ipos }) {
                   <p className="result-registrar">
                     {ipo.registrar || "Registrar not published"}
                   </p>
+                  {/* Their dropdown lists the full legal name, which is not
+                      always what anyone calls the company. */}
+                  <button
+                    type="button"
+                    className="result-copy-name"
+                    onClick={() => copyText(ipo.name, `name:${ipo.slug}`)}
+                  >
+                    {copied === `name:${ipo.slug}`
+                      ? "Company name copied"
+                      : "Copy company name"}
+                  </button>
                 </div>
                 {ipo.registrar_url ? (
                   <a
@@ -339,6 +351,12 @@ export default function AllotmentCheck({ ipos }) {
                 ) : null}
               </div>
 
+              <ol className="result-steps">
+                <li>Open the registrar and pick this company from their list</li>
+                <li>Paste the PAN and answer their CAPTCHA</li>
+                <li>Come back and tap what their page said</li>
+              </ol>
+
               <ul className="result-rows">
                 {pans.map((pan) => {
                   const current = marks[`${ipo.slug}|${pan}`];
@@ -347,16 +365,25 @@ export default function AllotmentCheck({ ipos }) {
                       <button
                         type="button"
                         className="result-pan"
-                        onClick={() => copyPan(pan)}
+                        onClick={() => copyText(pan, `pan:${pan}`)}
                         title="Copy this PAN"
                       >
                         {pan}
                         <span className="result-copy">
-                          {copied === pan ? "Copied" : "Copy"}
+                          {copied === `pan:${pan}` ? "Copied" : "Copy"}
                         </span>
                       </button>
 
                       <span className="result-marks">
+                        {/* Only while nothing is pressed. A row with neither
+                            button set was being read as a "no", and nobody
+                            must mistake "not looked at yet" for "did not get
+                            any" — but once a button IS pressed it says so
+                            itself, and repeating it beside it reads as two
+                            different facts. */}
+                        {current ? null : (
+                          <span className="result-state">Not checked yet</span>
+                        )}
                         {OUTCOMES.map((outcome) => (
                           <button
                             key={outcome.key}

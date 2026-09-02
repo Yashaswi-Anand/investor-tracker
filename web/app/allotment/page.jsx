@@ -34,12 +34,44 @@ export default async function AllotmentPage() {
       <section className="allot-head">
         <h1 className="news-h1">Check allotment</h1>
         <p className="subtitle news-lede">
-          Your PANs and the issues you applied for, on one screen. Every
-          registrar puts its status form behind a CAPTCHA, so {SITE.name}{" "}
-          cannot fetch the result for you — what it removes is the rest of it:
-          finding the right registrar for each issue, retyping a PAN into six
-          different forms, and losing track of which ones you already checked.
+          Your PANs and the issues you applied for, on one screen — the right
+          registrar for each, the PAN a tap from their form, and a record of
+          what you found.
         </p>
+
+        {/* A callout, not a sentence in a paragraph. The first version of
+            this page said the same thing in the lede and it did not land:
+            the page looked like it was reporting a status, so a row nobody
+            had marked yet was read as "not allotted". */}
+        <aside className="allot-notice">
+          <h2 className="allot-notice-title">
+            {SITE.name} cannot look up your allotment
+          </h2>
+          <p>
+            Only the registrar knows, and every one of them — Bigshare, KFin,
+            MUFG Intime, Skyline — puts that answer behind a CAPTCHA, which
+            exists precisely to stop a site like this asking on your behalf.
+            No IPO site can honestly get past it, and this one does not try.
+          </p>
+          <p>
+            So the last step stays yours: open the registrar, paste the PAN,
+            answer their CAPTCHA. <strong>Allotted</strong> and{" "}
+            <strong>Not allotted</strong> below are buttons for you to press
+            afterwards — they record what their page said, so you can see at a
+            glance which ones you have already been through.
+          </p>
+          <p className="allot-notice-alt">
+            BSE offers the same lookup for issues listed there, if you find
+            their form easier:{" "}
+            <a
+              href="https://www.bseindia.com/investors/appli_check.aspx"
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+            >
+              bseindia.com application status
+            </a>
+          </p>
+        </aside>
       </section>
 
       <AllotmentCheck ipos={ipos} />
