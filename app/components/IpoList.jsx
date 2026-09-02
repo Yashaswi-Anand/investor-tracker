@@ -7,6 +7,14 @@
  * desktop — one component, switched by CSS so there is no layout shift and
  * no duplicated data.
  *
+ * The two views page differently because they are read differently. A table
+ * is scanned: you want a known number of rows, a stable header, and the
+ * ability to jump — so it paginates. A phone list is thumbed: page buttons
+ * would sit at the bottom of a column you are already scrolling past, so it
+ * grows as you reach the end instead. Both slice the same sorted array, and
+ * whichever view CSS has hidden costs nothing — a display:none list has no
+ * layout box, so its sentinel never intersects and it never grows.
+ *
  * The table is driven by the COLUMNS array below rather than by hand-written
  * <th>/<td> pairs. With eleven columns, reordering by hand means editing two
  * lists in lockstep and silently shifting every cell in the body if you miss
@@ -80,6 +88,23 @@ const STATUS_RANK = { open: 0, upcoming: 1, closed: 2, allotment: 3, listed: 4 }
 
 /** At most two columns may be pinned; more would leave nothing to scroll. */
 const MAX_PINNED = 2;
+
+/**
+ * Rows per page in the table.
+ *
+ * Fifteen rows of eleven columns is already a tall screen; more and the
+ * header scrolls away, which is the thing pinning exists to prevent.
+ */
+const PAGE_SIZE = 15;
+
+/**
+ * Cards rendered at first, and added each time the phone list runs out.
+ *
+ * Eight is roughly two thumb-flicks — long enough that the first batch never
+ * looks truncated, short enough that a sixty-issue season does not build
+ * sixty cards nobody scrolls to.
+ */
+const CARD_CHUNK = 8;
 
 const TAB_KEYS = TABS.map((t) => t.key);
 const BOARD_KEYS = BOARDS.map((b) => b.key);
@@ -276,6 +301,30 @@ function compare(a, b, key, dir, today) {
   return tiebreak(a, b);
 }
 
+/**
+ * The page buttons to draw: every page while there are few, otherwise the
+ * first, the last, and a window around where the reader is, with gaps
+ * marking what was left out. Twenty numbered buttons in a row is not
+ * navigation, it is a wall.
+ */
+function pageWindow(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+  const wanted = [1, total, current - 1, current, current + 1]
+    .filter((page) => page >= 1 && page <= total)
+    .sort((a, b) => a - b);
+
+  const out = [];
+  let previous = 0;
+  for (const page of wanted) {
+    if (page === previous) continue;
+    if (page - previous > 1) out.push("gap");
+    out.push(page);
+    previous = page;
+  }
+  return out;
+}
+
 function PinIcon() {
   return (
     <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
@@ -340,6 +389,8 @@ export default function IpoList({ ipos }) {
   const [closingToday, setClosingToday] = useState(false);
   const [sort, setSort] = useState({ key: "default", dir: "desc" });
   const [pinned, setPinned] = useState(["name"]);
+  const [page, setPage] = useState(1);
+  const [shown, setShown] = useState(CARD_CHUNK);
 
   // Read ?tab= / ?board= on the client rather than from server searchParams,
   // so the page keeps one cacheable render. This also makes the app-manifest
@@ -460,10 +511,85 @@ export default function IpoList({ ipos }) {
     return rows;
   }, [filtered, query, closingToday, today, sort]);
 
+  // Any change to what is being listed sends both views back to the start.
+  // Landing on page 4 of a search that returned six rows, or holding forty
+  // grown cards while the reader switches to a tab with three, is the kind
+  // of stale state that makes a filter feel broken.
+  useEffect(() => {
+    setPage(1);
+    setShown(CARD_CHUNK);
+  }, [active, board, query, closingToday, sort.key, sort.dir]);
+
+  const tableRef = useRef(null);
+  const sentinelRef = useRef(null);
+
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  // Clamped rather than trusted: the reset above runs after the render that
+  // narrowed the list, so for one paint `page` can still point past the end.
+  // Deriving the current page means that paint shows the last page, not a
+  // blank table.
+  const current = Math.min(page, pageCount);
+  const start = (current - 1) * PAGE_SIZE;
+  const rows = useMemo(
+    () => visible.slice(start, start + PAGE_SIZE),
+    [visible, start]
+  );
+
+  const cards = useMemo(() => visible.slice(0, shown), [visible, shown]);
+  const moreCards = cards.length < visible.length;
+
+  const goToPage = (next) => {
+    setPage(Math.min(Math.max(next, 1), pageCount));
+    // Without this a new page arrives wherever the old one was left, which
+    // reads as the table having quietly rewritten itself rather than turned.
+    const table = tableRef.current;
+    if (!table) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    table.scrollIntoView({
+      block: "start",
+      inline: "nearest",
+      behavior: still ? "instant" : "smooth",
+    });
+  };
+
+  /**
+   * Grow the phone list when its end comes into view.
+   *
+   * Rebuilt on every growth on purpose. An observer only reports CHANGES in
+   * intersection, so when a batch is shorter than the screen the sentinel
+   * stays visible, nothing changes, and the list stalls until the reader
+   * scrolls again. A fresh observer reports the state it finds, which loads
+   * the next batch immediately and keeps going until the end is off-screen.
+   */
+  useEffect(() => {
+    if (!moreCards) return undefined;
+    const node = sentinelRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShown((count) => count + CARD_CHUNK);
+        }
+      },
+      // Start a little before the end is actually reached, so the next cards
+      // are already there by the time the reader would have seen the bottom.
+      { rootMargin: "320px 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [moreCards, shown]);
+
+  // A button for the rare browser with no IntersectionObserver. Decided after
+  // mount so the server and the first client render agree.
+  const [autoGrows, setAutoGrows] = useState(true);
+  useEffect(() => {
+    setAutoGrows(typeof IntersectionObserver !== "undefined");
+  }, []);
+
   // Pinned columns stick at cumulative offsets, so the second one sits
   // exactly against the first. The widths are whatever the browser resolved,
   // so they have to be measured rather than assumed.
-  const tableRef = useRef(null);
   const [offsets, setOffsets] = useState({});
 
   useLayoutEffect(() => {
@@ -492,7 +618,7 @@ export default function IpoList({ ipos }) {
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, [pinned, visible]);
+  }, [pinned, rows]);
 
   if (!ipos.length) {
     return (
@@ -602,7 +728,7 @@ export default function IpoList({ ipos }) {
 
       {narrowed && visible.length > 0 ? (
         <p className="result-note">
-          Showing {visible.length} of {filtered.length}
+          {visible.length} of {filtered.length} match this filter
         </p>
       ) : null}
 
@@ -636,7 +762,7 @@ export default function IpoList({ ipos }) {
         <>
           {/* Phone / app view */}
           <div className="card-list">
-            {visible.map((ipo) => {
+            {cards.map((ipo) => {
               const timeline = timelineLabel(ipo, today);
               return (
                 <Link
@@ -679,6 +805,25 @@ export default function IpoList({ ipos }) {
             })}
           </div>
 
+          {moreCards ? (
+            /* Empty on purpose: the reader scrolling here is the whole
+               interaction, and a spinner for work that takes no time would
+               only ever be seen as a flicker. */
+            <div className="card-more" ref={sentinelRef}>
+              {autoGrows ? null : (
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() => setShown((count) => count + CARD_CHUNK)}
+                >
+                  Show {Math.min(CARD_CHUNK, visible.length - cards.length)} more
+                </button>
+              )}
+            </div>
+          ) : visible.length > CARD_CHUNK ? (
+            <p className="card-end">That&rsquo;s all {visible.length}.</p>
+          ) : null}
+
           {/* Desktop view */}
           <div className="table-wrap">
             <table ref={tableRef}>
@@ -699,7 +844,7 @@ export default function IpoList({ ipos }) {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((ipo) => {
+                {rows.map((ipo) => {
                   const timeline = timelineLabel(ipo, today);
                   return (
                     <tr key={ipo.slug}>
@@ -729,6 +874,59 @@ export default function IpoList({ ipos }) {
               </tbody>
             </table>
           </div>
+
+          {pageCount > 1 ? (
+            <nav className="pager" aria-label="IPO table pages">
+              <button
+                type="button"
+                className="pager-step"
+                onClick={() => goToPage(current - 1)}
+                disabled={current === 1}
+                aria-label="Previous page"
+              >
+                <span aria-hidden="true">&lsaquo;</span>
+              </button>
+
+              <ol className="pager-pages">
+                {pageWindow(current, pageCount).map((entry, index) =>
+                  entry === "gap" ? (
+                    <li key={`gap-${index}`} className="pager-gap" aria-hidden="true">
+                      &hellip;
+                    </li>
+                  ) : (
+                    <li key={entry}>
+                      <button
+                        type="button"
+                        className="pager-page"
+                        data-active={entry === current || undefined}
+                        aria-current={entry === current ? "page" : undefined}
+                        aria-label={`Page ${entry}`}
+                        onClick={() => goToPage(entry)}
+                      >
+                        {entry}
+                      </button>
+                    </li>
+                  )
+                )}
+              </ol>
+
+              <button
+                type="button"
+                className="pager-step"
+                onClick={() => goToPage(current + 1)}
+                disabled={current === pageCount}
+                aria-label="Next page"
+              >
+                <span aria-hidden="true">&rsaquo;</span>
+              </button>
+
+              {/* Live, because after a page turn the numbers are the only
+                  thing that says where the reader now is. */}
+              <p className="pager-range" aria-live="polite">
+                {start + 1}&ndash;{start + rows.length} of {visible.length}
+              </p>
+            </nav>
+          ) : null}
         </>
       )}
     </>
