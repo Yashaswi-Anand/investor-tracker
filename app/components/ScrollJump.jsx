@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * One floating button that points wherever you are not.
+ * Back to top, once there is a top worth going back to.
  *
- * Near the top it offers the bottom; past the halfway mark it offers the top.
- * A single control that turns around is easier to trust than two buttons that
- * appear and disappear, and it is always the same target under the thumb.
+ * It stays out of the way until the reader has actually travelled — roughly
+ * one screen down — and then offers the only jump anyone wants from there.
+ * A "go to bottom" arrow was the other half of this and has been dropped:
+ * near the top of a list nobody is trying to reach the footer, and an arrow
+ * that changes meaning as you scroll is one more thing to work out mid-flick.
  *
  * It hides itself on any page short enough that jumping is not worth a tap.
  * That check has to be re-run on more than scroll and resize: the phone list
@@ -22,10 +24,13 @@ import { useEffect, useState } from "react";
  */
 const MIN_SCROLLABLE = 240;
 
+/** How far down counts as "travelled" — about one screen. */
+const SHOW_AFTER = 0.9;
+
 export default function ScrollJump() {
-  // null until measured, which is also what the server renders — there is no
-  // scroll position to know about before the page exists.
-  const [dir, setDir] = useState(null);
+  // false until measured, which is also what the server renders — there is
+  // no scroll position to know about before the page exists.
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
     let frame = 0;
@@ -33,11 +38,9 @@ export default function ScrollJump() {
     const measure = () => {
       frame = 0;
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      if (max < MIN_SCROLLABLE) {
-        setDir(null);
-        return;
-      }
-      setDir(window.scrollY > max / 2 ? "up" : "down");
+      setShow(
+        max >= MIN_SCROLLABLE && window.scrollY > window.innerHeight * SHOW_AFTER
+      );
     };
 
     // Scroll fires far more often than the answer can change; one frame is
@@ -62,30 +65,21 @@ export default function ScrollJump() {
     };
   }, []);
 
-  if (!dir) return null;
-
-  const up = dir === "up";
-  const label = up ? "Back to top" : "Jump to bottom";
+  if (!show) return null;
 
   const jump = () => {
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({
-      top: up ? 0 : document.documentElement.scrollHeight,
-      behavior: still ? "instant" : "smooth",
-    });
+    window.scrollTo({ top: 0, behavior: still ? "instant" : "smooth" });
   };
 
   return (
     <button
       type="button"
       className="scroll-jump"
-      data-dir={dir}
       onClick={jump}
-      aria-label={label}
-      title={label}
+      aria-label="Back to top"
+      title="Back to top"
     >
-      {/* Drawn pointing up; CSS turns it over for the other direction, so the
-          button reads as one thing rotating rather than two icons swapping. */}
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path d="M12 19V6M5.5 12.5 12 6l6.5 6.5" />
       </svg>

@@ -602,6 +602,7 @@ h2::before {
   color: var(--warn);
 }
 
+.period-select,
 .sort-select {
   margin-left: auto;
   min-height: 38px;
@@ -616,7 +617,17 @@ h2::before {
   cursor: pointer;
   box-shadow: var(--shadow-sm);
 }
+.period-select:focus,
 .sort-select:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
+/* Only sort earns the auto margin; two right-aligned selects would leave a
+   gap between them that grows with the window. */
+.period-select { margin-left: 0; }
+/* On a phone the period lives in the sheet with everything else, so the
+   toolbar keeps to search, Filters and sort. */
+.period-select { display: none; }
+@media (min-width: 880px) {
+  .period-select { display: inline-block; }
+}
 
 /* Once the toolbar wraps, the auto margin would strand the sort control
    right-aligned on a line of its own — give it the whole row instead. */
@@ -704,12 +715,19 @@ h2::before {
 
 
 /* Sets no colour of its own: it sits beside .gmp-up / .gmp-down, which do. */
-.est-pct { margin-left: 4px; font-size: 0.88em; font-weight: 600; }
+/* No margin: the gap is a real space in the markup now, which is also the
+   break opportunity the phone card needs. A margin gives neither. */
+.est-pct { font-size: 0.88em; font-weight: 600; }
 
 .ipo-card-grid {
   display: grid;
-  /* Four stats: 2×2 on phones, one row once there is width for it. */
-  grid-template-columns: repeat(2, 1fr);
+  /* Four stats: 2x2 on phones, one row once there is width for it.
+     minmax(0, 1fr), not 1fr: a bare fr has an auto minimum, so the GMP cell -
+     the widest thing in the card - pushed its column past its share and the
+     two columns came out uneven (157px against 146px), leaving the labels
+     out of line with every other card. Zero as the minimum lets long values
+     wrap inside their own column instead of stealing width from the next. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 12px;
   padding-top: 12px;
@@ -1284,9 +1302,15 @@ td a:hover { color: var(--primary); text-decoration: none; }
   color: var(--text-muted);
   font-weight: 500;
 }
+/* Each figure is one unbreakable piece, so a wrap can only land between
+   them — never between the arrow and the number it belongs to. */
+.gmp-est-part { white-space: nowrap; }
+
 /* On a phone card the cell has a column to itself and no sideways scroll to
-   fall back on, so let it wrap rather than overflow. */
-.ipo-card-grid .gmp-est { white-space: normal; }
+   fall back on, so let it wrap rather than overflow. A notch smaller than the
+   other stats as well: "▲ ₹30 → ₹122 (+32.6%)" is three times the text of a
+   price band and was the only thing in the card that needed three lines. */
+.ipo-card-grid .gmp-est { white-space: normal; font-size: 0.86rem; }
 
 /* ==========================================================================
    About the company
@@ -1775,11 +1799,7 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
   stroke-width: 2.1;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transition: transform 0.25s ease;
 }
-/* The arrow is drawn pointing up, so only the other direction turns. */
-.scroll-jump[data-dir="down"] svg { transform: rotate(180deg); }
-
 @keyframes jump-in {
   from { opacity: 0; transform: scale(0.8); }
   to { opacity: 1; transform: scale(1); }
@@ -1788,6 +1808,14 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 /* ==========================================================================
    Filter sheet (phone)
    ========================================================================== */
+/* The news feed pages the same way the IPO list does — numbered on a
+   desktop, growing on a phone — so exactly one of these is ever on screen. */
+.news-paged { display: none; }
+@media (min-width: 880px) {
+  .news-paged { display: block; }
+  .news-grown { display: none; }
+}
+
 /* Nothing else should float over the page while the sheet owns it. */
 body.has-sheet .scroll-jump { display: none; }
 
@@ -1950,6 +1978,16 @@ body.has-sheet .scroll-jump { display: none; }
   background: var(--primary);
   border-color: var(--primary);
 }
+/* Round for one-of, square for any-of — the shape is what tells a reader
+   whether picking this un-picks the last one. */
+.sheet-option[data-single] .sheet-box { border-radius: 50%; background: var(--surface); }
+.sheet-option[data-single][data-on] .sheet-box { border-color: var(--primary); }
+.sheet-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+}
 .sheet-count {
   flex: 0 0 auto;
   font-size: 0.8rem;
@@ -2004,3 +2042,28 @@ body.has-sheet .scroll-jump { display: none; }
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ==========================================================================
+   Error boundary
+   ========================================================================== */
+.error-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.error-btn {
+  min-height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 999px;
+  background: var(--brand-grad);
+  color: var(--on-brand);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.error-btn-quiet {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  box-shadow: none;
+}
+.error-btn-quiet:hover { background: var(--surface-3); }

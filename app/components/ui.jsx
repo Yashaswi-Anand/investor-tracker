@@ -55,7 +55,7 @@ export function EstListing({ ipo }) {
   const tone = pct == null ? "gmp-flat" : pct > 0 ? "gmp-up" : pct < 0 ? "gmp-down" : "gmp-flat";
   return (
     <span>
-      {inr(Math.round(est))}
+      {inr(Math.round(est))}{" "}
       {pct != null && (
         <span className={`est-pct ${tone}`}>
           ({pct > 0 ? "+" : ""}
@@ -126,24 +126,27 @@ export function GmpEstimate({ ipo }) {
   const delta = fmtDelta(ipo.gmp_delta);
 
   return (
+    // The two figures are wrapped in their own spans so that, in the narrow
+    // column of a phone card, a line can only break BETWEEN them. Left to
+    // itself the browser broke after the arrow and gave "▲" a line of its own.
     <span className="gmp-est">
-      <span className={cls}>
+      <span className={`gmp-est-part ${cls}`}>
         {arrow} {inr(Math.abs(value))}
       </span>
       {est != null && (
-        <>
+        <span className="gmp-est-part">
           {/* Decorative: the sentence is carried by the two figures and the
               column heading, so a screen reader gains nothing from "arrow". */}
           <span className="gmp-est-sep" aria-hidden="true">→</span>
           <span className="num">{inr(Math.round(est))}</span>
-        </>
-      )}
+        </span>
+      )}{" "}
       {pct != null && (
         <span className={`est-pct ${cls}`}>
           ({pct > 0 ? "+" : ""}
           {pct.toFixed(1)}%)
         </span>
-      )}
+      )}{" "}
       {delta && (
         <span
           className={`gmp-delta ${ipo.gmp_delta > 0 ? "gmp-delta-up" : "gmp-delta-down"}`}
