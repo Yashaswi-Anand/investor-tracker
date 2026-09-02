@@ -25,7 +25,8 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { StatusBadge } from "./ui";
+import MultiSelect from "./MultiSelect";
+import { STATUS_LABEL } from "../../lib/format";
 
 const PAN_KEY = "ipo-pans";
 const PICK_KEY = "ipo-allotment-picks";
@@ -34,9 +35,17 @@ const MARK_KEY = "ipo-allotment-marks";
 /** Five letters, four digits, one letter — the format the registrars want. */
 const PAN_SHAPE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
+/**
+ * What a reader can record after looking, as a dropdown rather than a pair of
+ * buttons. Two buttons labelled "Allotted" and "Not allotted" sitting in a
+ * results table read as the site's own verdict — one reader took an unpressed
+ * pair for "not allotted" and reported the page as wrong. A select is
+ * unmistakably a thing you set.
+ */
 const OUTCOMES = [
-  { key: "allotted", label: "Allotted", tone: "up" },
-  { key: "none", label: "Not allotted", tone: "down" },
+  { key: "", label: "Not checked yet" },
+  { key: "allotted", label: "Allotted" },
+  { key: "none", label: "Not allotted" },
 ];
 
 /** localStorage throws in some privacy modes; a filter tool is not worth it. */
@@ -126,7 +135,9 @@ export default function AllotmentCheck({ ipos }) {
     setMarks((current) => {
       const key = `${slug}|${pan}`;
       const next = { ...current };
-      if (next[key] === outcome) delete next[key];
+      // The empty value is "not checked yet", which is an absence rather than
+      // a third answer — storing it would make the counts below wrong.
+      if (!outcome) delete next[key];
       else next[key] = outcome;
       return next;
     });
@@ -232,50 +243,41 @@ export default function AllotmentCheck({ ipos }) {
           {ipos.length === 1 ? " is 1" : ` are ${ipos.length}`} right now.
         </p>
 
-        {ipos.length === 0 ? (
-          <p className="pan-empty">
-            Nothing has reached allotment yet. This fills in as issues close.
-          </p>
-        ) : (
-          <div className="pick-list">
-            {ipos.map((ipo) => {
-              const on = picks.includes(ipo.slug);
-              return (
+        <MultiSelect
+          label="Choose IPOs to check"
+          placeholder="Select companies…"
+          emptyText="Nothing at allotment yet"
+          options={ipos.map((ipo) => ({
+            key: ipo.slug,
+            label: ipo.short_name || ipo.name,
+            note: ipo.registrar || "Registrar not published",
+            tag: STATUS_LABEL[ipo.status] || ipo.status,
+          }))}
+          selected={picks}
+          onToggle={togglePick}
+          onSelectAll={() => setPicks(ipos.map((ipo) => ipo.slug))}
+          onClear={() => setPicks([])}
+        />
+
+        {/* Repeated outside the dropdown so the choice is still visible once
+            it is shut, and removable without opening it again. */}
+        {chosen.length ? (
+          <ul className="pan-list">
+            {chosen.map((ipo) => (
+              <li key={ipo.slug} className="pan-chip">
+                <span className="chip-name">{ipo.short_name || ipo.name}</span>
                 <button
-                  key={ipo.slug}
                   type="button"
-                  className="pick"
-                  role="checkbox"
-                  aria-checked={on}
-                  data-on={on || undefined}
+                  className="pan-remove"
                   onClick={() => togglePick(ipo.slug)}
+                  aria-label={`Remove ${ipo.short_name || ipo.name}`}
                 >
-                  <span className="pick-box" aria-hidden="true">
-                    {on ? (
-                      <svg viewBox="0 0 16 16" width="12" height="12">
-                        <path
-                          d="M3 8.4 6.2 11.5 13 4.8"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    ) : null}
-                  </span>
-                  <span className="pick-text">
-                    <span className="pick-name">{ipo.short_name || ipo.name}</span>
-                    <span className="pick-note">
-                      {ipo.registrar || "Registrar not published"}
-                    </span>
-                  </span>
-                  <StatusBadge status={ipo.status} />
+                  ×
                 </button>
-              );
-            })}
-          </div>
-        )}
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         <button
           type="button"
@@ -294,9 +296,9 @@ export default function AllotmentCheck({ ipos }) {
           <h2>Your checklist</h2>
           <p className="subtitle">
             One row per PAN per issue. For each one: open the registrar, paste
-            the PAN, answer their CAPTCHA, then tap what their page said. The
-            two buttons are yours to set — they record what you saw, they are
-            not a result this site worked out.
+            the PAN, answer their CAPTCHA, then set the dropdown to what their
+            page said. That dropdown is yours to set — it records what you
+            saw, it is not a result this site worked out.
           </p>
 
           <p className="check-summary" role="status">
@@ -354,7 +356,7 @@ export default function AllotmentCheck({ ipos }) {
               <ol className="result-steps">
                 <li>Open the registrar and pick this company from their list</li>
                 <li>Paste the PAN and answer their CAPTCHA</li>
-                <li>Come back and tap what their page said</li>
+                <li>Come back and set the dropdown to what it said</li>
               </ol>
 
               <ul className="result-rows">
@@ -374,30 +376,25 @@ export default function AllotmentCheck({ ipos }) {
                         </span>
                       </button>
 
-                      <span className="result-marks">
-                        {/* Only while nothing is pressed. A row with neither
-                            button set was being read as a "no", and nobody
-                            must mistake "not looked at yet" for "did not get
-                            any" — but once a button IS pressed it says so
-                            itself, and repeating it beside it reads as two
-                            different facts. */}
-                        {current ? null : (
-                          <span className="result-state">Not checked yet</span>
-                        )}
-                        {OUTCOMES.map((outcome) => (
-                          <button
-                            key={outcome.key}
-                            type="button"
-                            className="result-mark"
-                            data-tone={outcome.tone}
-                            data-on={current === outcome.key || undefined}
-                            aria-pressed={current === outcome.key}
-                            onClick={() => mark(ipo.slug, pan, outcome.key)}
-                          >
-                            {outcome.label}
-                          </button>
-                        ))}
-                      </span>
+                      <label className="result-marks">
+                        <span className="result-marks-label">
+                          What the registrar showed
+                        </span>
+                        <select
+                          className="result-select"
+                          value={current || ""}
+                          data-outcome={current}
+                          onChange={(event) =>
+                            mark(ipo.slug, pan, event.target.value)
+                          }
+                        >
+                          {OUTCOMES.map((outcome) => (
+                            <option key={outcome.key || "unset"} value={outcome.key}>
+                              {outcome.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     </li>
                   );
                 })}

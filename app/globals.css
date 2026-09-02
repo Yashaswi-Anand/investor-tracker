@@ -2242,18 +2242,6 @@ body.has-sheet .scroll-jump { display: none; }
   color: var(--text-muted);
 }
 
-/* The row's own answer in words, so "nothing pressed" reads as "not looked
-   at yet" instead of as a negative result. */
-.result-state {
-  margin-right: 4px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--text-muted);
-  align-self: center;
-}
-.result-row[data-outcome="allotted"] .result-state { color: var(--up); }
-
 .result-copy-name {
   margin-top: 6px;
   padding: 0;
@@ -2334,37 +2322,152 @@ body.has-sheet .scroll-jump { display: none; }
 }
 .pan-remove:hover { background: var(--down-soft); color: var(--down); }
 
-.pick-list { display: grid; gap: 8px; margin: 14px 0 0; }
-.pick {
+/* ==========================================================================
+   Multi-select dropdown
+   ========================================================================== */
+.msel { position: relative; margin-top: 14px; }
+.msel-trigger {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 9px;
   width: 100%;
-  padding: 12px 14px;
+  min-height: 46px;
+  padding: 10px 15px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface-2);
   color: var(--text);
   font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
 }
-.pick[data-on] { background: var(--primary-soft); border-color: var(--primary); }
-.pick-box {
+.msel-trigger[data-filled] { border-color: var(--primary); }
+.msel-trigger:disabled { opacity: 0.6; cursor: default; }
+.msel-summary { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msel-count {
   flex: 0 0 auto;
-  width: 21px; height: 21px;
+  min-width: 22px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-brand);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+}
+.msel-trigger svg { flex: 0 0 auto; color: var(--text-muted); }
+
+.msel-pop {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+.msel-search {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 13px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+}
+.msel-search:focus { outline: none; border-color: var(--primary); }
+.msel-bulk {
+  display: flex;
+  gap: 14px;
+  padding: 2px 6px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+}
+.msel-bulk .link-btn:disabled { opacity: 0.45; cursor: default; text-decoration: none; }
+
+/* Capped so the popover never runs past the fold with a long season's list. */
+.msel-list { max-height: 280px; overflow-y: auto; overscroll-behavior: contain; padding-top: 6px; display: grid; gap: 2px; }
+.msel-none { margin: 10px 6px; font-size: 0.84rem; color: var(--text-muted); }
+.msel-option {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 10px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.msel-option:hover { background: var(--surface-2); }
+.msel-option[data-on] { background: var(--primary-soft); color: var(--primary); }
+.msel-box {
+  flex: 0 0 auto;
+  width: 19px; height: 19px;
   display: grid; place-items: center;
   border: 2px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--surface);
   color: var(--on-brand);
 }
-.pick[data-on] .pick-box { background: var(--primary); border-color: var(--primary); }
-.pick-text { flex: 1 1 auto; display: grid; gap: 2px; min-width: 0; }
-.pick-name { font-size: 0.92rem; font-weight: 700; }
-.pick-note { font-size: 0.74rem; color: var(--text-muted); }
-.pick[data-on] .pick-note { color: inherit; opacity: 0.75; }
+.msel-option[data-on] .msel-box { background: var(--primary); border-color: var(--primary); }
+.msel-text { flex: 1 1 auto; display: grid; gap: 1px; min-width: 0; }
+.msel-label { font-size: 0.88rem; font-weight: 600; }
+.msel-note { font-size: 0.72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msel-option[data-on] .msel-note { color: inherit; opacity: 0.75; }
+.msel-tag {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.chip-name { font-size: 0.84rem; font-weight: 700; }
+
+/* One control, and obviously a control. Two buttons labelled Allotted and
+   Not allotted read as the site's own answer; a dropdown never does. */
+.result-marks { display: flex; flex-direction: column; gap: 4px; }
+.result-marks-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.result-select {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.result-select:focus { outline: none; border-color: var(--primary); }
+.result-select[data-outcome="allotted"] {
+  border-color: var(--up);
+  background: var(--up-soft);
+  color: var(--up);
+}
 
 .check-btn {
   width: 100%;
@@ -2456,23 +2559,4 @@ body.has-sheet .scroll-jump { display: none; }
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--primary);
-}
-.result-marks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.result-mark {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-2);
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.result-mark[data-tone="up"][data-on] {
-  background: var(--up); border-color: var(--up); color: var(--on-brand);
-}
-.result-mark[data-tone="down"][data-on] {
-  background: var(--surface-3); border-color: var(--border-strong); color: var(--text-2);
 }
