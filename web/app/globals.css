@@ -138,6 +138,12 @@
    ========================================================================== */
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+/* Smooth scrolling is a nicety; for a reader who has asked the OS to stop
+   animating, it is motion they did not consent to. Without this the CSS wins
+   over any behavior a script passes. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
 body {
   margin: 0;
   background: var(--bg);
@@ -799,6 +805,92 @@ td a:hover { color: var(--primary); text-decoration: none; }
 @media (min-width: 880px) {
   .table-wrap { display: block; }
   .card-list { display: none; }
+}
+
+/* ==========================================================================
+   Paging - a pager for the table, a growing list on the phone
+   ========================================================================== */
+
+/* The sentinel the phone list watches. It needs a box to be intersected, and
+   it is the only reason it needs any height at all. On desktop the card list
+   is display:none, and so is this: no box, no intersection, no growth. */
+.card-more { height: 1px; margin-top: 10px; }
+.card-end {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.pager { display: none; }
+
+@media (min-width: 880px) {
+  .card-more,
+  .card-end { display: none; }
+
+  .pager {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    /* The range sits hard right on a wide sheet and tucks under the buttons
+       on a narrow one, rather than stretching the row to the window. */
+    flex-wrap: wrap;
+  }
+  .pager-pages {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pager-step,
+  .pager-page {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-2);
+    font: inherit;
+    font-size: 0.83rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.12s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .pager-step { font-size: 1.05rem; line-height: 1; }
+  .pager-step:hover:not(:disabled),
+  .pager-page:hover:not([data-active]) { transform: translateY(-1px); }
+  /* Kept in place rather than removed: the arrows are how a reader knows
+     which end of the run they are at, and a row that loses a button when you
+     reach page one shifts every remaining button sideways. */
+  .pager-step:disabled {
+    opacity: 0.4;
+    cursor: default;
+    box-shadow: none;
+  }
+  .pager-page[data-active] {
+    background: var(--brand-grad);
+    border-color: transparent;
+    color: var(--on-brand);
+    box-shadow: var(--shadow-lg);
+    cursor: default;
+  }
+  .pager-gap {
+    padding: 0 2px;
+    color: var(--text-muted);
+    user-select: none;
+  }
+  .pager-range {
+    margin: 0 0 0 auto;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 /* ==========================================================================
