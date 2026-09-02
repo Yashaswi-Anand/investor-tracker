@@ -170,11 +170,12 @@ export function BoardBadge({ board }) {
   return <span className="badge badge-board">{board || "Mainboard"}</span>;
 }
 
-export function Stat({ label, children }) {
+export function Stat({ label, children, note }) {
   return (
     <div>
       <div className="stat-label">{label}</div>
       <div className="stat-value">{children}</div>
+      {note ? <div className="stat-note">{note}</div> : null}
     </div>
   );
 }

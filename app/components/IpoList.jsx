@@ -33,6 +33,8 @@ import {
   inr,
   issueSizeCrore,
   istToday,
+  minLots,
+  minLotsLabel,
   periodLabel,
   periodRange,
   priceBand,
@@ -208,7 +210,17 @@ const COLUMNS = [
     key: "min",
     label: "Min Invest",
     sort: "min",
-    render: (ipo) => inr(ipo.min_investment),
+    // The lot count only appears where it is not one. On the SME board the
+    // minimum is two lots, and ₹2,44,800 next to a mainboard ₹14,880 reads
+    // as a typo until the row says why.
+    render: (ipo) => (
+      <>
+        {inr(ipo.min_investment)}
+        {minLots(ipo) > 1 ? (
+          <span className="cell-note">{minLots(ipo)} lots</span>
+        ) : null}
+      </>
+    ),
   },
   {
     key: "trend",
@@ -950,7 +962,12 @@ export default function IpoList({ ipos }) {
                     </Stat>
                     <Stat label="Price Band">{priceBand(ipo)}</Stat>
                     <Stat label="Issue Size">{fmtIssueSize(ipo)}</Stat>
-                    <Stat label="Min Invest">{inr(ipo.min_investment)}</Stat>
+                    <Stat
+                      label="Min Invest"
+                      note={minLots(ipo) > 1 ? minLotsLabel(ipo) : null}
+                    >
+                      {inr(ipo.min_investment)}
+                    </Stat>
                   </div>
                 </Link>
               );

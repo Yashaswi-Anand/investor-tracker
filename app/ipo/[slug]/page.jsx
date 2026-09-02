@@ -19,6 +19,7 @@ import {
   fmtTime,
   inr,
   istToday,
+  minLotsLabel,
   priceBand,
   safeJsonLd,
   times,
@@ -559,7 +560,12 @@ export default async function IpoDetailPage({ params }) {
               what one application costs. */}
           <Stat label="Issue Size">{fmtIssueSize(ipo)}</Stat>
           <Stat label="Lot Size">{ipo.lot_size ?? "—"}</Stat>
-          <Stat label="Min Investment">{inr(ipo.min_investment)}</Stat>
+          {/* The lot count is on the figure itself. On the SME board the
+              minimum is two lots, and a number two and a half times the one
+              beside it reads as an error until it says why. */}
+          <Stat label="Min Investment" note={minLotsLabel(ipo)}>
+            {inr(ipo.min_investment)}
+          </Stat>
           {ipo.listing_price != null ? (
             <Stat label="Listed At">
               <ListingResult ipo={ipo} />
@@ -583,7 +589,12 @@ export default async function IpoDetailPage({ params }) {
             <KV label="Lot Size">
               {ipo.lot_size ? `${ipo.lot_size} shares` : "—"}
             </KV>
-            <KV label="Min Investment">{inr(ipo.min_investment)}</KV>
+            <KV label="Min Investment">
+              {inr(ipo.min_investment)}
+              {minLotsLabel(ipo) ? (
+                <span className="kv-note kv-note-inline"> ({minLotsLabel(ipo)})</span>
+              ) : null}
+            </KV>
             <KV label="Face Value">{inr(ipo.face_value)}</KV>
             <KV label="Issue Size">
               <span className="kv-note">
