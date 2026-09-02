@@ -98,6 +98,39 @@ def parse_lot_size(text):
 # genuinely still open on its closing date.
 CLOSE_HOUR_IST = 18
 
+# ---------------------------------------------------------------------------
+# Minimum application
+# ---------------------------------------------------------------------------
+
+# SME issues cannot be applied for one lot at a time; the smallest order is
+# two. Mainboard is one, and the exchange sets the lot so that one lands near
+# Rs 15,000. On the SME board the lot itself is already worth Rs 1.1-1.3 lakh,
+# and the minimum application is two of them.
+#
+# This lives here, once, because it is derived rather than published: NSE
+# gives us the lot and the band and nothing about the smallest order, so the
+# figure is ours to compute -- and a rule computed in two places is a rule
+# that will eventually be two different rules.
+MIN_LOTS_SME = 2
+
+
+def min_lots(board):
+    """How many lots the smallest application is, for this board."""
+    return MIN_LOTS_SME if (board or "").strip().lower() == "sme" else 1
+
+
+def min_investment(lot, high, board):
+    """The smallest cheque an applicant can write, at the top of the band.
+
+    At the cap rather than the floor because a book-built issue is bid at the
+    cap by anyone who wants the allotment, and a minimum quoted below what it
+    actually takes to apply is the wrong way to be wrong.
+    """
+    if not lot or not high:
+        return None
+    return round(float(lot) * float(high) * min_lots(board))
+
+
 
 def derive_status(
     open_date,

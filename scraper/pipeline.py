@@ -173,8 +173,15 @@ def compute_derived(row, gmp=None, existing_row=None):
     stored = existing_row or {}
     lot = row.get("lot_size") or stored.get("lot_size")
     high = row.get("price_band_high") or stored.get("price_band_high")
-    if row.get("min_investment") is None and lot and high:
-        row["min_investment"] = round(lot * high)
+    board = row.get("board") or stored.get("board")
+    # Recomputed every run, not just when the column is empty. It used to be
+    # filled once and left alone, which meant a row carrying a figure from an
+    # older rule kept it forever — exactly how every SME issue went on showing
+    # a one-lot minimum after the rule became two. A locked column is still
+    # safe: db.py strips those from the payload before it is sent.
+    smallest = util.min_investment(lot, high, board)
+    if smallest is not None:
+        row["min_investment"] = smallest
     if gmp is not None and high:
         row["estimated_listing"] = round(float(high) + float(gmp), 2)
     return row

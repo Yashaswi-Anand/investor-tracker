@@ -20,6 +20,7 @@ import requests
 import config
 from util import (
     derive_status,
+    min_investment,
     parse_lot_size,
     parse_price_band,
     short_name,
@@ -166,7 +167,7 @@ def parse_company_details(info):
     return details or None
 
 
-def parse_detail(detail):
+def parse_detail(detail, board=None):
     """Pull lot size / face value / issue size / lead managers out of ipo-detail.
 
     Mainboard and SME issues label the lot differently:
@@ -210,8 +211,11 @@ def parse_detail(detail):
         fields["price_band_low"] = low
     if high is not None:
         fields["price_band_high"] = high
-    if lot and high:
-        fields["min_investment"] = round(lot * high)
+    # Board-dependent: an SME application is two lots, not one. util owns
+    # that rule so the pipeline's recompute cannot disagree with this one.
+    smallest = min_investment(lot, high, board)
+    if smallest is not None:
+        fields["min_investment"] = smallest
 
     return {key: value for key, value in fields.items() if value is not None}
 
@@ -287,7 +291,7 @@ def fetch():
             if detail is None:
                 failures.append(f"detail:{symbol}")
             else:
-                row.update(parse_detail(detail))
+                row.update(parse_detail(detail, row.get("board")))
             time.sleep(config.DELAY_SECONDS)
 
         if row.get("status") == "open":

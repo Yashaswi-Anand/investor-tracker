@@ -15,7 +15,7 @@
  */
 
 import { isConfigured, supabaseHeaders, supabaseUrl } from "./config";
-import { dailySeries, istToday, timelineDays } from "./format";
+import { dailySeries, istToday, minInvestment, timelineDays } from "./format";
 
 async function get(endpointKey, query) {
   if (!isConfigured()) return [];
@@ -38,8 +38,21 @@ async function get(endpointKey, query) {
 function enrich(ipo) {
   if (!ipo) return ipo;
   const out = { ...ipo };
-  if (out.min_investment == null && out.lot_size && out.price_band_high) {
-    out.min_investment = Math.round(out.lot_size * out.price_band_high);
+
+  // Recomputed rather than read, for the same reason as the estimate below:
+  // a row that left NSE's set stopped being re-derived and kept whatever it
+  // was last given. Every SME issue was carrying a one-lot minimum from
+  // before the rule was two, and no scrape would ever have corrected the
+  // ones that have already listed. Derived here, the page is right the
+  // moment this ships.
+  //
+  // A lock is the one thing that wins. `locked` is how a human says "I have
+  // checked this one myself", and silently recomputing over that would make
+  // the escape hatch useless.
+  const locked = Array.isArray(out.locked) ? out.locked : [];
+  if (!locked.includes("min_investment")) {
+    const smallest = minInvestment(out);
+    if (smallest != null) out.min_investment = smallest;
   }
   // Always recomputed, never read from the stored column, because the two can
   // disagree and the page is where that shows. An IPO leaves NSE's set once

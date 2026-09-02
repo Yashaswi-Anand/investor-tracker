@@ -738,6 +738,10 @@ h2::before {
   color: var(--text-muted); font-weight: 700;
 }
 .stat-value { font-size: 0.95rem; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+/* What the figure above is made of — "2 lots · 2,400 shares". Quiet, because
+   it explains the number rather than competing with it. */
+.stat-note { margin-top: 2px; font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
+.kv-note-inline { font-weight: 600; }
 
 /* ==========================================================================
    Table (desktop)

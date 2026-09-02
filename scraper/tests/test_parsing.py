@@ -226,9 +226,16 @@ NSE_SME_DETAIL = {
 
 def test_parse_detail_sme_uses_lot_size_title():
     """SME issues label the lot 'Lot Size', mainboard uses 'Bid Lot'."""
-    fields = nse.parse_detail(NSE_SME_DETAIL)
+    fields = nse.parse_detail(NSE_SME_DETAIL, "SME")
     assert fields["lot_size"] == 1200
     assert fields["face_value"] == 10.0
+    # Two lots, because that is the smallest SME application.
+    assert fields["min_investment"] == 2 * 1200 * 101
+
+
+def test_parse_detail_without_a_board_assumes_one_lot():
+    """The board is what makes it two, so an unknown board must not guess."""
+    fields = nse.parse_detail(NSE_SME_DETAIL)
     assert fields["min_investment"] == 1200 * 101
 
 
@@ -867,6 +874,52 @@ def test_min_investment_also_falls_back_to_the_stored_band_and_lot():
     assert row["min_investment"] == 14999
     # Still no gmp, so still no estimate rather than a guess.
     assert "estimated_listing" not in row
+
+
+# --------------------------------------------------------------------------
+# Minimum application: one lot on the mainboard, two on SME
+# --------------------------------------------------------------------------
+def test_min_lots_is_two_only_for_sme():
+    assert util.min_lots("SME") == 2
+    assert util.min_lots("sme") == 2
+    assert util.min_lots("  SME  ") == 2
+    assert util.min_lots("Mainboard") == 1
+    assert util.min_lots(None) == 1
+    assert util.min_lots("") == 1
+
+
+def test_min_investment_needs_both_a_lot_and_a_band():
+    assert util.min_investment(None, 100, "SME") is None
+    assert util.min_investment(1200, None, "SME") is None
+    assert util.min_investment(0, 100, "SME") is None
+
+
+def test_pipeline_recomputes_an_sme_minimum_left_at_one_lot():
+    """The reason it recomputes every run rather than only when empty.
+
+    Rows written under the old one-lot rule keep that figure forever
+    otherwise, and the ones that have already listed would never be
+    re-derived at all.
+    """
+    row = {"slug": "acme", "board": "SME", "lot_size": 1200,
+           "price_band_high": 101, "min_investment": 1200 * 101}
+    pipeline.compute_derived(row, None, {})
+    assert row["min_investment"] == 2 * 1200 * 101
+
+
+def test_pipeline_takes_the_board_from_the_stored_row_when_absent():
+    """NSE drops an issue from its feed once bidding closes; the board it
+    was scraped with is the only one left to judge it by."""
+    row = {"slug": "acme", "lot_size": 1200, "price_band_high": 101}
+    pipeline.compute_derived(row, None, {"board": "SME"})
+    assert row["min_investment"] == 2 * 1200 * 101
+
+
+def test_mainboard_minimum_stays_one_lot():
+    row = {"slug": "acme", "board": "Mainboard", "lot_size": 93,
+           "price_band_high": 160}
+    pipeline.compute_derived(row, None, {})
+    assert row["min_investment"] == 93 * 160
 
 
 # --------------------------------------------------------------------------
