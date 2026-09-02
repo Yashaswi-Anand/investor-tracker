@@ -55,10 +55,10 @@ export default async function AllotmentPage() {
           </p>
           <p>
             So the last step stays yours: open the registrar, paste the PAN,
-            answer their CAPTCHA. <strong>Allotted</strong> and{" "}
-            <strong>Not allotted</strong> below are buttons for you to press
-            afterwards — they record what their page said, so you can see at a
-            glance which ones you have already been through.
+            answer their CAPTCHA. The{" "}
+            <strong>What the registrar showed</strong> dropdown on each row is
+            for afterwards — it records what their page said, so you can see
+            at a glance which ones you have already been through.
           </p>
           <p className="allot-notice-alt">
             BSE offers the same lookup for issues listed there, if you find
