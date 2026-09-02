@@ -3,6 +3,7 @@ import { SITE } from "../lib/config";
 import Logo from "./components/Logo";
 import ServiceWorker from "./components/ServiceWorker";
 import ThemeToggle from "./components/ThemeToggle";
+import ScrollJump from "./components/ScrollJump";
 import "./globals.css";
 
 export const metadata = {
@@ -138,6 +139,10 @@ export default function RootLayout({ children }) {
             </div>
           </div>
         </footer>
+
+        {/* Last in the document on purpose: a shortcut past the page belongs
+            after the page, both for reading order and for tab order. */}
+        <ScrollJump />
 
         <ServiceWorker />
       </body>
