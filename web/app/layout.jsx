@@ -3,7 +3,6 @@ import { SITE } from "../lib/config";
 import Logo from "./components/Logo";
 import ServiceWorker from "./components/ServiceWorker";
 import ThemeToggle from "./components/ThemeToggle";
-import UserMenu from "./components/UserMenu";
 import "./globals.css";
 
 export const metadata = {
@@ -108,7 +107,6 @@ export default function RootLayout({ children }) {
                 </Link>
               </nav>
               <ThemeToggle />
-              <UserMenu />
             </div>
           </div>
         </header>
