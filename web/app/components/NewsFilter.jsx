@@ -21,8 +21,18 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import NewsList from "./NewsList";
+import Pager from "./Pager";
+import useGrowOnScroll from "./useGrowOnScroll";
 
 const QUICK_CHIPS = 5;
+
+/**
+ * Paging, the same two ways the IPO list does it: numbered pages on a desktop
+ * where the feed is scanned, a list that grows on a phone where it is thumbed.
+ * Ten headlines is about a screenful of these cards; six is two thumb-flicks.
+ */
+const PAGE_SIZE = 10;
+const FEED_CHUNK = 6;
 
 export default function NewsFilter({ articles, companies }) {
   const [query, setQuery] = useState("");
@@ -89,9 +99,43 @@ export default function NewsFilter({ articles, companies }) {
     }
   };
 
-  const shown = picked
-    ? picked.indices.map((i) => articles[i]).filter(Boolean)
-    : articles;
+  const shown = useMemo(
+    () =>
+      picked ? picked.indices.map((i) => articles[i]).filter(Boolean) : articles,
+    [picked, articles]
+  );
+
+  const [page, setPage] = useState(1);
+  const feed = useGrowOnScroll(shown.length, FEED_CHUNK);
+  const { reset: resetFeed } = feed;
+
+  // Picking a company is a new list; page four of the old one means nothing
+  // in it, and neither do thirty already-grown cards.
+  useEffect(() => {
+    setPage(1);
+    resetFeed();
+  }, [picked, resetFeed]);
+
+  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount);
+  const start = (current - 1) * PAGE_SIZE;
+  const pageRows = useMemo(
+    () => shown.slice(start, start + PAGE_SIZE),
+    [shown, start]
+  );
+  const feedRows = useMemo(() => shown.slice(0, feed.shown), [shown, feed.shown]);
+
+  const headRef = useRef(null);
+  const goToPage = (next) => {
+    setPage(Math.min(Math.max(next, 1), pageCount));
+    const head = headRef.current;
+    if (!head) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    head.scrollIntoView({
+      block: "start",
+      behavior: still ? "instant" : "smooth",
+    });
+  };
 
   return (
     <>
@@ -204,7 +248,7 @@ export default function NewsFilter({ articles, companies }) {
 
       {/* role="status" so the change is announced: the list below can shrink
           from fifty items to one and a sighted reader sees that instantly. */}
-      <p className="news-result" role="status">
+      <p className="news-result" role="status" ref={headRef}>
         {picked ? (
           <>
             <strong>{shown.length}</strong>{" "}
@@ -218,7 +262,31 @@ export default function NewsFilter({ articles, companies }) {
         )}
       </p>
 
-      <NewsList articles={shown} lead={!picked} />
+      {/* Desktop */}
+      <div className="news-paged">
+        {/* The lead treatment belongs to the first story there is, not to
+            whichever story happens to head page four. */}
+        <NewsList articles={pageRows} lead={!picked && current === 1} />
+        <Pager
+          current={current}
+          pageCount={pageCount}
+          from={start + 1}
+          to={start + pageRows.length}
+          total={shown.length}
+          label="Headline pages"
+          onGo={goToPage}
+        />
+      </div>
+
+      {/* Phone */}
+      <div className="news-grown">
+        <NewsList articles={feedRows} lead={!picked} />
+        {feed.more ? (
+          <div className="card-more" ref={feed.sentinelRef} />
+        ) : shown.length > FEED_CHUNK ? (
+          <p className="card-end">That&rsquo;s all {shown.length}.</p>
+        ) : null}
+      </div>
     </>
   );
 }

@@ -218,7 +218,14 @@ export default function FilterSheet({
               <h3 className="sheet-group-title">{group.label}</h3>
               {group.hint ? <p className="sheet-hint">{group.hint}</p> : null}
 
-              <div className="sheet-options">
+              {/* A single-choice group is a radio group, and says so — the
+                  shape of the indicator and the role both have to match, or
+                  a screen reader promises a choice the group will not honour. */}
+              <div
+                className="sheet-options"
+                role={group.single ? "radiogroup" : undefined}
+                aria-label={group.single ? group.label : undefined}
+              >
                 {group.options.map((option) => {
                   const on = group.selected.includes(option.key);
                   return (
@@ -226,13 +233,14 @@ export default function FilterSheet({
                       key={option.key}
                       type="button"
                       className="sheet-option"
-                      role="checkbox"
+                      role={group.single ? "radio" : "checkbox"}
                       aria-checked={on}
                       data-on={on || undefined}
+                      data-single={group.single || undefined}
                       onClick={() => onToggle(group.key, option.key)}
                     >
                       <span className="sheet-box" aria-hidden="true">
-                        {on ? <Tick /> : null}
+                        {on ? group.single ? <span className="sheet-dot" /> : <Tick /> : null}
                       </span>
                       <span className="sheet-option-label">{option.label}</span>
                       {option.count != null ? (

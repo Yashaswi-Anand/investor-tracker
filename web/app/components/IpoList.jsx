@@ -24,18 +24,26 @@
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
+  DEFAULT_PERIOD,
+  PERIODS,
+  PERIOD_KEYS,
   fmtDate,
   fmtIssueSize,
+  inPeriod,
   inr,
   issueSizeCrore,
   istToday,
+  periodLabel,
+  periodRange,
   priceBand,
   times,
   timelineDays,
   timelineLabel,
 } from "../../lib/format";
 import FilterSheet from "./FilterSheet";
+import Pager from "./Pager";
 import Sparkline from "./Sparkline";
+import useGrowOnScroll from "./useGrowOnScroll";
 import { GmpEstimate, Stat, StatusBadge } from "./ui";
 
 const TABS = [
@@ -322,30 +330,6 @@ function compare(a, b, key, dir, today) {
   return tiebreak(a, b);
 }
 
-/**
- * The page buttons to draw: every page while there are few, otherwise the
- * first, the last, and a window around where the reader is, with gaps
- * marking what was left out. Twenty numbered buttons in a row is not
- * navigation, it is a wall.
- */
-function pageWindow(current, total) {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-
-  const wanted = [1, total, current - 1, current, current + 1]
-    .filter((page) => page >= 1 && page <= total)
-    .sort((a, b) => a - b);
-
-  const out = [];
-  let previous = 0;
-  for (const page of wanted) {
-    if (page === previous) continue;
-    if (page - previous > 1) out.push("gap");
-    out.push(page);
-    previous = page;
-  }
-  return out;
-}
-
 function PinIcon() {
   return (
     <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
@@ -406,12 +390,15 @@ function HeadCell({ column, sort, onSort, pinned, pinEdge, left, onPin }) {
 export default function IpoList({ ipos }) {
   const [statuses, setStatuses] = useState([]);
   const [boards, setBoards] = useState([]);
+  // A period is a single window, not a set — "this week and last month" is
+  // not a thing anyone means. It starts narrowed to the current month, which
+  // is what the dashboard is for; "All time" is one tap away.
+  const [period, setPeriod] = useState(DEFAULT_PERIOD);
   const [query, setQuery] = useState("");
   const [closingToday, setClosingToday] = useState(false);
   const [sort, setSort] = useState({ key: "default", dir: "desc" });
   const [pinned, setPinned] = useState(["name"]);
   const [page, setPage] = useState(1);
-  const [shown, setShown] = useState(CARD_CHUNK);
   // The phone's filter sheet, and the selection it is holding but has not
   // committed. null whenever the sheet is shut.
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -427,6 +414,10 @@ export default function IpoList({ ipos }) {
     // works too, and "?tab=all" parses to nothing, which is the same thing.
     setStatuses(parseKeys(params.get("tab"), STATUS_KEYS));
     setBoards(parseKeys(params.get("board"), BOARD_KEYS));
+    const requestedPeriod = params.get("period");
+    if (requestedPeriod && PERIOD_KEYS.includes(requestedPeriod)) {
+      setPeriod(requestedPeriod);
+    }
     if (requestedSort && SORT_KEYS.includes(requestedSort)) {
       setSort({ key: requestedSort, dir: FIRST_DIR[requestedSort] || "desc" });
     }
@@ -435,7 +426,11 @@ export default function IpoList({ ipos }) {
   const setParam = (name, value) => {
     const url = new URL(window.location.href);
     const key = Array.isArray(value) ? value.join(",") : value;
-    if (!key || key === "default") url.searchParams.delete(name);
+    // The defaults are what an absent parameter already means, so writing
+    // them would only make every shared link longer.
+    if (!key || key === "default" || (name === "period" && key === DEFAULT_PERIOD)) {
+      url.searchParams.delete(name);
+    }
     else url.searchParams.set(name, key);
     window.history.replaceState(null, "", url);
   };
@@ -451,6 +446,11 @@ export default function IpoList({ ipos }) {
     const next = key === "all" ? [] : toggle(boards, key);
     setBoards(next);
     setParam("board", next);
+  };
+
+  const selectPeriod = (key) => {
+    setPeriod(key);
+    setParam("period", key);
   };
 
   /** Header click: switch column, or flip direction when already on it. */
@@ -482,11 +482,20 @@ export default function IpoList({ ipos }) {
     );
   };
 
+  const today = istToday();
+
+  // The period comes first and everything else counts within it, so the pill
+  // counts describe the window being looked at rather than the whole archive.
+  const inWindow = useMemo(() => {
+    const range = periodRange(period, today);
+    return range ? ipos.filter((ipo) => inPeriod(ipo, range)) : ipos;
+  }, [ipos, period, today]);
+
   // Status counts respect the board filter, and board counts respect the
   // status filter — each row of pills reflects what the other has narrowed.
   const byBoard = useMemo(
-    () => (boards.length ? ipos.filter((i) => boards.includes(boardOf(i))) : ipos),
-    [ipos, boards]
+    () => (boards.length ? inWindow.filter((i) => boards.includes(boardOf(i))) : inWindow),
+    [inWindow, boards]
   );
 
   const counts = useMemo(() => {
@@ -498,8 +507,9 @@ export default function IpoList({ ipos }) {
   }, [byBoard]);
 
   const byStatus = useMemo(
-    () => (statuses.length ? ipos.filter((i) => statuses.includes(i.status)) : ipos),
-    [ipos, statuses]
+    () =>
+      statuses.length ? inWindow.filter((i) => statuses.includes(i.status)) : inWindow,
+    [inWindow, statuses]
   );
 
   const boardCounts = useMemo(() => {
@@ -512,7 +522,8 @@ export default function IpoList({ ipos }) {
 
   // Bids close at the end of the closing day, so "closing today" is the last
   // call to apply — worth a one-tap filter during the hours it matters.
-  const today = istToday();
+  // Counted across every IPO, not just the window: an issue closing today is
+  // closing today whatever period is on screen.
   const closingCount = useMemo(
     () => ipos.filter((i) => i.close_date === today).length,
     [ipos, today]
@@ -544,17 +555,20 @@ export default function IpoList({ ipos }) {
   // Landing on page 4 of a search that returned six rows, or holding forty
   // grown cards while the reader switches to a tab with three, is the kind
   // of stale state that makes a filter feel broken.
+  const cardPaging = useGrowOnScroll(visible.length, CARD_CHUNK);
+  const { reset: resetCards } = cardPaging;
+
   useEffect(() => {
     setPage(1);
-    setShown(CARD_CHUNK);
-  }, [statuses, boards, query, closingToday, sort.key, sort.dir]);
+    resetCards();
+  }, [statuses, boards, period, query, closingToday, sort.key, sort.dir, resetCards]);
 
   // ---- The phone's filter sheet -----------------------------------------
   // Held as a draft rather than applied on each tap: the list is behind the
   // sheet and invisible while it is open, so live filtering would change
   // nothing anyone can see. The Apply button carries the count instead.
   const openSheet = () => {
-    setDraft({ statuses, boards, closingToday });
+    setDraft({ statuses, boards, closingToday, period });
     setSheetOpen(true);
   };
 
@@ -563,6 +577,8 @@ export default function IpoList({ ipos }) {
       if (!current) return current;
       if (group === "status") return { ...current, statuses: toggle(current.statuses, key) };
       if (group === "board") return { ...current, boards: toggle(current.boards, key) };
+      // One window at a time, so this replaces rather than toggles.
+      if (group === "period") return { ...current, period: key };
       return { ...current, closingToday: !current.closingToday };
     });
   };
@@ -572,8 +588,10 @@ export default function IpoList({ ipos }) {
       setStatuses(draft.statuses);
       setBoards(draft.boards);
       setClosingToday(draft.closingToday);
+      setPeriod(draft.period);
       setParam("tab", draft.statuses);
       setParam("board", draft.boards);
+      setParam("period", draft.period);
     }
     setSheetOpen(false);
   };
@@ -582,8 +600,10 @@ export default function IpoList({ ipos }) {
   const draftCount = useMemo(() => {
     if (!draft) return 0;
     const needle = query.trim().toLowerCase();
+    const range = periodRange(draft.period, today);
     return ipos.filter(
       (ipo) =>
+        inPeriod(ipo, range) &&
         (!draft.statuses.length || draft.statuses.includes(ipo.status)) &&
         (!draft.boards.length || draft.boards.includes(boardOf(ipo))) &&
         (!draft.closingToday || ipo.close_date === today) &&
@@ -591,7 +611,14 @@ export default function IpoList({ ipos }) {
     ).length;
   }, [ipos, draft, query, today]);
 
-  const activeFilters = statuses.length + boards.length + (closingToday ? 1 : 0);
+  // The period is deliberately not counted while it sits on its default. A
+  // badge that is lit before the reader has touched anything stops meaning
+  // "you changed something", which is the only thing a badge is for.
+  const activeFilters =
+    statuses.length +
+    boards.length +
+    (closingToday ? 1 : 0) +
+    (period === DEFAULT_PERIOD ? 0 : 1);
 
   // A sheet left open while the window grows past the table breakpoint would
   // be a modal with no way back to the button that opened it, over a page
@@ -615,7 +642,6 @@ export default function IpoList({ ipos }) {
   }, [sheetOpen]);
 
   const tableRef = useRef(null);
-  const sentinelRef = useRef(null);
 
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   // Clamped rather than trusted: the reset above runs after the render that
@@ -629,8 +655,10 @@ export default function IpoList({ ipos }) {
     [visible, start]
   );
 
-  const cards = useMemo(() => visible.slice(0, shown), [visible, shown]);
-  const moreCards = cards.length < visible.length;
+  const cards = useMemo(
+    () => visible.slice(0, cardPaging.shown),
+    [visible, cardPaging.shown]
+  );
 
   const goToPage = (next) => {
     setPage(Math.min(Math.max(next, 1), pageCount));
@@ -645,41 +673,6 @@ export default function IpoList({ ipos }) {
       behavior: still ? "instant" : "smooth",
     });
   };
-
-  /**
-   * Grow the phone list when its end comes into view.
-   *
-   * Rebuilt on every growth on purpose. An observer only reports CHANGES in
-   * intersection, so when a batch is shorter than the screen the sentinel
-   * stays visible, nothing changes, and the list stalls until the reader
-   * scrolls again. A fresh observer reports the state it finds, which loads
-   * the next batch immediately and keeps going until the end is off-screen.
-   */
-  useEffect(() => {
-    if (!moreCards) return undefined;
-    const node = sentinelRef.current;
-    if (!node || typeof IntersectionObserver === "undefined") return undefined;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setShown((count) => count + CARD_CHUNK);
-        }
-      },
-      // Start a little before the end is actually reached, so the next cards
-      // are already there by the time the reader would have seen the bottom.
-      { rootMargin: "320px 0px" }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [moreCards, shown]);
-
-  // A button for the rare browser with no IntersectionObserver. Decided after
-  // mount so the server and the first client render agree.
-  const [autoGrows, setAutoGrows] = useState(true);
-  useEffect(() => {
-    setAutoGrows(typeof IntersectionObserver !== "undefined");
-  }, []);
 
   // Pinned columns stick at cumulative offsets, so the second one sits
   // exactly against the first. The widths are whatever the browser resolved,
@@ -839,6 +832,22 @@ export default function IpoList({ ipos }) {
           </button>
         ) : null}
 
+        {/* Desktop's way to the same window the sheet offers. A select, not
+            pills: the five options are exclusive and a native picker is the
+            control everyone already knows for that. */}
+        <select
+          className="period-select"
+          value={period}
+          onChange={(e) => selectPeriod(e.target.value)}
+          aria-label="Filter IPOs by period"
+        >
+          {PERIODS.map((item) => (
+            <option key={item.key} value={item.key}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+
         <select
           className="sort-select"
           value={sort.key}
@@ -853,9 +862,13 @@ export default function IpoList({ ipos }) {
         </select>
       </div>
 
-      {narrowed && visible.length > 0 ? (
+      {/* The period is on by default, so it has to be visible somewhere that
+          is not a control — otherwise the reader counts eleven IPOs, knows
+          there are eighteen, and concludes the site is broken. */}
+      {visible.length > 0 && (narrowed || period !== "all") ? (
         <p className="result-note">
-          {visible.length} of {filtered.length} match this filter
+          {visible.length} of {ipos.length} IPOs
+          {period === "all" ? null : ` · ${periodLabel(period)}`}
         </p>
       ) : null}
 
@@ -881,7 +894,19 @@ export default function IpoList({ ipos }) {
               {boards.length === 1
                 ? `${boards[0] === "sme" ? "SME" : "Mainboard"} IPOs`
                 : "IPOs"}{" "}
-              right now.
+              {period === "all" ? "right now." : `in ${periodLabel(period).toLowerCase()}.`}
+              {period === "all" ? null : (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => selectPeriod("all")}
+                  >
+                    Show all time
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -932,21 +957,11 @@ export default function IpoList({ ipos }) {
             })}
           </div>
 
-          {moreCards ? (
+          {cardPaging.more ? (
             /* Empty on purpose: the reader scrolling here is the whole
                interaction, and a spinner for work that takes no time would
                only ever be seen as a flicker. */
-            <div className="card-more" ref={sentinelRef}>
-              {autoGrows ? null : (
-                <button
-                  type="button"
-                  className="link-btn"
-                  onClick={() => setShown((count) => count + CARD_CHUNK)}
-                >
-                  Show {Math.min(CARD_CHUNK, visible.length - cards.length)} more
-                </button>
-              )}
-            </div>
+            <div className="card-more" ref={cardPaging.sentinelRef} />
           ) : visible.length > CARD_CHUNK ? (
             <p className="card-end">That&rsquo;s all {visible.length}.</p>
           ) : null}
@@ -1002,58 +1017,15 @@ export default function IpoList({ ipos }) {
             </table>
           </div>
 
-          {pageCount > 1 ? (
-            <nav className="pager" aria-label="IPO table pages">
-              <button
-                type="button"
-                className="pager-step"
-                onClick={() => goToPage(current - 1)}
-                disabled={current === 1}
-                aria-label="Previous page"
-              >
-                <span aria-hidden="true">&lsaquo;</span>
-              </button>
-
-              <ol className="pager-pages">
-                {pageWindow(current, pageCount).map((entry, index) =>
-                  entry === "gap" ? (
-                    <li key={`gap-${index}`} className="pager-gap" aria-hidden="true">
-                      &hellip;
-                    </li>
-                  ) : (
-                    <li key={entry}>
-                      <button
-                        type="button"
-                        className="pager-page"
-                        data-active={entry === current || undefined}
-                        aria-current={entry === current ? "page" : undefined}
-                        aria-label={`Page ${entry}`}
-                        onClick={() => goToPage(entry)}
-                      >
-                        {entry}
-                      </button>
-                    </li>
-                  )
-                )}
-              </ol>
-
-              <button
-                type="button"
-                className="pager-step"
-                onClick={() => goToPage(current + 1)}
-                disabled={current === pageCount}
-                aria-label="Next page"
-              >
-                <span aria-hidden="true">&rsaquo;</span>
-              </button>
-
-              {/* Live, because after a page turn the numbers are the only
-                  thing that says where the reader now is. */}
-              <p className="pager-range" aria-live="polite">
-                {start + 1}&ndash;{start + rows.length} of {visible.length}
-              </p>
-            </nav>
-          ) : null}
+          <Pager
+            current={current}
+            pageCount={pageCount}
+            from={start + 1}
+            to={start + rows.length}
+            total={visible.length}
+            label="IPO table pages"
+            onGo={goToPage}
+          />
         </>
       )}
 
@@ -1061,9 +1033,19 @@ export default function IpoList({ ipos }) {
         <FilterSheet
           open={sheetOpen}
           activeCount={
-            draft.statuses.length + draft.boards.length + (draft.closingToday ? 1 : 0)
+            draft.statuses.length +
+            draft.boards.length +
+            (draft.closingToday ? 1 : 0) +
+            (draft.period === DEFAULT_PERIOD ? 0 : 1)
           }
           groups={[
+            {
+              key: "period",
+              label: "Period",
+              single: true,
+              selected: [draft.period],
+              options: PERIODS.map((item) => ({ key: item.key, label: item.label })),
+            },
             {
               key: "status",
               label: "Status",
@@ -1100,7 +1082,12 @@ export default function IpoList({ ipos }) {
           ]}
           onToggle={toggleDraft}
           onReset={() =>
-            setDraft({ statuses: [], boards: [], closingToday: false })
+            setDraft({
+              statuses: [],
+              boards: [],
+              closingToday: false,
+              period: DEFAULT_PERIOD,
+            })
           }
           onApply={applyDraft}
           onClose={() => setSheetOpen(false)}

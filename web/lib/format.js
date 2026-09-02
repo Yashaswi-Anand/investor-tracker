@@ -67,6 +67,90 @@ export function istToday() {
  * days rather than elapsed hours — otherwise a date could round to the wrong
  * day depending on when the page happened to render.
  */
+/* ==========================================================================
+   Periods — "this month", "last week" and friends
+   ========================================================================== */
+
+/**
+ * The windows the dashboard can be narrowed to.
+ *
+ * Ordered nearest-first because that is the order they are wanted in, and
+ * "All time" leads because it is the escape hatch from all the others.
+ */
+export const PERIODS = [
+  { key: "all", label: "All time" },
+  { key: "this-week", label: "This week" },
+  { key: "last-week", label: "Last week" },
+  { key: "this-month", label: "This month" },
+  { key: "last-month", label: "Last month" },
+];
+
+export const PERIOD_KEYS = PERIODS.map((p) => p.key);
+export const DEFAULT_PERIOD = "this-month";
+
+export const periodLabel = (key) =>
+  (PERIODS.find((p) => p.key === key) || PERIODS[0]).label;
+
+const iso = (date) => date.toISOString().slice(0, 10);
+
+/**
+ * The first and last day of a period, as IST calendar dates.
+ *
+ * Built on UTC arithmetic over the IST date string rather than on local Date
+ * objects: the server runs in UTC and the reader may be anywhere, and a
+ * period called "this month" must mean the same days to both. Weeks start on
+ * Monday, which is how a working week is counted here.
+ *
+ * Returns null for "all", which every caller reads as "no bound".
+ */
+export function periodRange(key, today = istToday()) {
+  if (!key || key === "all") return null;
+
+  const [year, month, day] = today.split("-").map(Number);
+  const base = new Date(Date.UTC(year, month - 1, day));
+  const shift = (from, days) =>
+    new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
+
+  switch (key) {
+    case "this-week":
+    case "last-week": {
+      // getUTCDay is 0 for Sunday, so Sunday is six days into its week.
+      const sinceMonday = (base.getUTCDay() + 6) % 7;
+      const monday = shift(base, -sinceMonday - (key === "last-week" ? 7 : 0));
+      return { from: iso(monday), to: iso(shift(monday, 6)) };
+    }
+    case "this-month":
+    case "last-month": {
+      const offset = key === "last-month" ? -1 : 0;
+      const first = new Date(Date.UTC(year, month - 1 + offset, 1));
+      // Day 0 of the next month is the last day of this one, leap years and
+      // all — no table of month lengths to get wrong.
+      const last = new Date(Date.UTC(year, month + offset, 0));
+      return { from: iso(first), to: iso(last) };
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Does anything about this IPO happen inside the window?
+ *
+ * Any of its three dates counts, not one chosen "primary" date. An issue that
+ * opened in August and lists in September belongs to both months, and a
+ * reader asking for September wants to see it; picking a single date would
+ * hide it from one of the two.
+ *
+ * An IPO with no dates at all is never hidden. It has not told us when it
+ * happens, and dropping it would be asserting something we do not know.
+ */
+export function inPeriod(ipo, range) {
+  if (!range) return true;
+  const dates = [ipo.open_date, ipo.close_date, ipo.listing_date].filter(Boolean);
+  if (!dates.length) return true;
+  return dates.some((date) => date >= range.from && date <= range.to);
+}
+
 export function daysUntil(date, today = istToday()) {
   if (!date) return null;
   const from = Date.parse(`${today}T00:00:00Z`);
