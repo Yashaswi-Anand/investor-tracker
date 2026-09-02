@@ -1118,7 +1118,11 @@ td a:hover { color: var(--primary); text-decoration: none; }
 }
 .disclaimer {
   border-top: 1px solid var(--border); background: var(--surface);
-  padding: 22px 0; font-size: 0.76rem; color: var(--text-muted); margin-top: 36px;
+  /* The extra room at the bottom is for the floating jump button. It is
+     fixed, so at full scroll it sits over the last 62px of the document —
+     which, without this, is the copyright line. */
+  padding: 22px 0 calc(78px + env(safe-area-inset-bottom));
+  font-size: 0.76rem; color: var(--text-muted); margin-top: 36px;
 }
 .disclaimer strong { color: var(--text); }
 .disclaimer-text { margin: 0; }
@@ -1687,3 +1691,49 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
   [data-anim="on"] .candle { opacity: 1; animation: none; }
 }
 
+/* ==========================================================================
+   Scroll jump - the floating up/down button
+   ========================================================================== */
+
+/* Below the sticky header (z-index 40) but above everything it floats over.
+   The two never meet anyway - one is pinned to the top, this to the bottom. */
+.scroll-jump {
+  position: fixed;
+  z-index: 35;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--primary);
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+  animation: jump-in 0.22s ease;
+}
+.scroll-jump:hover {
+  background: var(--brand-grad);
+  border-color: transparent;
+  color: var(--on-brand);
+  transform: translateY(-2px);
+}
+.scroll-jump:active { transform: scale(0.94); }
+.scroll-jump svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.25s ease;
+}
+/* The arrow is drawn pointing up, so only the other direction turns. */
+.scroll-jump[data-dir="down"] svg { transform: rotate(180deg); }
+
+@keyframes jump-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
