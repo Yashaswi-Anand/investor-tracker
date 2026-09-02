@@ -34,6 +34,7 @@ import {
   timelineDays,
   timelineLabel,
 } from "../../lib/format";
+import FilterSheet from "./FilterSheet";
 import Sparkline from "./Sparkline";
 import { GmpEstimate, Stat, StatusBadge } from "./ui";
 
@@ -106,9 +107,29 @@ const PAGE_SIZE = 15;
  */
 const CARD_CHUNK = 8;
 
-const TAB_KEYS = TABS.map((t) => t.key);
-const BOARD_KEYS = BOARDS.map((b) => b.key);
+/**
+ * Filters are sets, not single picks: an IPO has one status, so choosing
+ * several means the union of them, which is a question readers actually ask
+ * ("what is open OR closing today"). An empty set is no filter at all, which
+ * is what the "All" pill selects - so "all" is the absence of a filter rather
+ * than one of them, and never appears in these lists.
+ */
+const STATUS_KEYS = TABS.filter((t) => t.key !== "all").map((t) => t.key);
+const BOARD_KEYS = BOARDS.filter((b) => b.key !== "all").map((b) => b.key);
 const SORT_KEYS = SORTS.map((s) => s.key);
+
+/** Read a comma list from the URL, keeping only values we recognise. */
+function parseKeys(raw, allowed) {
+  if (!raw) return [];
+  const seen = raw
+    .split(",")
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => allowed.includes(part));
+  return [...new Set(seen)];
+}
+
+const toggle = (list, key) =>
+  list.includes(key) ? list.filter((item) => item !== key) : [...list, key];
 
 const boardOf = (ipo) => (ipo.board || "Mainboard").toLowerCase();
 
@@ -383,45 +404,53 @@ function HeadCell({ column, sort, onSort, pinned, pinEdge, left, onPin }) {
 }
 
 export default function IpoList({ ipos }) {
-  const [active, setActive] = useState("all");
-  const [board, setBoard] = useState("all");
+  const [statuses, setStatuses] = useState([]);
+  const [boards, setBoards] = useState([]);
   const [query, setQuery] = useState("");
   const [closingToday, setClosingToday] = useState(false);
   const [sort, setSort] = useState({ key: "default", dir: "desc" });
   const [pinned, setPinned] = useState(["name"]);
   const [page, setPage] = useState(1);
   const [shown, setShown] = useState(CARD_CHUNK);
+  // The phone's filter sheet, and the selection it is holding but has not
+  // committed. null whenever the sheet is shut.
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [draft, setDraft] = useState(null);
 
   // Read ?tab= / ?board= on the client rather than from server searchParams,
   // so the page keeps one cacheable render. This also makes the app-manifest
   // shortcut ("/?tab=open") work and makes filter links shareable.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tab = params.get("tab");
-    const requestedBoard = params.get("board");
     const requestedSort = params.get("sort");
-    if (tab && TAB_KEYS.includes(tab)) setActive(tab);
-    if (requestedBoard && BOARD_KEYS.includes(requestedBoard)) setBoard(requestedBoard);
+    // "?tab=open" still means what it always did; "?tab=open,closed" now
+    // works too, and "?tab=all" parses to nothing, which is the same thing.
+    setStatuses(parseKeys(params.get("tab"), STATUS_KEYS));
+    setBoards(parseKeys(params.get("board"), BOARD_KEYS));
     if (requestedSort && SORT_KEYS.includes(requestedSort)) {
       setSort({ key: requestedSort, dir: FIRST_DIR[requestedSort] || "desc" });
     }
   }, []);
 
-  const setParam = (name, key) => {
+  const setParam = (name, value) => {
     const url = new URL(window.location.href);
-    if (key === "all" || key === "default") url.searchParams.delete(name);
+    const key = Array.isArray(value) ? value.join(",") : value;
+    if (!key || key === "default") url.searchParams.delete(name);
     else url.searchParams.set(name, key);
     window.history.replaceState(null, "", url);
   };
 
+  /** The "All" pill clears the set; any other pill toggles its own key. */
   const selectTab = (key) => {
-    setActive(key);
-    setParam("tab", key);
+    const next = key === "all" ? [] : toggle(statuses, key);
+    setStatuses(next);
+    setParam("tab", next);
   };
 
   const selectBoard = (key) => {
-    setBoard(key);
-    setParam("board", key);
+    const next = key === "all" ? [] : toggle(boards, key);
+    setBoards(next);
+    setParam("board", next);
   };
 
   /** Header click: switch column, or flip direction when already on it. */
@@ -456,8 +485,8 @@ export default function IpoList({ ipos }) {
   // Status counts respect the board filter, and board counts respect the
   // status filter — each row of pills reflects what the other has narrowed.
   const byBoard = useMemo(
-    () => (board === "all" ? ipos : ipos.filter((i) => boardOf(i) === board)),
-    [ipos, board]
+    () => (boards.length ? ipos.filter((i) => boards.includes(boardOf(i))) : ipos),
+    [ipos, boards]
   );
 
   const counts = useMemo(() => {
@@ -469,8 +498,8 @@ export default function IpoList({ ipos }) {
   }, [byBoard]);
 
   const byStatus = useMemo(
-    () => (active === "all" ? ipos : ipos.filter((i) => i.status === active)),
-    [ipos, active]
+    () => (statuses.length ? ipos.filter((i) => statuses.includes(i.status)) : ipos),
+    [ipos, statuses]
   );
 
   const boardCounts = useMemo(() => {
@@ -491,8 +520,8 @@ export default function IpoList({ ipos }) {
 
   /** Everything the tabs allow, before search and sorting. */
   const filtered = useMemo(
-    () => byBoard.filter((i) => active === "all" || i.status === active),
-    [byBoard, active]
+    () => (statuses.length ? byBoard.filter((i) => statuses.includes(i.status)) : byBoard),
+    [byBoard, statuses]
   );
 
   const visible = useMemo(() => {
@@ -518,7 +547,72 @@ export default function IpoList({ ipos }) {
   useEffect(() => {
     setPage(1);
     setShown(CARD_CHUNK);
-  }, [active, board, query, closingToday, sort.key, sort.dir]);
+  }, [statuses, boards, query, closingToday, sort.key, sort.dir]);
+
+  // ---- The phone's filter sheet -----------------------------------------
+  // Held as a draft rather than applied on each tap: the list is behind the
+  // sheet and invisible while it is open, so live filtering would change
+  // nothing anyone can see. The Apply button carries the count instead.
+  const openSheet = () => {
+    setDraft({ statuses, boards, closingToday });
+    setSheetOpen(true);
+  };
+
+  const toggleDraft = (group, key) => {
+    setDraft((current) => {
+      if (!current) return current;
+      if (group === "status") return { ...current, statuses: toggle(current.statuses, key) };
+      if (group === "board") return { ...current, boards: toggle(current.boards, key) };
+      return { ...current, closingToday: !current.closingToday };
+    });
+  };
+
+  const applyDraft = () => {
+    if (draft) {
+      setStatuses(draft.statuses);
+      setBoards(draft.boards);
+      setClosingToday(draft.closingToday);
+      setParam("tab", draft.statuses);
+      setParam("board", draft.boards);
+    }
+    setSheetOpen(false);
+  };
+
+  /** What Apply would leave on screen, so the button can say so. */
+  const draftCount = useMemo(() => {
+    if (!draft) return 0;
+    const needle = query.trim().toLowerCase();
+    return ipos.filter(
+      (ipo) =>
+        (!draft.statuses.length || draft.statuses.includes(ipo.status)) &&
+        (!draft.boards.length || draft.boards.includes(boardOf(ipo))) &&
+        (!draft.closingToday || ipo.close_date === today) &&
+        (!needle || haystack(ipo).includes(needle))
+    ).length;
+  }, [ipos, draft, query, today]);
+
+  const activeFilters = statuses.length + boards.length + (closingToday ? 1 : 0);
+
+  // A sheet left open while the window grows past the table breakpoint would
+  // be a modal with no way back to the button that opened it, over a page
+  // whose scrolling it has locked. Two listeners, not one: the media query's
+  // own change event is the right signal, but it is not delivered when the
+  // viewport is resized by tooling rather than by a hand on the window edge,
+  // and a stuck modal is too bad an outcome to rest on a single hook.
+  useEffect(() => {
+    if (!sheetOpen) return undefined;
+    const wide = window.matchMedia("(min-width: 880px)");
+    const shut = () => {
+      if (wide.matches) setSheetOpen(false);
+    };
+    shut();
+    wide.addEventListener("change", shut);
+    window.addEventListener("resize", shut);
+    return () => {
+      wide.removeEventListener("change", shut);
+      window.removeEventListener("resize", shut);
+    };
+  }, [sheetOpen]);
 
   const tableRef = useRef(null);
   const sentinelRef = useRef(null);
@@ -642,8 +736,12 @@ export default function IpoList({ ipos }) {
             type="button"
             role="tab"
             className="tab"
-            data-active={active === tab.key}
-            aria-selected={active === tab.key}
+            data-active={
+              tab.key === "all" ? !statuses.length : statuses.includes(tab.key)
+            }
+            aria-selected={
+              tab.key === "all" ? !statuses.length : statuses.includes(tab.key)
+            }
             onClick={() => selectTab(tab.key)}
           >
             {tab.label}
@@ -661,8 +759,12 @@ export default function IpoList({ ipos }) {
             type="button"
             role="tab"
             className="tab tab-sm"
-            data-active={board === item.key}
-            aria-selected={board === item.key}
+            data-active={
+              item.key === "all" ? !boards.length : boards.includes(item.key)
+            }
+            aria-selected={
+              item.key === "all" ? !boards.length : boards.includes(item.key)
+            }
             onClick={() => selectBoard(item.key)}
           >
             {item.label}
@@ -699,10 +801,35 @@ export default function IpoList({ ipos }) {
           ) : null}
         </div>
 
+        {/* Phone only. The pills above hold every filter this opens, but on
+            a phone they run off the screen edge — this is the same choices
+            where they can all be seen at once. */}
+        <button
+          type="button"
+          className="filter-trigger"
+          onClick={openSheet}
+          aria-haspopup="dialog"
+          aria-expanded={sheetOpen}
+        >
+          <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+            <path
+              d="M3 5.5h14M6 10h8M8.5 14.5h3"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+            />
+          </svg>
+          Filters
+          {activeFilters ? (
+            <span className="tab-count">{activeFilters}</span>
+          ) : null}
+        </button>
+
         {closingCount > 0 ? (
           <button
             type="button"
-            className="chip"
+            className="chip chip-closing"
             data-active={closingToday}
             aria-pressed={closingToday}
             onClick={() => setClosingToday((v) => !v)}
@@ -750,10 +877,10 @@ export default function IpoList({ ipos }) {
             </>
           ) : (
             <>
-              No {active === "all" ? "" : `${active} `}
-              {board === "all"
-                ? "IPOs"
-                : `${board === "sme" ? "SME" : "Mainboard"} IPOs`}{" "}
+              No {statuses.length === 1 ? `${statuses[0]} ` : ""}
+              {boards.length === 1
+                ? `${boards[0] === "sme" ? "SME" : "Mainboard"} IPOs`
+                : "IPOs"}{" "}
               right now.
             </>
           )}
@@ -929,6 +1056,61 @@ export default function IpoList({ ipos }) {
           ) : null}
         </>
       )}
+
+      {draft ? (
+        <FilterSheet
+          open={sheetOpen}
+          activeCount={
+            draft.statuses.length + draft.boards.length + (draft.closingToday ? 1 : 0)
+          }
+          groups={[
+            {
+              key: "status",
+              label: "Status",
+              hint: "Pick as many as you like",
+              selected: draft.statuses,
+              options: TABS.filter((tab) => tab.key !== "all").map((tab) => ({
+                key: tab.key,
+                label: tab.label,
+                count: counts[tab.key] || 0,
+              })),
+            },
+            {
+              key: "board",
+              label: "Board",
+              selected: draft.boards,
+              options: BOARDS.filter((item) => item.key !== "all").map((item) => ({
+                key: item.key,
+                label: item.label,
+                count: boardCounts[item.key] || 0,
+              })),
+            },
+            ...(closingCount > 0
+              ? [
+                  {
+                    key: "closing",
+                    label: "Timing",
+                    selected: draft.closingToday ? ["today"] : [],
+                    options: [
+                      { key: "today", label: "Closing today", count: closingCount },
+                    ],
+                  },
+                ]
+              : []),
+          ]}
+          onToggle={toggleDraft}
+          onReset={() =>
+            setDraft({ statuses: [], boards: [], closingToday: false })
+          }
+          onApply={applyDraft}
+          onClose={() => setSheetOpen(false)}
+          applyLabel={
+            draftCount === 0
+              ? "No matches"
+              : `Show ${draftCount} IPO${draftCount === 1 ? "" : "s"}`
+          }
+        />
+      ) : null}
     </>
   );
 }
