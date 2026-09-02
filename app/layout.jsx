@@ -4,6 +4,7 @@ import Logo from "./components/Logo";
 import ServiceWorker from "./components/ServiceWorker";
 import ThemeToggle from "./components/ThemeToggle";
 import ScrollJump from "./components/ScrollJump";
+import SiteMenu from "./components/SiteMenu";
 import "./globals.css";
 
 export const metadata = {
@@ -108,6 +109,7 @@ export default function RootLayout({ children }) {
                 </Link>
               </nav>
               <ThemeToggle />
+              <SiteMenu />
             </div>
           </div>
         </header>

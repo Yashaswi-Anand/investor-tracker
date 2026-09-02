@@ -18,16 +18,19 @@ import {
   fmtShortDate,
   fmtTime,
   inr,
+  gmpPercent,
   istToday,
   minLotsLabel,
   priceBand,
   safeJsonLd,
+  STATUS_LABEL,
   times,
 } from "../../../lib/format";
 import Financials from "../../components/Financials";
 import PriceChart from "../../components/PriceChart";
 import NewsList from "../../components/NewsList";
 import Reveal from "../../components/Reveal";
+import ShareButton from "../../components/ShareButton";
 import GmpLineChart from "../../components/GmpLineChart";
 import {
   BoardBadge,
@@ -461,6 +464,33 @@ function buildFaq(ipo) {
   return items;
 }
 
+/**
+ * What actually gets forwarded.
+ *
+ * Written as lines rather than a paragraph because it is read in a chat
+ * window, and skipped entirely where a figure is missing — "GMP —" in a
+ * WhatsApp message is worse than one line fewer.
+ */
+function shareSummary(ipo) {
+  const lines = [`${ipo.name} IPO`];
+
+  if (ipo.gmp != null) {
+    const pct = gmpPercent(ipo);
+    const est = ipo.estimated_listing != null ? ` → ₹${ipo.estimated_listing}` : "";
+    const move = pct != null ? ` (${pct > 0 ? "+" : ""}${pct.toFixed(1)}%)` : "";
+    lines.push(`GMP ₹${ipo.gmp}${est}${move}`);
+  }
+
+  const band = priceBand(ipo);
+  if (band && band !== "—") lines.push(`Price band ${band}`);
+  if (ipo.min_investment) lines.push(`Min investment ${inr(ipo.min_investment)}`);
+  if (ipo.open_date || ipo.close_date) {
+    lines.push(`${fmtDate(ipo.open_date)} – ${fmtDate(ipo.close_date)}`);
+  }
+  lines.push(`${ipo.board || "Mainboard"} · ${STATUS_LABEL[ipo.status] || ipo.status}`);
+  return lines.join("\n");
+}
+
 export default async function IpoDetailPage({ params }) {
   const { slug } = await params;
   const [ipo, gmpHistory, subscriptionHistory, allNews] = await Promise.all([
@@ -544,7 +574,16 @@ export default async function IpoDetailPage({ params }) {
           <BoardBadge board={ipo.board} />
           {ipo.symbol && <span className="badge badge-board">{ipo.symbol}</span>}
         </div>
-        <h1 className="detail-title">{ipo.name} IPO</h1>
+        <div className="detail-title-row">
+          <h1 className="detail-title">{ipo.name} IPO</h1>
+          {/* A summary, not a bare link: a URL alone in a group chat tells
+              nobody whether it is worth opening. */}
+          <ShareButton
+            title={`${ipo.name} IPO`}
+            summary={shareSummary(ipo)}
+            url={`${SITE.url}/ipo/${ipo.slug}`}
+          />
+        </div>
         <p className="subtitle subtitle-flush">
           {fmtDate(ipo.open_date, true)} – {fmtDate(ipo.close_date, true)}
         </p>

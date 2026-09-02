@@ -2071,3 +2071,348 @@ body.has-sheet .scroll-jump { display: none; }
   box-shadow: none;
 }
 .error-btn-quiet:hover { background: var(--surface-3); }
+
+/* ==========================================================================
+   Header menu
+   ========================================================================== */
+.site-menu { position: relative; }
+.menu-button {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--on-brand);
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.menu-button:hover { background: rgba(255, 255, 255, 0.24); }
+.menu-button:active { transform: scale(0.95); }
+
+.menu-pop {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(268px, calc(100vw - 28px));
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+  animation: menu-drop 0.16s ease;
+}
+@keyframes menu-drop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  color: var(--text);
+  transition: background 0.14s ease;
+}
+.menu-item:hover { background: var(--surface-2); text-decoration: none; }
+.menu-item[data-active] { background: var(--primary-soft); color: var(--primary); }
+.menu-item svg { flex: 0 0 auto; }
+.menu-item-text { display: grid; gap: 1px; }
+.menu-item-label { font-size: 0.88rem; font-weight: 700; }
+.menu-item-note { font-size: 0.72rem; color: var(--text-muted); }
+.menu-item[data-active] .menu-item-note { color: inherit; opacity: 0.75; }
+
+/* News keeps its own button where there is room for one. On a phone it is in
+   the menu with everything else, and the header keeps its wordmark. */
+.site-nav { display: none; }
+@media (min-width: 620px) {
+  .site-nav { display: flex; }
+}
+
+/* ==========================================================================
+   Share
+   ========================================================================== */
+.share { position: relative; flex: 0 0 auto; }
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.share-btn:hover { background: var(--surface-2); transform: translateY(-1px); }
+.share-btn:active { transform: scale(0.97); }
+
+.share-pop {
+  position: absolute;
+  z-index: 45;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 196px;
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: menu-drop 0.16s ease;
+}
+.share-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.share-item:hover { background: var(--surface-2); text-decoration: none; }
+
+/* The title and the share control share a line, and the title takes what is
+   left - min-width 0 so a long company name wraps instead of shoving the
+   button off the edge. */
+.detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.detail-title-row .detail-title { min-width: 0; }
+
+/* ==========================================================================
+   Allotment check
+   ========================================================================== */
+.allot-head { margin-bottom: 18px; }
+
+.pan-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; }
+.pan-input {
+  flex: 1 1 180px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  /* A PAN is read back character by character when it is checked against a
+     card, so the characters need to be the same width. */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pan-input::placeholder { font-weight: 500; letter-spacing: 0.06em; color: var(--text-muted); }
+.pan-input:focus { outline: none; border-color: var(--primary); }
+.pan-add {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--brand-grad);
+  color: var(--on-brand);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pan-add:disabled { opacity: 0.5; cursor: default; }
+.pan-error { margin: 8px 2px 0; font-size: 0.8rem; color: var(--down); }
+.pan-empty { margin: 12px 0 0; font-size: 0.84rem; color: var(--text-muted); }
+
+.pan-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.pan-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.pan-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.pan-remove {
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.pan-remove:hover { background: var(--down-soft); color: var(--down); }
+
+.pick-list { display: grid; gap: 8px; margin: 14px 0 0; }
+.pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.pick[data-on] { background: var(--primary-soft); border-color: var(--primary); }
+.pick-box {
+  flex: 0 0 auto;
+  width: 21px; height: 21px;
+  display: grid; place-items: center;
+  border: 2px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--on-brand);
+}
+.pick[data-on] .pick-box { background: var(--primary); border-color: var(--primary); }
+.pick-text { flex: 1 1 auto; display: grid; gap: 2px; min-width: 0; }
+.pick-name { font-size: 0.92rem; font-weight: 700; }
+.pick-note { font-size: 0.74rem; color: var(--text-muted); }
+.pick[data-on] .pick-note { color: inherit; opacity: 0.75; }
+
+.check-btn {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--brand-grad);
+  color: var(--on-brand);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+}
+.check-btn:disabled {
+  background: var(--surface-3);
+  color: var(--text-muted);
+  cursor: default;
+  box-shadow: none;
+}
+
+.check-summary { margin: 0 0 16px; font-size: 0.86rem; color: var(--text-muted); }
+.check-won { color: var(--up); font-weight: 700; }
+
+.result-block { padding-top: 16px; border-top: 1px solid var(--border); }
+.result-block:first-of-type { border-top: none; padding-top: 0; }
+.result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.result-name { margin: 0; font-size: 1rem; font-weight: 700; }
+.result-name::before { content: none; }
+.result-registrar { margin: 2px 0 0; font-size: 0.76rem; color: var(--text-muted); }
+.result-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.result-open:hover { text-decoration: none; filter: brightness(1.05); }
+
+.result-rows { display: grid; gap: 8px; margin: 12px 0 18px; padding: 0; list-style: none; }
+.result-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+/* The row itself carries the answer, so a long list can be read down the left
+   edge without stopping at every button. */
+.result-row[data-outcome="allotted"] { border-color: var(--up); background: var(--up-soft); }
+.result-row[data-outcome="none"] { border-color: var(--border-strong); opacity: 0.72; }
+
+.result-pan {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.result-copy {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.result-marks { display: flex; gap: 6px; }
+.result-mark {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.result-mark[data-tone="up"][data-on] {
+  background: var(--up); border-color: var(--up); color: var(--on-brand);
+}
+.result-mark[data-tone="down"][data-on] {
+  background: var(--surface-3); border-color: var(--border-strong); color: var(--text-2);
+}
