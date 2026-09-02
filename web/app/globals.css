@@ -438,11 +438,19 @@ h2::before {
 /* ==========================================================================
    Tabs
    ========================================================================== */
-.tabs {
-  display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px;
-  margin-bottom: 12px; scrollbar-width: none;
-}
+/* Hidden on phones. Six status pills and three board pills do not fit a
+   375px screen, and what does not fit ends up behind a sideways swipe that
+   nothing signals — half the filters, invisible. The same choices are in
+   the sheet behind the Filters button, all visible at once. */
+.tabs { display: none; }
 .tabs::-webkit-scrollbar { display: none; }
+
+@media (min-width: 880px) {
+  .tabs {
+    display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px;
+    margin-bottom: 12px; scrollbar-width: none;
+  }
+}
 .tab {
   flex: 0 0 auto;
   padding: 8px 15px;
@@ -531,6 +539,45 @@ h2::before {
   cursor: pointer;
 }
 .search-clear:hover { background: var(--border-strong); }
+
+/* The phone's way into every filter. Same pill language as the rest of the
+   toolbar so it does not read as a different kind of control. */
+.filter-trigger {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.filter-trigger:active { transform: scale(0.97); }
+/* Carrying a count is what makes it obvious a filter is on while the pills
+   that would have shown it are not on screen. */
+.filter-trigger:has(.tab-count) {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+@media (min-width: 880px) {
+  .filter-trigger { display: none; }
+}
+
+/* Closing today lives in the sheet on a phone, beside the pills on desktop. */
+.chip-closing { display: none; }
+@media (min-width: 880px) {
+  .chip-closing { display: inline-flex; align-items: center; }
+}
 
 /* Same pill language as .tab, but a toggle rather than a tablist member. */
 .chip {
@@ -1736,4 +1783,224 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 @keyframes jump-in {
   from { opacity: 0; transform: scale(0.8); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* ==========================================================================
+   Filter sheet (phone)
+   ========================================================================== */
+/* Nothing else should float over the page while the sheet owns it. */
+body.has-sheet .scroll-jump { display: none; }
+
+.sheet-root {
+  position: fixed;
+  inset: 0;
+  /* Above the sticky header (40) and the jump button (35): while this is up
+     it is the only thing on screen that should answer a tap. */
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+}
+.sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(12, 8, 6, 0.55);
+  animation: sheet-fade 0.2s ease;
+}
+.sheet-panel {
+  position: relative;
+  width: 100%;
+  max-height: min(88vh, 760px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 -18px 48px -18px rgba(12, 8, 6, 0.6);
+  animation: sheet-rise 0.24s cubic-bezier(0.2, 0.9, 0.3, 1);
+  /* --drag is only set while a finger is on the grip. Outside a drag the
+     transition carries the panel back to rest. */
+  transform: translateY(var(--drag, 0px));
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.sheet-panel[data-dragging] { transition: none; }
+.sheet-panel:focus { outline: none; }
+
+.sheet-root[data-leaving] .sheet-panel {
+  animation: sheet-sink 0.2s ease forwards;
+}
+.sheet-root[data-leaving] .sheet-scrim {
+  animation: sheet-fade 0.2s ease reverse forwards;
+}
+
+/* Its own row, and the only place a drag is read — put the gesture on the
+   whole panel and every flick meant for the option list fights it. */
+.sheet-grip {
+  padding: 10px 0 2px;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+}
+.sheet-grip-bar {
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sheet-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+.sheet-title::before { content: none; }
+.sheet-badge {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-brand);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-align: center;
+}
+.sheet-close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.sheet-close:hover { background: var(--surface-3); }
+
+.sheet-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 18px 4px;
+}
+.sheet-group + .sheet-group { margin-top: 20px; }
+.sheet-group-title {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.sheet-hint { margin: 3px 0 0; font-size: 0.76rem; color: var(--text-muted); }
+.sheet-options { display: grid; gap: 8px; margin-top: 10px; }
+
+/* Full-width rows, not pills. A pill is sized by its label, so the tap
+   target for "SME" is a third of the one for "Closing today"; here every
+   option is the same easy target and the labels line up to be read down. */
+.sheet-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.sheet-option[data-on] {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.sheet-option-label { flex: 1 1 auto; }
+.sheet-box {
+  flex: 0 0 auto;
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--on-brand);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.sheet-option[data-on] .sheet-box {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.sheet-count {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sheet-option[data-on] .sheet-count { color: inherit; opacity: 0.8; }
+
+.sheet-actions {
+  display: flex;
+  gap: 10px;
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.sheet-reset,
+.sheet-apply {
+  min-height: 48px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sheet-reset {
+  flex: 0 0 auto;
+  padding: 0 22px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.sheet-reset:hover { background: var(--surface-3); }
+/* The wide one, because applying is what the reader came here to do. */
+.sheet-apply {
+  flex: 1 1 auto;
+  border: none;
+  background: var(--brand-grad);
+  color: var(--on-brand);
+  box-shadow: var(--shadow-lg);
+}
+
+@keyframes sheet-rise {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes sheet-sink {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+@keyframes sheet-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
