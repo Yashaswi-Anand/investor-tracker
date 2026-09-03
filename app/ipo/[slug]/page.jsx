@@ -26,6 +26,7 @@ import {
   STATUS_LABEL,
   times,
 } from "../../../lib/format";
+import { documentsFor } from "../../../lib/documents";
 import Financials from "../../components/Financials";
 import PriceChart from "../../components/PriceChart";
 import NewsList from "../../components/NewsList";
@@ -267,12 +268,6 @@ const ISSUE_DETAIL_ROWS = [
   ["sponsor_bank", "Sponsor Bank"],
 ];
 
-const DOCUMENT_ROWS = [
-  ["rhp_url", "Red Herring Prospectus"],
-  ["ratios_url", "Basis of Issue Price"],
-  ["anchor_url", "Anchor Allocation"],
-];
-
 /**
  * Company and issue detail collected by the scraper.
  *
@@ -286,7 +281,7 @@ const DOCUMENT_ROWS = [
 function IssueDetails({ ipo }) {
   const details = ipo.details || {};
   const issueRows = ISSUE_DETAIL_ROWS.filter(([key]) => details[key]);
-  const documents = DOCUMENT_ROWS.filter(([key]) => details[key]);
+  const documents = documentsFor(ipo);
 
   if (!details.objects && !issueRows.length && !documents.length) return null;
 
@@ -336,21 +331,48 @@ function IssueDetails({ ipo }) {
       {documents.length > 0 && (
         <>
           <p className="subtitle sub-hist-caption">Documents</p>
-          <ul className="list">
-            {documents.map(([key, label]) => (
-              <li key={key}>
-                {/* NSE serves these as ZIPs from its own archive. External and
-                    untrusted-by-default, hence noopener. */}
+          <ul className="doc-list">
+            {documents.map((doc) => (
+              <li key={doc.kind}>
+                {/* Our own route, not NSE's URL: it takes the PDF out of the
+                    ZIP NSE serves, so this opens a document instead of
+                    downloading an archive a phone cannot open. If anything
+                    about that fails it redirects to the ZIP, which is where
+                    this link used to go. */}
                 <a
-                  href={details[key]}
+                  className="doc-link"
+                  href={`/api/doc/${ipo.slug}/${doc.kind}`}
                   target="_blank"
-                  rel="noopener noreferrer nofollow"
+                  rel="noopener noreferrer"
                 >
-                  {label} ↗
+                  <span className="doc-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="17" height="17" fill="none">
+                      <path
+                        d="M14 3v5h5M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8l-4-5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M9 13h6M9 16.5h4"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
+                  <span className="doc-text">
+                    <span className="doc-label">{doc.label}</span>
+                    <span className="doc-note">{doc.note}</span>
+                  </span>
+                  <span className="doc-open">PDF</span>
                 </a>
               </li>
             ))}
           </ul>
+          <p className="doc-source">
+            Published by NSE as ZIP archives; opened here as the PDF inside.
+          </p>
         </>
       )}
 
