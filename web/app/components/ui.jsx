@@ -33,40 +33,6 @@ export function GmpValue({ ipo, showPercent = false }) {
 }
 
 /**
- * Estimated listing price (upper band + GMP) with the gain it implies.
- *
- * The percentage carries the up/down colour while the rupee figure stays in
- * body text — colouring the whole cell made the table read as a wall of green.
- * `.est-pct` deliberately sets no colour of its own so it cannot fight the
- * `.gmp-up` / `.gmp-down` class sitting alongside it.
- */
-export function EstListing({ ipo }) {
-  // Normally enrich() in lib/data.js has already derived this, but fall back
-  // to the same arithmetic so the component works on any row it is handed
-  // rather than silently rendering a dash.
-  const est =
-    ipo.estimated_listing != null
-      ? Number(ipo.estimated_listing)
-      : ipo.gmp != null && ipo.price_band_high
-        ? Number(ipo.price_band_high) + Number(ipo.gmp)
-        : null;
-  if (est == null) return <span className="gmp-flat">—</span>;
-  const pct = gmpPercent(ipo);
-  const tone = pct == null ? "gmp-flat" : pct > 0 ? "gmp-up" : pct < 0 ? "gmp-down" : "gmp-flat";
-  return (
-    <span>
-      {inr(Math.round(est))}{" "}
-      {pct != null && (
-        <span className={`est-pct ${tone}`}>
-          ({pct > 0 ? "+" : ""}
-          {pct.toFixed(1)}%)
-        </span>
-      )}
-    </span>
-  );
-}
-
-/**
  * What the IPO actually listed at, and the gain on the issue price.
  *
  * Deliberately renders nothing but a dash until a real price is stored. The
@@ -84,7 +50,7 @@ export function ListingResult({ ipo, showPercent = true }) {
   const tone = pct == null ? "gmp-flat" : pct > 0 ? "gmp-up" : pct < 0 ? "gmp-down" : "gmp-flat";
   return (
     <span>
-      {inr(ipo.listing_price)}
+      {inr(ipo.listing_price)}{" "}
       {showPercent && pct != null && (
         <span className={`est-pct ${tone}`}>
           ({pct > 0 ? "+" : ""}

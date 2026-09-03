@@ -163,7 +163,6 @@ button { font-family: inherit; }
 .container { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
 /* Keeps a phrase whole when a heading wraps, so the break lands between
    sentences instead of inside one. */
-.nowrap { white-space: nowrap; }
 .num { font-variant-numeric: tabular-nums; font-family: var(--font-num); }
 
 /* ==========================================================================
