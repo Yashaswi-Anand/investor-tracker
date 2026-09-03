@@ -758,7 +758,18 @@ export default async function IpoDetailPage({ params }) {
                 does not use. Capped and alone, the paragraph left a third of
                 the card empty beside it while everything else ran full width,
                 which read as an indent rather than a measure. */}
-            <div className="about-split">
+            {/* Only split when there is something to put in the second
+                column. With no promoter detail the grid would reserve a
+                third of the card for nothing. */}
+            <div
+              className={
+                details.promoters ||
+                details.promoter_holding_pre ||
+                details.promoter_holding_post
+                  ? "about-split"
+                  : undefined
+              }
+            >
               <p className="about-text about-prose">{about}</p>
 
               {(details.promoters ||

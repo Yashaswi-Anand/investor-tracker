@@ -1306,15 +1306,51 @@ td a:hover { color: var(--primary); text-decoration: none; }
 @media (min-width: 900px) {
   .about-split {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    column-gap: 34px;
+    /* Weighted towards the prose: the facts are a handful of short lines and
+       an even split gave them more room than they have anything to put in. */
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    column-gap: 30px;
     align-items: start;
   }
   /* The cap has done its job once the column itself is the right width. */
   .about-split .about-prose { max-width: none; }
-  .about-split .about-meta { margin-top: 0; }
-  /* One pair per line in the narrower column; two would be cramped. */
-  .about-split .detail-grid { grid-template-columns: minmax(0, 1fr); }
+
+  /* The facts become a panel rather than a continuation of the table style.
+     .kv puts its label and value at opposite edges, which reads well across
+     a full-width card and badly in a narrow column — with a single promoter
+     row the label was stranded from its value with 200px between them, and
+     the empty column below made the whole side look unfinished. Stacked and
+     boxed, one row looks deliberate and three look like a list. */
+  .about-split .about-meta {
+    display: block;
+    margin-top: 0;
+    padding: 15px 17px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+  }
+  .about-split .about-meta .kv {
+    display: block;
+    padding: 0;
+    border-bottom: none;
+  }
+  .about-split .about-meta .kv + .kv {
+    margin-top: 13px;
+    padding-top: 13px;
+    border-top: 1px solid var(--border);
+  }
+  .about-split .about-meta dt {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .about-split .about-meta dd {
+    margin-top: 4px;
+    text-align: left;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
 }
 
 /* ==========================================================================
