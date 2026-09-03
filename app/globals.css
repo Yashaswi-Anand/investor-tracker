@@ -1083,12 +1083,41 @@ td a:hover { color: var(--primary); text-decoration: none; }
 }
 .kv {
   display: flex; justify-content: space-between; gap: 12px;
+  /* Baseline, not the default stretch: beside a value that runs to two
+     lines the label was being stretched to the full row height, so it read
+     as floating rather than as the first line's label. */
+  align-items: baseline;
   padding: 8px 0; font-size: 0.86rem; border-bottom: 1px solid var(--border);
 }
 .kv:last-child { border-bottom: none; }
 .kv-note { font-weight: 500; font-size: 0.8rem; }
-.kv dt { color: var(--text-muted); }
-.kv dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+/* The label never shrinks. Both sides of a flex row shrink by default, and
+   the label always loses: its shortest word is a few characters while a long
+   value cannot go below its own longest line. That is how "UPI Mandate
+   Cut-off" ended up 58px wide and six lines tall, one word per line, beside
+   a 400-character value. */
+.kv dt { color: var(--text-muted); flex: 0 0 auto; }
+.kv dd {
+  margin: 0; font-weight: 700; text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+
+/* A row whose value is prose rather than a figure stacks instead of
+   splitting. Label and value at opposite ends of a line works for "Lot Size
+   82 shares"; for a paragraph it leaves the label stranded above a wall of
+   right-aligned text. kv-note is already how the markup says "this value is
+   prose" — kv-note-inline is the short suffix beside a figure and keeps the
+   ordinary layout. */
+.kv:has(dd > .kv-note:not(.kv-note-inline)) {
+  display: block;
+}
+.kv:has(dd > .kv-note:not(.kv-note-inline)) dd {
+  margin-top: 3px;
+  text-align: left;
+  font-weight: 600;
+  line-height: 1.55;
+}
 /* Company & issue details: two columns of label/value rows once there is
    room, one below that. The rows are .kv, so each already lays itself out —
    this only decides how many of them sit side by side. */
