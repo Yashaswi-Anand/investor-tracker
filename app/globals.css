@@ -2292,6 +2292,12 @@ body.has-sheet .scroll-jump { display: none; }
 .pan-add:disabled { opacity: 0.5; cursor: default; }
 .pan-error { margin: 8px 2px 0; font-size: 0.8rem; color: var(--down); }
 .pan-empty { margin: 12px 0 0; font-size: 0.84rem; color: var(--text-muted); }
+.pan-privacy { margin: 16px 0 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; }
+.pan-erase { color: var(--down); }
+
+/* The storage keys, in the privacy policy. */
+.policy-list { margin: 10px 0 12px; padding-left: 20px; display: grid; gap: 6px; }
+.policy-list code { font-size: 0.92em; }
 
 .pan-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
 .pan-chip {

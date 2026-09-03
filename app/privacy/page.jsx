@@ -6,10 +6,19 @@ import { SITE } from "../../lib/config";
 // analytics, ads, accounts or a contact form, update this page AND the Play
 // Console Data safety form together, in the same change.
 //
-// Everything below was checked against the code on 27 Aug 2026: no analytics
-// SDK, no ad SDK, no cookies, no account system, and the only browser storage
-// is the light/dark preference. The one third party a visitor's browser
-// actually contacts is Google Fonts.
+// Everything below was checked against the code on 3 Sep 2026: no analytics
+// SDK, no ad SDK, no cookies, no account system. The one third party a
+// visitor's browser actually contacts is Google Fonts.
+//
+// THE ALLOTMENT PAGE ASKS FOR A PAN. That is personal data under the DPDP
+// Act, and this page said in as many words that there was nowhere on the site
+// to enter one — written before that page existed and left standing after it
+// shipped, which made this document untrue for four days. It is corrected
+// below. The reason it stays a short section rather than a long one is that
+// the PAN never reaches a server: it is typed, stored and used entirely
+// inside the reader's own browser, so there is no collection to disclose.
+// If that ever changes, this page and the Play Console Data safety form have
+// to change in the SAME commit, before the feature ships.
 
 export const metadata = {
   title: "Privacy Policy",
@@ -18,7 +27,7 @@ export const metadata = {
   robots: { index: true, follow: true },
 };
 
-const EFFECTIVE_DATE = "27 August 2026";
+const EFFECTIVE_DATE = "3 September 2026";
 
 export default function PrivacyPage() {
   const host = SITE.url.replace("https://", "");
@@ -40,21 +49,64 @@ export default function PrivacyPage() {
 
         <h2>What we do not collect</h2>
         <p>
-          No name, email address, phone number, PAN, demat or bank details, and
-          no financial information of any kind. We never ask for them, and
-          there is nowhere on the site to enter them. The search box on the
-          dashboard filters the list inside your own browser — what you type is
-          never sent anywhere.
+          No name, email address, phone number, demat or bank details, and no
+          financial information of any kind. We never ask for them and there is
+          nowhere on the site to enter them. The search box on the dashboard
+          filters the list inside your own browser — what you type is never
+          sent anywhere.
+        </p>
+
+        <h2>The one exception: your PAN</h2>
+        <p>
+          The <Link href="/allotment">allotment page</Link> has a box for PAN
+          numbers, so that it can hand you the right registrar with your PAN
+          ready to paste into their form. That is the only place on this site
+          that asks for anything personal, and it is worth being precise about
+          what happens to it.
+        </p>
+        <p>
+          <strong>A PAN you type there never reaches us.</strong> There is no
+          request on that page that carries one — not to our server, not to our
+          database, not to any third party. It is saved in your own
+          browser&apos;s local storage and read back by the page on your own
+          device. It is never put in a web address either, which would have
+          placed it in your browser history and in the logs of every machine
+          the request passed through.
+        </p>
+        <p>
+          We also do not fetch your allotment result. Every registrar puts that
+          behind a CAPTCHA, so opening their page and reading the answer stays
+          with you; anything you record afterwards is a note to yourself, kept
+          in the same browser storage.
         </p>
 
         <h2>What is stored in your browser</h2>
         <p>
-          One thing: your choice of light or dark theme, saved in your
-          browser&apos;s local storage under the key <code>theme</code>. It
-          never leaves your device and is not a cookie. Clearing your browser
-          data removes it. The app also caches pages through a service worker
-          so it opens quickly and still works with a poor connection; that
-          cache holds public IPO pages, nothing about you.
+          Four things, all in local storage on your own device, none of them
+          cookies, and none of them ever sent anywhere:
+        </p>
+        <ul className="policy-list">
+          <li>
+            <code>theme</code> — whether you chose light or dark.
+          </li>
+          <li>
+            <code>ipo-pans</code> — the PAN numbers you added on the allotment
+            page.
+          </li>
+          <li>
+            <code>ipo-allotment-picks</code> — which issues you selected there.
+          </li>
+          <li>
+            <code>ipo-allotment-marks</code> — what you recorded after checking
+            each one with its registrar.
+          </li>
+        </ul>
+        <p>
+          Clearing your browser data for this site removes all four, and the
+          allotment page has an <strong>Erase everything</strong> button that
+          does the same thing in one tap. The app also caches pages through a
+          service worker so it opens quickly and still works on a poor
+          connection; that cache holds public IPO pages, nothing about you.
         </p>
         <p>
           We set <strong>no</strong> advertising, tracking or analytics
@@ -109,19 +161,41 @@ export default function PrivacyPage() {
           collect none from children either.
         </p>
 
-        <h2>Your rights</h2>
+        <h2>Your rights, and the DPDP Act</h2>
         <p>
-          Rights to access, correct or delete personal data only apply to
-          personal data that exists. We hold none, so there is nothing to
-          request, export or erase. If that ever changes, this page will say so
-          before it does.
+          India&apos;s Digital Personal Data Protection Act, 2023 places its
+          duties on whoever determines how personal data is processed and
+          actually holds it. We hold none. A PAN entered on the allotment page
+          is processed on your own device, by code running in your own browser,
+          and is never transmitted to or stored by us — so there is no copy of
+          it for us to disclose, correct, export or erase, and no consent
+          notice we could meaningfully serve for data we never receive.
+        </p>
+        <p>
+          What that means in practice: the rights of access, correction,
+          erasure and grievance redressal exist against whoever holds your
+          data, and for the PAN on that page, that is you. Deleting it is the
+          Erase everything button, or clearing this site&apos;s browser data.
+        </p>
+        <p>
+          If we ever start receiving PANs — which would mean fetching allotment
+          results ourselves rather than sending you to the registrar — we would
+          become a Data Fiduciary under the Act, with duties of notice,
+          consent, purpose limitation, retention limits and breach reporting.
+          We are not doing that, and this page will be rewritten in full before
+          we ever do.
         </p>
 
         <h2>Changes to this policy</h2>
         <p>
           If we ever begin collecting anything — analytics, accounts, alerts
-          that need an email address — this page will be updated with a new
-          effective date <em>before</em> that change goes live, not after.
+          that need an email address, or a PAN that reaches our server — this
+          page will be updated with a new effective date <em>before</em> that
+          change goes live, not after. That promise was broken once: the
+          allotment page shipped on 2 September 2026 with a PAN box while this
+          policy still said there was nowhere on the site to enter one. It was
+          corrected the next day, and the correction is recorded here rather
+          than quietly patched.
         </p>
 
         <h2>Contact</h2>

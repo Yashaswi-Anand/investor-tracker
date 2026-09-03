@@ -14,7 +14,7 @@ export const metadata = {
   robots: { index: true, follow: true },
 };
 
-const EFFECTIVE_DATE = "27 August 2026";
+const EFFECTIVE_DATE = "3 September 2026";
 
 export default function TermsPage() {
   const host = SITE.url.replace("https://", "");
@@ -118,6 +118,29 @@ export default function TermsPage() {
           quoting a figure with attribution are all fine.
         </p>
 
+        <h2>The allotment page</h2>
+        <p>
+          That page does not check your allotment. It cannot: every registrar
+          puts the answer behind a CAPTCHA, which is there precisely to stop a
+          site like this asking on someone&apos;s behalf, and we do not work
+          around it. What the page does is hand you the right registrar for
+          each issue with your PAN ready to paste, and keep a note of what you
+          found.
+        </p>
+        <p>
+          <strong>The registrar is the only authority on allotment.</strong>
+          Anything shown on that page is your own record of what you saw on
+          their site. It is not a confirmation, it is not evidence of an
+          allotment, and it should never be relied on in place of the
+          registrar&apos;s own answer or your demat statement. If the two
+          disagree, the registrar is right.
+        </p>
+        <p>
+          PAN numbers entered there stay in your browser and are never sent to
+          us. Enter only PANs you are entitled to use — your own, or those you
+          are authorised to act for.
+        </p>
+
         <h2>Third-party names and links</h2>
         <p>
           Company names, trademarks and logos mentioned here belong to their
@@ -130,7 +153,10 @@ export default function TermsPage() {
 
         <h2>Privacy</h2>
         <p>
-          We collect no personal data. The details are in our{" "}
+          We receive no personal data. The allotment page asks for a PAN, but
+          it never leaves your browser — what is stored on your device, and why
+          that keeps us outside the duties the DPDP Act places on whoever holds
+          personal data, is set out in our{" "}
           <Link href="/privacy">Privacy Policy</Link>.
         </p>
 

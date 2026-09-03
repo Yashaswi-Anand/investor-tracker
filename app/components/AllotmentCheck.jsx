@@ -24,6 +24,7 @@
  * it, and the page says so where it is asked for.
  */
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import MultiSelect from "./MultiSelect";
 import { STATUS_LABEL } from "../../lib/format";
@@ -62,7 +63,15 @@ function read(key, fallback) {
 
 function write(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    // An empty list is not a value worth keeping — the key is removed instead
+    // of being set to "[]". Erase everything then really does leave nothing
+    // behind, which is what the privacy policy says it does.
+    const empty =
+      value == null ||
+      (Array.isArray(value) && value.length === 0) ||
+      (typeof value === "object" && !Array.isArray(value) && !Object.keys(value).length);
+    if (empty) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
   } catch {
     /* full, or disabled — the page still works for this session */
   }
@@ -149,6 +158,28 @@ export default function AllotmentCheck({ ipos }) {
       else next[key] = outcome;
       return next;
     });
+
+  /**
+   * Everything this page holds, gone in one tap.
+   *
+   * A PAN is a government identifier. Telling someone it lives in their
+   * browser is only half an answer if getting it out again means finding
+   * their way into site settings — so the promise in the privacy policy is
+   * a button here, not an instruction there.
+   */
+  const eraseAll = () => {
+    setPans([]);
+    setPicks([]);
+    setMarks({});
+    setChecking(false);
+    for (const key of [PAN_KEY, PICK_KEY, MARK_KEY]) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        /* nothing stored means nothing to remove */
+      }
+    }
+  };
 
   const copyText = async (text, token) => {
     try {
@@ -242,6 +273,19 @@ export default function AllotmentCheck({ ipos }) {
             No PANs yet. Add one above — several if you apply for the family.
           </p>
         )}
+
+        <p className="pan-privacy">
+          Stored on this device only, never sent to us —{" "}
+          <Link href="/privacy">how that works</Link>.
+          {pans.length || picks.length || Object.keys(marks).length ? (
+            <>
+              {" "}
+              <button type="button" className="link-btn pan-erase" onClick={eraseAll}>
+                Erase everything
+              </button>
+            </>
+          ) : null}
+        </p>
       </section>
 
       <section className="card card-wide">
