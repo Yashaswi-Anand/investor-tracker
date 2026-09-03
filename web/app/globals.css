@@ -2048,6 +2048,44 @@ body.has-sheet .scroll-jump { display: none; }
 }
 
 /* ==========================================================================
+   Offer documents
+   ========================================================================== */
+.doc-list { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.doc-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.doc-link:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  text-decoration: none;
+}
+.doc-icon { flex: 0 0 auto; display: grid; place-items: center; color: var(--primary); }
+.doc-text { flex: 1 1 auto; display: grid; gap: 1px; min-width: 0; }
+.doc-label { font-size: 0.9rem; font-weight: 700; }
+.doc-note { font-size: 0.74rem; color: var(--text-muted); }
+/* Says what opens, because the last thing this link did was download a ZIP
+   and a reader who has met that once will not trust it twice. */
+.doc-open {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-brand);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.doc-source { margin: 10px 2px 0; font-size: 0.74rem; color: var(--text-muted); }
+
+/* ==========================================================================
    Error boundary
    ========================================================================== */
 .error-actions { display: flex; flex-wrap: wrap; gap: 10px; }
