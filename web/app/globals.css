@@ -1041,6 +1041,13 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .card-wide { grid-column: 1 / -1; }
 
+/* The news card and the FAQ sit AFTER .grid closes, so the grid's own
+   row-gap never reached them and they butted straight up against the last
+   card above — a measured zero pixels. Everything that follows the grid
+   carries the same 14px the cards inside it get from each other. */
+.news-card,
+.card.faq { margin-top: 14px; }
+
 /* A row of short cards, sized against each other rather than the page. Any
    of them may be absent — the source publishes risks for some issues only —
    and auto-fit means whichever survive divide the row between them instead
@@ -1290,6 +1297,25 @@ td a:hover { color: var(--primary); text-decoration: none; }
 }
 
 .about-meta { margin-top: 14px; }
+
+/* On a wide screen the prose was capped at 68ch inside a 1088px card, which
+   left a third of the card empty beside it while the heading, the table and
+   the caption all ran full width — the paragraph looked indented rather than
+   set. Side by side, the description keeps a line length worth reading and
+   the facts fill what it does not use. */
+@media (min-width: 900px) {
+  .about-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    column-gap: 34px;
+    align-items: start;
+  }
+  /* The cap has done its job once the column itself is the right width. */
+  .about-split .about-prose { max-width: none; }
+  .about-split .about-meta { margin-top: 0; }
+  /* One pair per line in the narrower column; two would be cramped. */
+  .about-split .detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* ==========================================================================
    GMP and the listing price it implies, in one cell

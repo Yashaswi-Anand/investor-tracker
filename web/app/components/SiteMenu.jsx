@@ -63,22 +63,14 @@ const ITEMS = [
       />
     ),
   },
-  {
-    href: "/allotment",
-    label: "Check allotment",
-    note: "Your PANs, every registrar",
-    icon: (
-      <path
-        d="M9 11.5 11 13.5 15.5 9M5 4.5h14a.5.5 0 0 1 .5.5v14a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    ),
-  },
-];
+]
+
+// Check allotment is deliberately absent. The page still works for anyone
+// holding its link, but it is not offered: it cannot answer the question its
+// name asks — every registrar puts that behind a CAPTCHA — and a menu item
+// promising an answer the page then refuses is the wrong first impression,
+// especially on a site about to be reviewed by an ad network. Put it back by
+// restoring the entry here and the /allotment line in sitemap.js.;
 
 export default function SiteMenu() {
   const [open, setOpen] = useState(false);
