@@ -287,7 +287,10 @@ function IssueDetails({ ipo }) {
 
   return (
     <section className="card card-wide">
-      <h2>Issue Details</h2>
+      {/* Not "Issue Details" — that heading is already on this page, on the
+          card carrying the price band and lot size. Two identical headings
+          on one document help nobody and read as a duplicate to a crawler. */}
+      <h2>Offer details</h2>
 
       {details.objects && (
         <>
@@ -750,30 +753,34 @@ export default async function IpoDetailPage({ params }) {
               </p>
             )}
 
-            {/* Capped measure: the card runs the full width of the page and
-                unbroken prose across 1,100px is genuinely hard to track back
-                from at the end of a line. */}
-            <p className="about-text about-prose">{about}</p>
+            {/* Two columns on a wide screen: the description keeps a line
+                length worth reading, and the promoter facts fill the width it
+                does not use. Capped and alone, the paragraph left a third of
+                the card empty beside it while everything else ran full width,
+                which read as an indent rather than a measure. */}
+            <div className="about-split">
+              <p className="about-text about-prose">{about}</p>
 
-            {(details.promoters ||
-              details.promoter_holding_pre ||
-              details.promoter_holding_post) && (
-              <dl className="detail-grid about-meta">
-                {details.promoters && (
-                  <KV label="Promoters">{details.promoters}</KV>
-                )}
-                {details.promoter_holding_pre && (
-                  <KV label="Promoter holding (pre-issue)">
-                    {details.promoter_holding_pre}
-                  </KV>
-                )}
-                {details.promoter_holding_post && (
-                  <KV label="Promoter holding (post-issue)">
-                    {details.promoter_holding_post}
-                  </KV>
-                )}
-              </dl>
-            )}
+              {(details.promoters ||
+                details.promoter_holding_pre ||
+                details.promoter_holding_post) && (
+                <dl className="detail-grid about-meta">
+                  {details.promoters && (
+                    <KV label="Promoters">{details.promoters}</KV>
+                  )}
+                  {details.promoter_holding_pre && (
+                    <KV label="Promoter holding (pre-issue)">
+                      {details.promoter_holding_pre}
+                    </KV>
+                  )}
+                  {details.promoter_holding_post && (
+                    <KV label="Promoter holding (post-issue)">
+                      {details.promoter_holding_post}
+                    </KV>
+                  )}
+                </dl>
+              )}
+            </div>
 
             {/* Said out loud, because a reader deserves to know whose
                 description of the company they are reading. */}

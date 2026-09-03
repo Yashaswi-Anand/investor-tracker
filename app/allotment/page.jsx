@@ -11,6 +11,9 @@ export const metadata = {
   description:
     "Check IPO allotment for one or more PAN numbers across every issue at once. Each issue's registrar in one place, with your PAN a tap from the form.",
   alternates: { canonical: "/allotment" },
+  // Unlinked and unlisted, so it should not be indexed either — the three
+  // have to agree or the page is orphaned in search results.
+  robots: { index: false, follow: false },
 };
 
 /**
