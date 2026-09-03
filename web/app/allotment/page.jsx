@@ -13,8 +13,16 @@ export const metadata = {
   alternates: { canonical: "/allotment" },
 };
 
-/** Only issues whose allotment has actually happened can be looked up. */
-const CHECKABLE = new Set(["allotment", "listed"]);
+/**
+ * Issues at allotment, and only those.
+ *
+ * Listed ones used to be here too, on the reasoning that a registrar keeps
+ * the lookup open after listing. In practice it doubled the list with issues
+ * whose answer is already in the reader's demat account, and the one thing
+ * this page has to be is short enough to work through. An issue drops off it
+ * the day it lists — by then the shares are either there or they are not.
+ */
+const CHECKABLE = new Set(["allotment"]);
 
 export default async function AllotmentPage() {
   const all = await getAllIpos();

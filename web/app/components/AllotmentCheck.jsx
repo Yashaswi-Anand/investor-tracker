@@ -83,9 +83,17 @@ export default function AllotmentCheck({ ipos }) {
 
   useEffect(() => {
     setPans(read(PAN_KEY, []));
-    setPicks(read(PICK_KEY, []));
+    // Saved picks are dropped once their issue has left the list — it lists,
+    // and the page stops offering it. Kept, they counted towards the "3
+    // selected" badge while showing neither a chip nor a row, so the number
+    // on the dropdown disagreed with everything under it.
+    const available = new Set(ipos.map((ipo) => ipo.slug));
+    setPicks(read(PICK_KEY, []).filter((slug) => available.has(slug)));
     setMarks(read(MARK_KEY, {}));
     setReady(true);
+    // Deliberately once, on mount: this prunes what was stored, and re-running
+    // it whenever the list changes would fight a reader mid-selection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persisted by watching the state rather than by writing alongside every
@@ -239,14 +247,16 @@ export default function AllotmentCheck({ ipos }) {
       <section className="card card-wide">
         <h2>Choose IPOs</h2>
         <p className="subtitle">
-          Only issues past their allotment date can be checked. There
-          {ipos.length === 1 ? " is 1" : ` are ${ipos.length}`} right now.
+          Issues whose allotment is out — {ipos.length}
+          {ipos.length === 1 ? " right now" : " right now"}. An issue leaves
+          this list the day it lists, because by then the shares are either in
+          your demat account or they are not.
         </p>
 
         <MultiSelect
           label="Choose IPOs to check"
           placeholder="Select companies…"
-          emptyText="Nothing at allotment yet"
+          emptyText="No allotment out right now"
           options={ipos.map((ipo) => ({
             key: ipo.slug,
             label: ipo.short_name || ipo.name,
