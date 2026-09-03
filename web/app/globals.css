@@ -2047,6 +2047,33 @@ body.has-sheet .scroll-jump { display: none; }
 }
 
 /* ==========================================================================
+   Contact
+   ========================================================================== */
+.contact-address {
+  margin: 4px 0 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  word-break: break-word;
+}
+.contact-address a { color: var(--primary); }
+/* Deliberately quieter than an address would be: it is a gap being admitted,
+   not a route being offered. */
+.contact-missing {
+  margin: 4px 0 8px;
+  padding: 14px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
    Offer documents
    ========================================================================== */
 .doc-list { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }

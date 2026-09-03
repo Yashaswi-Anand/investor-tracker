@@ -3,14 +3,15 @@
 /**
  * The header menu.
  *
- * The site has three places to be and no room in a phone header for three
+ * The site has four places to be and no room in a phone header for four
  * links beside a wordmark and a theme toggle. News keeps its own button on a
  * wide screen because it is the one people come back for; everything else,
- * and News on a phone, lives behind this.
+ * and News on a phone, lives behind this. Contact is a footer link rather
+ * than a fifth item here — it is looked for once, not returned to.
  *
- * Deliberately not a modal. There are four items, none of them destructive,
- * and a scrim plus a slide-up sheet for a list of links would be ceremony
- * for something that should feel like a tap.
+ * Deliberately not a modal. None of these is destructive, and a scrim plus a
+ * slide-up sheet for a list of links would be ceremony for something that
+ * should feel like a tap.
  */
 
 import Link from "next/link";
@@ -42,6 +43,21 @@ const ITEMS = [
         fill="none"
         stroke="currentColor"
         strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
+  {
+    href: "/about",
+    label: "About",
+    note: "Where the numbers come from",
+    icon: (
+      <path
+        d="M12 16v-4.5M12 8.2h.01M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

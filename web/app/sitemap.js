@@ -21,7 +21,7 @@ export default async function sitemap() {
     // The other two pages people arrive at directly. Both carry their own
     // title and description and are marked indexable, so leaving them out
     // would be the two documents disagreeing about whether they exist.
-    ...["/news", "/allotment"].map((path) => ({
+    ...["/news", "/allotment", "/about", "/contact"].map((path) => ({
       url: `${SITE.url}${path}`,
       lastModified: new Date(),
       changeFrequency: "daily",
