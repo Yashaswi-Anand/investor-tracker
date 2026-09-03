@@ -127,6 +127,8 @@ export default function RootLayout({ children }) {
             <div className="footer-row">
               <div className="footer-links">
                 <Link href="/">All IPOs</Link>
+                <Link href="/about">About</Link>
+                <Link href="/contact">Contact</Link>
                 <Link href="/privacy">Privacy Policy</Link>
                 <Link href="/terms">Terms of Use</Link>
                 <a

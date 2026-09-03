@@ -160,6 +160,21 @@ export default function TermsPage() {
           <Link href="/privacy">Privacy Policy</Link>.
         </p>
 
+        <h2>Advertising</h2>
+        <p>
+          Pages here may carry advertising served by Google. Those ads are
+          chosen and delivered by Google, not selected, written or endorsed by
+          us, and an advertiser appearing beside an issue implies nothing about
+          that issue or about them. Anything an ad claims is between you and
+          the advertiser.
+        </p>
+        <p>
+          What advertising never does here is change the data. No figure on
+          this site is placed, ordered, withheld or coloured by anyone paying
+          for space, and no company can pay to appear, to rank higher, or to
+          have a premium shown differently.
+        </p>
+
         <h2>Changes to these terms</h2>
         <p>
           These terms may be updated as the service changes. The effective date

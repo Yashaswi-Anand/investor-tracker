@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SITE } from "../../lib/config";
+import { SITE, adsLive } from "../../lib/config";
 
 // Play Store requires every app to link a privacy policy URL — this page is
 // what you paste into Play Console. Keep it TRUTHFUL: if you ever add
@@ -29,8 +29,13 @@ export const metadata = {
 
 const EFFECTIVE_DATE = "3 September 2026";
 
+// Ads are disclosed here BEFORE they serve, which is both Google's
+// requirement and the only way this page stays true across the switch.
+// The tense changes with the flag; the substance does not.
+
 export default function PrivacyPage() {
   const host = SITE.url.replace("https://", "");
+  const ads = adsLive();
   return (
     <div className="container page-pad">
       <article className="card page-card">
@@ -109,8 +114,68 @@ export default function PrivacyPage() {
           connection; that cache holds public IPO pages, nothing about you.
         </p>
         <p>
-          We set <strong>no</strong> advertising, tracking or analytics
-          cookies. There are none to reject, which is why you are not asked.
+          {ads ? (
+            <>
+              We set no analytics or tracking cookies of our own. Advertising
+              cookies are a separate matter and are set by Google, not by us —
+              the section below says what they do and how to refuse them.
+            </>
+          ) : (
+            <>
+              We set <strong>no</strong> advertising, tracking or analytics
+              cookies today. There are none to reject, which is why you are
+              not asked. Advertising is planned, and the section below
+              describes what will change when it arrives.
+            </>
+          )}
+        </p>
+
+        <h2>Advertising</h2>
+        <p>
+          {ads
+            ? "This site carries advertising served by Google AdSense."
+            : "This site will carry advertising served by Google AdSense. Nothing described in this section is happening yet — it is set out in advance because a policy that only mentions ads after they appear is a policy nobody read in time."}
+        </p>
+        <p>
+          Google and its partners use cookies and similar identifiers to serve
+          and measure those ads, including showing ads based on pages you have
+          visited on this and other sites. That processing is Google&apos;s,
+          under{" "}
+          <a
+            href="https://policies.google.com/technologies/partner-sites"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            their advertising policy
+          </a>
+          , and not something we can see: we receive no personal data from it
+          and cannot identify anyone from it. What reaches us is a count of
+          impressions and earnings, with nobody attached.
+        </p>
+        <p>
+          You can turn personalised advertising off entirely at{" "}
+          <a
+            href="https://myadcenter.google.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google My Ad Center
+          </a>
+          , or block third-party cookies in your browser. Ads may still appear
+          after that; they simply stop being chosen from anything about you.
+        </p>
+        <p>
+          Readers in the EEA, the UK and Switzerland are asked for consent
+          before any advertising cookie is set, through a consent tool
+          certified by Google, and can change that answer at any time.
+        </p>
+        <p>
+          <strong>Two places will never carry an ad.</strong> The{" "}
+          <Link href="/allotment">allotment page</Link>, because it asks for a
+          PAN and an advertising script has no business on a screen where a
+          government identifier is typed; and the offer documents served
+          through this site, which are handed over exactly as the exchange
+          published them.
         </p>
 
         <h2>Third parties your browser contacts</h2>
@@ -178,6 +243,12 @@ export default function PrivacyPage() {
           Erase everything button, or clearing this site&apos;s browser data.
         </p>
         <p>
+          Advertising is the one thing that does not run through us at all.
+          Whatever Google sets and reads for ads is held by Google, and the
+          rights over it are exercised with them — the links in the
+          Advertising section above are where that is done.
+        </p>
+        <p>
           If we ever start receiving PANs — which would mean fetching allotment
           results ourselves rather than sending you to the registrar — we would
           become a Data Fiduciary under the Act, with duties of notice,
@@ -200,8 +271,8 @@ export default function PrivacyPage() {
 
         <h2>Contact</h2>
         <p>
-          Questions about this policy can be sent to the contact address listed
-          on our Google Play listing.
+          Questions about this policy, or a request about data held on your
+          device, go to our <Link href="/contact">contact page</Link>.
         </p>
 
         <p className="back-row">
