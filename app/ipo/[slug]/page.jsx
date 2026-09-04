@@ -688,8 +688,9 @@ export default async function IpoDetailPage({ params }) {
               <PriceChart ipo={ipo} />
             ) : (
               <p className="subtitle subtitle-flush">
-                Daily prices appear once NSE publishes the day&apos;s closing
-                data, which is in the evening.
+                {(ipo.details || {}).prices?.length === 1
+                  ? "One trading day so far — the chart starts from the second."
+                  : "Daily prices appear once NSE publishes the day's closing data, which is in the evening."}
               </p>
             )}
           </section>
