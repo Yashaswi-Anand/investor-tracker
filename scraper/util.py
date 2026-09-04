@@ -185,3 +185,14 @@ IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 def ist_today():
     """Today's calendar date in India, as 'YYYY-MM-DD'."""
     return datetime.datetime.now(IST).date().isoformat()
+
+
+def days_ago(days, today=None):
+    """The IST date `days` before today, as 'YYYY-MM-DD'.
+
+    In IST because every date this project compares it against — listing,
+    allotment, close — is an Indian calendar date, and a cutoff computed in
+    UTC would be a day out for the hours either side of midnight.
+    """
+    base = datetime.date.fromisoformat(today or ist_today())
+    return (base - datetime.timedelta(days=days)).isoformat()

@@ -877,6 +877,54 @@ def test_min_investment_also_falls_back_to_the_stored_band_and_lot():
 
 
 # --------------------------------------------------------------------------
+# Carrying listed rows long enough for the price chart to fill
+# --------------------------------------------------------------------------
+def test_days_ago_counts_back_in_calendar_days():
+    assert util.days_ago(90, "2026-09-03") == "2026-06-05"
+    assert util.days_ago(1, "2026-01-01") == "2025-12-31"   # across a year
+    assert util.days_ago(1, "2028-03-01") == "2028-02-29"   # across a leap day
+    assert util.days_ago(0, "2026-09-03") == "2026-09-03"
+
+
+def test_unfinished_query_keeps_recently_listed_rows(monkeypatch):
+    """The bug this exists to prevent.
+
+    A listed row used to stop matching the moment its listing price landed —
+    the same run that collected its first daily bar. Every listed IPO was
+    left holding exactly one candle for ever.
+    """
+    seen = {}
+
+    class _Response:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return []
+
+    def fake_get(url, **kwargs):
+        seen["url"] = url
+        return _Response()
+
+    monkeypatch.setattr(db.requests, "get", fake_get)
+    db.fetch_unfinished([])
+
+    url = seen["url"]
+    # Still carried while the listing price is missing...
+    assert "and(status.eq.listed,listing_price.is.null)" in url
+    # ...and now also while the chart is still filling.
+    assert f"and(status.eq.listed,listing_date.gte.{util.days_ago(db.PRICE_WINDOW_DAYS)})" in url
+
+
+def test_price_window_matches_what_the_chart_keeps():
+    """Carrying a row longer than the chart displays would be work with
+    nowhere to go; carrying it for less would truncate the chart."""
+    assert db.PRICE_WINDOW_DAYS == prices.MAX_BARS
+
+
+# --------------------------------------------------------------------------
 # Minimum application: one lot on the mainboard, two on SME
 # --------------------------------------------------------------------------
 def test_min_lots_is_two_only_for_sme():

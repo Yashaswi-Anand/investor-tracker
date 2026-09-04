@@ -161,6 +161,12 @@ def fetch_existing(slugs):
     }
 
 
+# How long after listing a row keeps being carried so its daily price bars
+# can accumulate. Set to match sources/prices.MAX_BARS — carrying a row
+# beyond the window the chart displays would be work with nowhere to go.
+PRICE_WINDOW_DAYS = 90
+
+
 def fetch_unfinished(known_slugs, limit=200):
     """IPOs that still have something outstanding and that NSE has stopped
     returning.
@@ -172,14 +178,23 @@ def fetch_unfinished(known_slugs, limit=200):
     filled in, and because apply_listing_status only sees rows in the current
     batch, they can never reach 'listed' no matter what listing_date says.
 
-    'listed' rows are included too, but ONLY while listing_price is still
-    missing. That is not tidiness — it is the whole reason a listing price
-    can ever be captured. The moment an IPO flips to 'listed' it is gone from
-    NSE's lists as well, so if this query stopped at 'closed' the one run
-    that noticed the listing would be the last run ever to see the row. And
-    that run cannot have the price: NSE publishes the day's bhavcopy in the
-    evening, after the flip has already happened. Once the price is stored
-    the row stops matching and costs nothing again.
+    'listed' rows are included for two different reasons, and both matter.
+
+    First, while listing_price is still missing. That is not tidiness — it is
+    the whole reason a listing price can ever be captured. The moment an IPO
+    flips to 'listed' it is gone from NSE's lists as well, so if this query
+    stopped at 'closed' the one run that noticed the listing would be the
+    last run ever to see the row. And that run cannot have the price: NSE
+    publishes the day's bhavcopy in the evening, after the flip has already
+    happened.
+
+    Second, while the price chart is still filling. That reason was missing,
+    and the chart was the casualty: a row stopped matching the moment its
+    listing price landed, which is the SAME run that collected its first
+    daily bar. Every listed IPO therefore held exactly one bar — the listing
+    day — for ever, and a candle chart of one candle is not a chart. Rows
+    stay for PRICE_WINDOW_DAYS after listing so the bars can accumulate, then
+    drop out and cost nothing again.
 
     Returns skeleton rows — slug, name, stored status, symbol and the
     timetable. Everything else is left out on purpose: apply_locks drops empty
@@ -190,10 +205,14 @@ def fetch_unfinished(known_slugs, limit=200):
     and a carried row without them could only ever keep the status it had when
     NSE stopped returning it.
     """
+    # Matches sources/prices.MAX_BARS: no point carrying a row longer than
+    # the chart will keep the bars it produces.
+    since = util.days_ago(PRICE_WINDOW_DAYS)
     unfinished = (
         "or=("
         "status.in.(upcoming,open,closed),"
-        "and(status.eq.listed,listing_price.is.null)"
+        "and(status.eq.listed,listing_price.is.null),"
+        f"and(status.eq.listed,listing_date.gte.{since})"
         ")"
     )
     response = requests.get(
