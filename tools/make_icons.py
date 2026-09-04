@@ -16,9 +16,9 @@ import os
 
 from PIL import Image, ImageDraw
 
-# --brand-grad, 120deg: #6d3220 -> #8f4429 -> #d98a52
-GRADIENT = ((0x6D, 0x32, 0x20), (0x8F, 0x44, 0x29), (0xD9, 0x8A, 0x52))
-GLYPH = (0xFD, 0xF8, 0xF0)  # --on-brand
+# --brand-grad, 120deg: #2e728b -> #0f5d7a -> #0b3f53
+GRADIENT = ((0x2E, 0x72, 0x8B), (0x0F, 0x5D, 0x7A), (0x0B, 0x3F, 0x53))
+GLYPH = (0xF2, 0xF6, 0xF7)  # --on-brand
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "web", "public", "icons")
 
