@@ -642,6 +642,23 @@ export default async function IpoDetailPage({ params }) {
       </section>
 
       <div className="grid">
+        {/* Once it trades there is a real price, quoted all day, and it is
+            the first thing anyone opening a listed issue came for — so it
+            leads the page, ahead of the band and lot size the offer is over
+            and the premium history the market has already answered. It sits
+            outside the cluster below because it wants the full width, not a
+            column shared with a short list of facts. */}
+        {ipo.status === "listed" && ipo.symbol && (
+          <section className="card card-wide">
+            <h2>Share Price</h2>
+            {/* Live from NSE through our server, with the daily candles from
+                our own records as the second view and the fallback. The
+                daily bars are computed here, on the server, so the client
+                component ships the numbers and not the derivation. */}
+            <LiveChart symbol={ipo.symbol} name={ipo.name} daily={dailyBars(ipo)} />
+          </section>
+        )}
+
         {/* Two short KV cards that read side by side on a wide screen and
             stack on a phone. Inside a cluster rather than loose in the grid:
             a cluster divides only the space it is given, so a missing card
@@ -677,21 +694,6 @@ export default async function IpoDetailPage({ params }) {
             </KV>
           </dl>
         </section>
-
-        {/* Once it trades there is a real price, quoted all day, and that is
-            the only chart worth showing — so it comes before the timetable
-            and before the premium history, which by then is a record of what
-            the grey market guessed. */}
-        {ipo.status === "listed" && ipo.symbol && (
-          <section className="card card-wide">
-            <h2>Share Price</h2>
-            {/* Live from NSE through our server, with the daily candles from
-                our own records as the second view and the fallback. The
-                daily bars are computed here, on the server, so the client
-                component ships the numbers and not the derivation. */}
-            <LiveChart symbol={ipo.symbol} name={ipo.name} daily={dailyBars(ipo)} />
-          </section>
-        )}
 
         <section className="card">
           <h2>Timetable</h2>
