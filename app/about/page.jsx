@@ -95,6 +95,13 @@ export default function AboutPage() {
           the last run, in IST, so you can judge the freshness yourself instead
           of taking our word for it.
         </p>
+        <p>
+          The one exception is the share price of an issue that has listed:
+          that is asked of NSE live when you open the page, through our server
+          rather than your browser, and refreshed every half minute while the
+          market trades. The time beside it is NSE&apos;s own stamp for that
+          price.
+        </p>
 
         <h2>About that grey market premium</h2>
         <p>
