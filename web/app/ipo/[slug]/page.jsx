@@ -29,7 +29,7 @@ import {
 import { documentsFor } from "../../../lib/documents";
 import Financials from "../../components/Financials";
 import LiveChart from "../../components/LiveChart";
-import { dailyBars } from "../../components/PriceChart";
+import { dailyBars } from "../../../lib/bars";
 import NewsList from "../../components/NewsList";
 import Reveal from "../../components/Reveal";
 import ShareButton from "../../components/ShareButton";

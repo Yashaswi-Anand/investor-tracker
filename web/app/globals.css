@@ -1835,8 +1835,6 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 /* ==========================================================================
    Price since listing - daily candles
    ========================================================================== */
-.price-chart-wrap { margin-top: 4px; }
-.price-caption { margin: 0 0 10px; }
 .price-chart { width: 100%; height: auto; display: block; overflow: visible; }
 
 /* Green closed up, red closed down: on a price chart these two colours mean
@@ -2167,6 +2165,13 @@ body.has-sheet .scroll-jump { display: none; }
   color: var(--text-muted);
 }
 
+/* Visible to a screen reader, to nothing else. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
 /* ==========================================================================
    Live share price
    ========================================================================== */
@@ -2196,9 +2201,56 @@ body.has-sheet .scroll-jump { display: none; }
 .live-ohl dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .live-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+/* A timeframe with nothing behind it yet stays visible and inert rather
+   than disappearing: a row of buttons that changes length as an issue ages
+   is harder to trust than one where the greyed-out entries say, plainly,
+   not yet. */
+.live-tabs .tab[disabled] { opacity: 0.4; cursor: not-allowed; }
+/* "5 min" reads better than "5m" and wins wherever it fits; below that the
+   compact label keeps all five on one line. The full text stays in the DOM
+   for screen readers either way. */
+.live-tabs .tab-short { display: none; }
+@media (max-width: 460px) {
+  .live-tabs .tab-long {
+    position: absolute; width: 1px; height: 1px;
+    margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .live-tabs .tab-short { display: inline; }
+  .live-tabs .tab { padding-inline: 12px; }
+}
+
+/* O H L C for the candle under the pointer. Reserves its own line whether
+   or not anything is hovered, so arriving at the chart does not shift the
+   page down the moment the pointer touches it. */
+.live-read {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;
+  margin: 2px 0 0; padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.live-read[data-reading] { border-color: var(--border-strong); background: var(--surface-3); }
+.live-read > div { display: flex; align-items: baseline; gap: 5px; }
+.live-read dt { color: var(--text-muted); font-weight: 700; letter-spacing: 0.04em; }
+.live-read dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.live-read-when { margin-inline-end: auto; }
+.live-read-when dd { color: var(--text-2); font-weight: 600; }
 .live-tabs .tab:disabled { opacity: 0.45; cursor: default; transform: none; }
 .live-svg { margin-top: 2px; }
 .live-foot { margin: 0; }
+
+/* The crosshair: one line down the hovered candle, one across its close,
+   so the price axis can be read off the same gesture that picks the bar. */
+.candle-cross line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.85; }
+/* The hovered candle brightens rather than changing colour — its colour
+   already means something. */
+.candle[data-on] .candle-body { filter: brightness(1.25); }
+.candle[data-on] .candle-wick { stroke-width: 2.4; }
+/* Pointer, not touch: a vertical drag through the chart should still
+   scroll the page, while a horizontal one scrubs the candles. */
+.candle-capture { touch-action: pan-y; cursor: crosshair; }
 
 /* Yesterday's close, as a reference the day's candles can be read against. */
 .candle-baseline line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 4 4; opacity: 0.7; }

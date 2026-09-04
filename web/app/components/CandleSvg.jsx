@@ -1,14 +1,14 @@
+"use client";
+
 import { inr } from "../../lib/format";
 
 /**
  * A candlestick chart as inline SVG, and nothing else.
  *
- * Shared by the daily chart (one candle a day, from NSE's bhavcopy) and the
- * intraday one (one every five minutes, from NSE's live ticks). It knows
- * nothing about where the bars came from or what the page says around them:
- * it is handed bars, a way to label each one, and an accessible summary, and
- * it draws. A candlestick library would be many times the weight of the
- * page for what is a rectangle and two lines per bar.
+ * It knows nothing about where the bars came from or what the page says
+ * around them: it is handed bars, a way to label each one, and an accessible
+ * summary, and it draws. A candlestick library would be many times the
+ * weight of the page for what is a rectangle and two lines per bar.
  *
  * The price axis is scaled to the actual low and high across the window, not
  * from zero: on a price series zero is not a meaningful floor, and starting
@@ -16,8 +16,13 @@ import { inr } from "../../lib/format";
  * opposite of the rule for the financial bars, and for the same reason —
  * the baseline should be whatever makes the shape honest.
  *
- * Server-safe: no hooks, no state. The daily chart renders it on the server;
- * the live one renders it in the browser. Same component either way.
+ * HOVER IS READ FROM THE WHOLE COLUMN, NOT THE CANDLE. A five-minute candle
+ * on a full session is about four pixels wide, and asking someone to land a
+ * cursor on four pixels — or a fingertip on four pixels — is not an
+ * interaction, it is a game. One transparent rectangle covers the plot,
+ * turns a pointer's x into the nearest bar, and the caller decides what to
+ * show for it. That also makes the readout work on a phone, where there is
+ * no hover at all and a drag along the chart scrubs through the session.
  */
 
 export const CANDLE_W = 640;
@@ -39,8 +44,19 @@ function ticks(lo, hi) {
  * @param baseline  optional price to draw as a dashed reference line — the
  *                  previous close on an intraday chart, so a bar's colour
  *                  and its position against yesterday can be read together.
+ * @param hovered   index of the bar to mark, or null.
+ * @param onHover   (index | null) => void. Passing it turns on the crosshair.
  */
-export default function CandleSvg({ bars, label, title, ariaLabel, baseline, className = "" }) {
+export default function CandleSvg({
+  bars,
+  label,
+  title,
+  ariaLabel,
+  baseline,
+  hovered = null,
+  onHover,
+  className = "",
+}) {
   if (!Array.isArray(bars) || bars.length < 2) return null;
 
   let lo = Math.min(...bars.map((b) => b.l));
@@ -69,6 +85,24 @@ export default function CandleSvg({ bars, label, title, ariaLabel, baseline, cla
   // Every bar when there are few, else about four labels spread evenly.
   const tickEvery = bars.length <= 6 ? 1 : Math.ceil(bars.length / 4);
 
+  /** Pointer position → the bar under it.
+   *
+   *  The box measured here is the capture rect, which IS the plot area — so
+   *  the fraction across it maps straight onto the bars, with no padding to
+   *  subtract. Scaling by the full viewBox width instead would be a frame
+   *  mismatch and would land on the wrong candle everywhere but the middle.
+   */
+  function barAt(event) {
+    const box = event.currentTarget.getBoundingClientRect();
+    if (!box.width) return null;
+    const frac = (event.clientX - box.left) / box.width;
+    const i = Math.floor(frac * bars.length);
+    if (i < 0 || i >= bars.length) return null;
+    return i;
+  }
+
+  const active = Number.isInteger(hovered) && hovered >= 0 && hovered < bars.length;
+
   return (
     <svg
       className={`chart price-chart ${className}`.trim()}
@@ -94,6 +128,18 @@ export default function CandleSvg({ bars, label, title, ariaLabel, baseline, cla
         </g>
       )}
 
+      {active && (
+        <g className="candle-cross" aria-hidden="true">
+          <line x1={x(hovered)} x2={x(hovered)} y1={PAD.top} y2={PAD.top + plotH} />
+          <line
+            x1={PAD.left}
+            x2={CANDLE_W - PAD.right}
+            y1={y(bars[hovered].c)}
+            y2={y(bars[hovered].c)}
+          />
+        </g>
+      )}
+
       {bars.map((bar, i) => {
         const up = bar.c >= bar.o;
         const top = y(Math.max(bar.o, bar.c));
@@ -103,6 +149,7 @@ export default function CandleSvg({ bars, label, title, ariaLabel, baseline, cla
             key={bar.key}
             className="candle"
             data-up={up}
+            data-on={active && i === hovered ? true : undefined}
             /* Position in the series, so the candles can appear left to
                right as the eye reads them. */
             style={{ "--i": bars.length > 1 ? i / (bars.length - 1) : 0 }}
@@ -129,6 +176,23 @@ export default function CandleSvg({ bars, label, title, ariaLabel, baseline, cla
             {label(bar)}
           </text>
         ) : null
+      )}
+
+      {onHover && (
+        /* Last, so it sits above every candle and catches the pointer
+           wherever it is in the plot. touch-action lets a vertical scroll
+           through the chart still scroll the page. */
+        <rect
+          className="candle-capture"
+          x={PAD.left}
+          y={PAD.top}
+          width={plotW}
+          height={plotH}
+          fill="transparent"
+          onPointerMove={(e) => onHover(barAt(e))}
+          onPointerDown={(e) => onHover(barAt(e))}
+          onPointerLeave={() => onHover(null)}
+        />
       )}
     </svg>
   );
