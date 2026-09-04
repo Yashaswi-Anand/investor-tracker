@@ -1,29 +1,36 @@
 "use client";
 
 /**
- * The price of an issue that has listed: live, and drawn.
+ * The price of an issue that has listed: live, drawn, and readable bar by bar.
  *
- * Two views of one stock. TODAY is five-minute candles from NSE's live ticks,
- * with the last traded price above them, refreshed every half minute while
- * the market trades. DAILY is one candle per session since listing, from
- * NSE's end-of-day file, rendered on the server and handed in as props.
- * Today is the default whenever there is a today to show; on a weekend, a
- * holiday, or before the first trade it falls back to Daily and says why.
+ * FIVE TIMEFRAMES, TWO SOURCES. 5 min and 15 min are today's session, folded
+ * out of NSE's one-minute ticks — one request, bucketed twice, so switching
+ * between them costs nothing. 1 day, 1 week and 1 month come from the daily
+ * bhavcopy we store ourselves, rolled up in the browser. NSE will answer for
+ * longer ranges, but every point it returns beyond a single day is a bare
+ * close with no open, high or low in it, and a close cannot make a candle.
+ *
+ * A timeframe with fewer than two candles behind it is shown disabled rather
+ * than hidden, and says what it is waiting for. This site tracks issues that
+ * listed days ago: a stock four sessions old has one calendar month of
+ * history, and a "1 month" chart of it would be a single candle claiming to
+ * describe a month that never happened. The button appears the day the
+ * sessions to fill it exist.
  *
  * WHAT "LIVE" MEANS HERE, EXACTLY. The figure is NSE's last traded price,
  * fetched through our own server — never from the reader's browser to NSE
  * — and at most twice a minute per symbol however many people are looking.
- * The time beside it is NSE's own stamp for that price, in IST. Outside
- * market hours the same figure is shown with "Market closed" and the time
- * it was last true, because a closed market has a last price and pretending
- * otherwise would leave the page blank for eighteen hours a day.
+ * Outside market hours the same figure is shown with "Market closed" and
+ * NSE's own stamp for it, because a closed market has a last price and
+ * pretending otherwise would leave the page blank for eighteen hours a day.
  *
  * Polling stops when the tab is hidden and when the market is shut. A
  * background tab asking every thirty seconds for a number nobody is looking
  * at is exactly the traffic the server-side cache exists to avoid.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { canDraw, groupBars } from "../../lib/bars";
 import { fmtDate, inr } from "../../lib/format";
 import CandleSvg from "./CandleSvg";
 
@@ -52,10 +59,20 @@ function bucketLabel(ms) {
   return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
 }
 
+/** "Sept 2026" from a 'YYYY-MM' key. */
+function monthLabel(key) {
+  return new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-IN", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export default function LiveChart({ symbol, name, daily }) {
   const [live, setLive] = useState(null);
   const [failed, setFailed] = useState(false);
-  const [view, setView] = useState("today");
+  const [frameId, setFrameId] = useState("5m");
+  const [hovered, setHovered] = useState(null);
   // Set once the first answer arrives, so the default is chosen from what
   // there actually is rather than from a guess made before asking.
   const decided = useRef(false);
@@ -71,10 +88,6 @@ export default function LiveChart({ symbol, name, daily }) {
       }
       setFailed(false);
       setLive(body);
-      if (!decided.current) {
-        decided.current = true;
-        setView(body.candles?.length >= 2 ? "today" : "daily");
-      }
       return body;
     } catch {
       setFailed(true);
@@ -106,15 +119,119 @@ export default function LiveChart({ symbol, name, daily }) {
     };
   }, [load]);
 
-  const candles = (live?.candles || []).map((c) => ({ ...c, key: c.t }));
-  const hasToday = candles.length >= 2;
-  const hasDaily = (daily || []).length >= 2;
-  const showing = view === "today" && hasToday ? "today" : "daily";
+  const phase = live?.phase;
+  const trading = phase === "open" || phase === "pre-open";
+
+  // Every timeframe, built once per new quote. The rollups are cheap, but
+  // rebuilding them on a hover — which fires a hundred times a drag — would
+  // not be.
+  const frames = useMemo(() => {
+    const intraday = (key) =>
+      (live?.candles?.[key] || []).map((c) => ({ ...c, key: c.t }));
+    const day = daily || [];
+    const week = groupBars(day, "week");
+    const month = groupBars(day, "month");
+
+    const clock = (bar) => bucketLabel(bar.t);
+    const date = (bar) => fmtDate(bar.d);
+    // Why an intraday frame is empty is two different facts, and telling
+    // someone their stock has not traded when really we could not reach the
+    // exchange is the kind of wrong that costs trust in every other number
+    // on the page.
+    const noIntraday = failed
+      ? "NSE did not answer — the daily series is our own record"
+      : trading
+        ? "No trades yet today"
+        : "Today's candles appear once the market opens";
+
+    return [
+      {
+        id: "5m",
+        tab: "5 min",
+        short: "5m",
+        bars: intraday("5m"),
+        label: clock,
+        stamp: clock,
+        baseline: live?.prevClose ?? undefined,
+        foot: (n) =>
+          `Five-minute candles from NSE's live ticks · ${n} ${trading ? "so far today" : "through today's close"}`,
+        waiting: noIntraday,
+      },
+      {
+        id: "15m",
+        tab: "15 min",
+        short: "15m",
+        bars: intraday("15m"),
+        label: clock,
+        stamp: clock,
+        baseline: live?.prevClose ?? undefined,
+        foot: (n) =>
+          `Fifteen-minute candles from NSE's live ticks · ${n} ${trading ? "so far today" : "through today's close"}`,
+        waiting: noIntraday,
+      },
+      {
+        id: "1d",
+        tab: "1 day",
+        short: "1D",
+        bars: day,
+        label: date,
+        stamp: date,
+        foot: (n) => `${n} trading days since listing · NSE end-of-day prices`,
+        waiting: "Daily prices appear the evening after the first session",
+      },
+      {
+        id: "1w",
+        tab: "1 week",
+        short: "1W",
+        bars: week,
+        label: date,
+        stamp: (bar) =>
+          `Week of ${fmtDate(bar.d)}${bar.sessions ? ` · ${bar.sessions} session${bar.sessions === 1 ? "" : "s"}` : ""}`,
+        foot: (n) => `${n} weeks since listing · each candle folds that week's sessions`,
+        waiting: "Needs a second trading week",
+      },
+      {
+        id: "1mo",
+        tab: "1 month",
+        short: "1M",
+        bars: month,
+        label: (bar) => monthLabel(bar.key),
+        stamp: (bar) =>
+          `${monthLabel(bar.key)}${bar.sessions ? ` · ${bar.sessions} session${bar.sessions === 1 ? "" : "s"}` : ""}`,
+        foot: (n) => `${n} months since listing · each candle folds that month's sessions`,
+        waiting: "Needs a second calendar month",
+      },
+    ];
+  }, [live, daily, trading, failed]);
+
+  // The first answer decides the opening frame: today's five-minute candles
+  // when the session has any, otherwise the daily series.
+  useEffect(() => {
+    if (!live || decided.current) return;
+    decided.current = true;
+    const five = frames.find((f) => f.id === "5m");
+    if (!canDraw(five?.bars)) setFrameId("1d");
+  }, [live, frames]);
+
+  const wanted = frames.find((f) => f.id === frameId) || frames[0];
+  // Never leave the reader looking at an empty frame: if what they picked
+  // has emptied out (a reload before the first trade of the day), fall
+  // through to the first frame that can actually be drawn.
+  const frame = canDraw(wanted.bars) ? wanted : frames.find((f) => canDraw(f.bars)) || wanted;
+  const bars = frame.bars;
+  const drawable = canDraw(bars);
+  const anyFrame = frames.some((f) => canDraw(f.bars));
+
+  // The readout follows the pointer, and rests on the newest candle when
+  // nothing is under it — so the row is informative before it is touched
+  // rather than being four empty labels.
+  const shown = drawable
+    ? bars[Number.isInteger(hovered) && hovered >= 0 && hovered < bars.length ? hovered : bars.length - 1]
+    : null;
+  const reading = Number.isInteger(hovered);
 
   const change = live?.change;
   const tone = change > 0 ? "gmp-up" : change < 0 ? "gmp-down" : "gmp-flat";
-  const phase = live?.phase;
-  const trading = phase === "open" || phase === "pre-open";
 
   return (
     <div className="live">
@@ -186,73 +303,79 @@ export default function LiveChart({ symbol, name, daily }) {
         </dl>
       )}
 
-      {(hasToday || hasDaily) && (
-        <div className="live-tabs" role="tablist" aria-label="Chart range">
-          <button
-            type="button"
-            role="tab"
-            className="tab tab-sm"
-            data-active={showing === "today"}
-            aria-selected={showing === "today"}
-            disabled={!hasToday}
-            onClick={() => setView("today")}
-          >
-            Today · 5 min
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className="tab tab-sm"
-            data-active={showing === "daily"}
-            aria-selected={showing === "daily"}
-            disabled={!hasDaily}
-            onClick={() => setView("daily")}
-          >
-            Daily since listing
-          </button>
+      {anyFrame && (
+        <div className="live-tabs" role="tablist" aria-label="Candle timeframe">
+          {frames.map((f) => {
+            const ok = canDraw(f.bars);
+            return (
+              <button
+                key={f.id}
+                type="button"
+                role="tab"
+                className="tab tab-sm"
+                data-active={frame.id === f.id}
+                aria-selected={frame.id === f.id}
+                disabled={!ok}
+                title={ok ? undefined : f.waiting}
+                onClick={() => {
+                  setFrameId(f.id);
+                  setHovered(null);
+                }}
+              >
+                {/* Both labels ship; CSS shows whichever the width allows,
+                    so five timeframes stay on one row on a phone instead of
+                    wrapping into a second the scroll button then covers. */}
+                <span className="tab-long">{f.tab}</span>
+                <span className="tab-short" aria-hidden="true">{f.short}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {showing === "today" ? (
+      {drawable ? (
         <>
+          {/* The OHLC readout for whichever candle is under the pointer, in
+              HTML above the chart rather than a bubble floating over it: a
+              bubble covers the very candles either side that give the one
+              you are on its meaning, and on a phone it sits under your own
+              thumb. */}
+          <dl className="live-read" data-reading={reading || undefined} aria-live="off">
+            <div className="live-read-when">
+              <dt className="sr-only">Candle</dt>
+              <dd>{frame.stamp(shown)}</dd>
+            </div>
+            <div><dt>O</dt><dd>{inr(shown.o)}</dd></div>
+            <div><dt>H</dt><dd>{inr(shown.h)}</dd></div>
+            <div><dt>L</dt><dd>{inr(shown.l)}</dd></div>
+            <div>
+              <dt>C</dt>
+              <dd className={shown.c > shown.o ? "gmp-up" : shown.c < shown.o ? "gmp-down" : undefined}>
+                {inr(shown.c)}
+              </dd>
+            </div>
+          </dl>
+
           <CandleSvg
             className="live-svg"
-            bars={candles}
-            baseline={live?.prevClose ?? undefined}
-            label={(bar) => bucketLabel(bar.t)}
+            bars={bars}
+            baseline={frame.baseline}
+            hovered={hovered}
+            onHover={setHovered}
+            label={frame.label}
             title={(bar) =>
-              `${bucketLabel(bar.t)} — O ${inr(bar.o)} H ${inr(bar.h)} L ${inr(bar.l)} C ${inr(bar.c)}`
+              `${frame.stamp(bar)} — O ${inr(bar.o)} H ${inr(bar.h)} L ${inr(bar.l)} C ${inr(bar.c)}`
             }
-            ariaLabel={`${name} today, five-minute candles: ${inr(candles[0].o)} at ${bucketLabel(
-              candles[0].t
-            )} to ${inr(candles[candles.length - 1].c)} at ${bucketLabel(candles[candles.length - 1].t)} IST`}
+            ariaLabel={`${name}, ${frame.tab} candles: ${inr(bars[0].o)} at ${frame.stamp(
+              bars[0]
+            )} to ${inr(bars[bars.length - 1].c)} at ${frame.stamp(bars[bars.length - 1])}`}
           />
-          <p className="subtitle live-foot">
-            Five-minute candles from NSE&apos;s live ticks · {candles.length}{" "}
-            {trading ? "so far today" : "through today's close"}
-          </p>
-        </>
-      ) : hasDaily ? (
-        <>
-          <CandleSvg
-            className="live-svg"
-            bars={daily}
-            label={(bar) => fmtDate(bar.d)}
-            title={(bar) =>
-              `${fmtDate(bar.d)} — O ${inr(bar.o)} H ${inr(bar.h)} L ${inr(bar.l)} C ${inr(bar.c)}`
-            }
-            ariaLabel={`${name} daily price since listing`}
-          />
-          <p className="subtitle live-foot">
-            {daily.length} trading days since listing · NSE end-of-day prices
-            {live && !hasToday && trading && " · no trades yet today"}
-            {live && !hasToday && !trading && " · today's candles appear once the market opens"}
-          </p>
+          <p className="subtitle live-foot">{frame.foot(bars.length)}</p>
         </>
       ) : (
         <p className="subtitle subtitle-flush">
           {daily?.length === 1
-            ? "One trading day so far — the daily chart starts from the second."
+            ? "One trading day so far — a chart starts from the second."
             : "Daily prices appear once NSE publishes the day's closing data, which is in the evening."}
         </p>
       )}
