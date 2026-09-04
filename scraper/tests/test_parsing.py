@@ -918,6 +918,63 @@ def test_unfinished_query_keeps_recently_listed_rows(monkeypatch):
     assert f"and(status.eq.listed,listing_date.gte.{util.days_ago(db.PRICE_WINDOW_DAYS)})" in url
 
 
+def test_unfinished_query_carries_every_status_before_listed(monkeypatch):
+    """The second half of the same bug.
+
+    'allotment' was missing from the carried statuses, and NSE drops an issue
+    from its feed at about the moment it allots — so the row was never seen
+    again and nothing could promote it to 'listed'. Five issues were stuck
+    that way, two of them already trading.
+    """
+    seen = {}
+
+    class _Response:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return []
+
+    def fake_get(url, **kwargs):
+        seen["url"] = url
+        return _Response()
+
+    monkeypatch.setattr(db.requests, "get", fake_get)
+    db.fetch_unfinished([])
+
+    for status in ("upcoming", "open", "closed", "allotment"):
+        assert status in seen["url"], f"{status} rows would stop being carried"
+
+
+def test_derive_status_promotes_allotment_to_listed_on_the_day():
+    """The promotion the carry above exists to let happen."""
+    assert (
+        util.derive_status(
+            "2026-08-25",
+            "2026-08-27",
+            "2026-09-02",
+            "2026-08-28",
+            today="2026-09-04",
+            hour=12,
+        )
+        == "listed"
+    )
+    # ...and not a day early.
+    assert (
+        util.derive_status(
+            "2026-08-25",
+            "2026-08-27",
+            "2026-09-05",
+            "2026-08-28",
+            today="2026-09-04",
+            hour=12,
+        )
+        == "allotment"
+    )
+
+
 def test_price_window_matches_what_the_chart_keeps():
     """Carrying a row longer than the chart displays would be work with
     nowhere to go; carrying it for less would truncate the chart."""

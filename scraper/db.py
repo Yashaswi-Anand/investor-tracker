@@ -204,13 +204,21 @@ def fetch_unfinished(known_slugs, limit=200):
     The dates are not decoration. Status is derived from them on every run,
     and a carried row without them could only ever keep the status it had when
     NSE stopped returning it.
+
+    Every status before 'listed' is carried, 'allotment' included. It was not,
+    and that was a trap: NSE drops an issue from the upcoming-issues feed at
+    about the time it allots, so a row that reached 'allotment' was never
+    fetched again and apply_status never got the chance to promote it. Five
+    issues were sitting on the site as 'allotment' with listing dates up to
+    three days past, two of them already trading and drawing a live chart on
+    their own page while the list still called them unlisted.
     """
     # Matches sources/prices.MAX_BARS: no point carrying a row longer than
     # the chart will keep the bars it produces.
     since = util.days_ago(PRICE_WINDOW_DAYS)
     unfinished = (
         "or=("
-        "status.in.(upcoming,open,closed),"
+        "status.in.(upcoming,open,closed,allotment),"
         "and(status.eq.listed,listing_price.is.null),"
         f"and(status.eq.listed,listing_date.gte.{since})"
         ")"
