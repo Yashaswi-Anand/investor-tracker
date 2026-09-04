@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Investor — design system.
+   Investor â€” design system.
 
    Theme model (three states, all covered):
      * explicit choice  -> <html data-theme="light|dark">   (ThemeToggle)
@@ -14,7 +14,7 @@
 :root {
   color-scheme: light;
 
-  /* Brand — the two supplied accents. Rust carries the light theme and the
+  /* Brand â€” the two supplied accents. Rust carries the light theme and the
      lighter orange carries the dark one, because each is the member of the
      pair that holds its contrast against that ground. */
   --brand-1: #8f4429;
@@ -30,7 +30,7 @@
      theme toggle reads it back out of the computed styles. */
   --theme-bar: #8f4429;
 
-  /* Surfaces — the supplied cream, with tints of itself for depth. */
+  /* Surfaces â€” the supplied cream, with tints of itself for depth. */
   --bg: #f7f2e8;
   --surface: #fffdf7;
   --surface-2: #f1e9db;
@@ -38,13 +38,13 @@
   --border: #e3d8c4;
   --border-strong: #c9b79a;
 
-  /* Text — the supplied near-black, lightened through warm greys. */
+  /* Text â€” the supplied near-black, lightened through warm greys. */
   --text: #14100c;
   --text-2: #3f362a;
   --text-muted: #7b6b55;
 
-  /* Semantics. Green and red stay green and red — they carry meaning, not
-     brand — but both are warmed to sit on cream. Down leans crimson rather
+  /* Semantics. Green and red stay green and red â€” they carry meaning, not
+     brand â€” but both are warmed to sit on cream. Down leans crimson rather
      than scarlet so a negative premium can never be mistaken for the rust
      accent sitting next to it. */
   --up: #2e7d4f;
@@ -166,7 +166,7 @@ button { font-family: inherit; }
 .num { font-variant-numeric: tabular-nums; font-family: var(--font-num); }
 
 /* ==========================================================================
-   Header — sticky, brand gradient
+   Header â€” sticky, brand gradient
    ========================================================================== */
 .site-header {
   position: sticky;
@@ -234,7 +234,7 @@ button { font-family: inherit; }
 }
 /*
  * The band used to stop dead against the page, drawing a hard line across
- * the middle of the screen — and because the filter tabs are pulled up into
+ * the middle of the screen â€” and because the filter tabs are pulled up into
  * the hero, that line ran straight through them. It now dissolves into the
  * page colour instead, so there is no edge to notice and no half-and-half
  * split.
@@ -270,7 +270,7 @@ button { font-family: inherit; }
     radial-gradient(420px 200px at 6% 118%, rgba(109, 50, 32, 0.42), transparent 62%);
   pointer-events: none;
 }
-/* Above .hero::after — a pseudo-element declared after the content would
+/* Above .hero::after â€” a pseudo-element declared after the content would
    otherwise paint over it and fade the tiles along with the band. */
 .hero .container { position: relative; z-index: 1; }
 /* The hero is one line now, so it can carry more weight than it used to. */
@@ -300,7 +300,7 @@ button { font-family: inherit; }
 }
 /* Three tiles on a two-column phone grid would leave the third stranded
    at half width. It is the one with two rows inside it, so give it the
-   whole line — it reads better wide anyway. */
+   whole line â€” it reads better wide anyway. */
 .stat-tile-wide { grid-column: 1 / -1; }
 .stat-tile {
   background: rgba(255, 255, 255, 0.14);
@@ -325,7 +325,7 @@ button { font-family: inherit; }
 }
 .stat-tile .s { font-size: 0.72rem; opacity: 0.85; margin-top: 2px; }
 
-/* Top GMP carries two entries — the best premium among issues you can still
+/* Top GMP carries two entries â€” the best premium among issues you can still
    apply for, and the best among those still to open. One headline number
    would hide whichever of the two the reader came for. Each row links to
    that IPO. */
@@ -431,7 +431,7 @@ h2::before {
   background: var(--brand-grad);
 }
 .subtitle { color: var(--text-muted); font-size: 0.875rem; margin: 0 0 16px; }
-/* Same voice, no trailing gap — for a subtitle that sits last in a card. */
+/* Same voice, no trailing gap â€” for a subtitle that sits last in a card. */
 .subtitle-flush { margin: 0; }
 
 /* ==========================================================================
@@ -439,7 +439,7 @@ h2::before {
    ========================================================================== */
 /* Hidden on phones. Six status pills and three board pills do not fit a
    375px screen, and what does not fit ends up behind a sideways swipe that
-   nothing signals — half the filters, invisible. The same choices are in
+   nothing signals â€” half the filters, invisible. The same choices are in
    the sheet behind the Filters button, all visible at once. */
 .tabs { display: none; }
 .tabs::-webkit-scrollbar { display: none; }
@@ -477,7 +477,7 @@ h2::before {
 .tab-sm { padding: 6px 12px; min-height: 32px; font-size: 0.78rem; }
 
 /* ==========================================================================
-   Toolbar — search, quick filter, sort
+   Toolbar â€” search, quick filter, sort
    ========================================================================== */
 .toolbar {
   display: flex;
@@ -629,7 +629,7 @@ h2::before {
 }
 
 /* Once the toolbar wraps, the auto margin would strand the sort control
-   right-aligned on a line of its own — give it the whole row instead. */
+   right-aligned on a line of its own â€” give it the whole row instead. */
 /* On a phone the search box was sharing its row with the filter chip and
    ended up ~200px wide, too narrow to read a company name back. It takes
    the whole first row now; the chip and the sort control share the next. */
@@ -686,7 +686,7 @@ h2::before {
 .ipo-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .ipo-name { font-weight: 700; font-size: 0.98rem; letter-spacing: -0.01em; color: var(--text); }
 .ipo-meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 3px; }
-/* Status and, while bidding is open, how long is left — stacked so the
+/* Status and, while bidding is open, how long is left â€” stacked so the
    countdown reads as a qualifier on the badge rather than a separate flag. */
 .card-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
 .days-left {
@@ -702,7 +702,7 @@ h2::before {
 /* The last day to apply is the one worth alarming about. */
 .days-left[data-urgent="true"] { color: var(--down); background: var(--down-soft); }
 
-/* Second line inside a table cell, e.g. the countdown under Open – Close. */
+/* Second line inside a table cell, e.g. the countdown under Open â€“ Close. */
 .cell-note {
   display: block;
   margin-top: 2px;
@@ -737,7 +737,7 @@ h2::before {
   color: var(--text-muted); font-weight: 700;
 }
 .stat-value { font-size: 0.95rem; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
-/* What the figure above is made of — "2 lots · 2,400 shares". Quiet, because
+/* What the figure above is made of â€” "2 lots Â· 2,400 shares". Quiet, because
    it explains the number rather than competing with it. */
 .stat-note { margin-top: 2px; font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
 .kv-note-inline { font-weight: 600; }
@@ -766,7 +766,7 @@ h2::before {
 }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* Pinned columns stay put while the rest scrolls — otherwise you scroll right
+/* Pinned columns stay put while the rest scrolls â€” otherwise you scroll right
    to read Status and no longer know which IPO the row belongs to. Which
    columns are pinned is the reader's choice (up to two); `left` is set
    inline from measured widths so the second sits flush against the first.
@@ -1018,7 +1018,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
   margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border);
 }
 /* Six stats now that issue size is among them, so the counts divide evenly
-   at every breakpoint — 2x3, 3x2, then one row. Five columns with six stats
+   at every breakpoint â€” 2x3, 3x2, then one row. Five columns with six stats
    left a single stat alone on a second row with four empty cells beside it. */
 @media (min-width: 640px) { .hero-stats-detail { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 960px) { .hero-stats-detail { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
@@ -1029,13 +1029,13 @@ td a:hover { color: var(--primary); text-decoration: none; }
    go in a .grid-cluster instead.
 
    The grid used to auto-fit at 290px, which gave three columns on a desktop
-   and left two of them empty behind every card that was not full width —
+   and left two of them empty behind every card that was not full width â€”
    most of the page. Auto-fitting the whole page cannot fix that, because a
    full-width card forces a row break either way; only the small cards
    knowing about each other can. */
 /* minmax(0, 1fr), not a bare implicit column: an implicit column's minimum
-   is min-content, so one unshrinkable child — the four Financials tabs in a
-   row — widened the column past the phone and pushed the whole page sideways.
+   is min-content, so one unshrinkable child â€” the four Financials tabs in a
+   row â€” widened the column past the phone and pushed the whole page sideways.
    A zero minimum makes wide content scroll inside its own card, which is
    what the tabs row and the tables were already set up to do. */
 .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
@@ -1043,13 +1043,13 @@ td a:hover { color: var(--primary); text-decoration: none; }
 
 /* The news card and the FAQ sit AFTER .grid closes, so the grid's own
    row-gap never reached them and they butted straight up against the last
-   card above — a measured zero pixels. Everything that follows the grid
+   card above â€” a measured zero pixels. Everything that follows the grid
    carries the same 14px the cards inside it get from each other. */
 .news-card,
 .card.faq { margin-top: 14px; }
 
 /* A row of short cards, sized against each other rather than the page. Any
-   of them may be absent — the source publishes risks for some issues only —
+   of them may be absent â€” the source publishes risks for some issues only â€”
    and auto-fit means whichever survive divide the row between them instead
    of leaving a hole where the missing one would have been. */
 .grid-cluster {
@@ -1075,7 +1075,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .hist-layout { display: grid; grid-template-columns: 1fr; gap: 14px; }
 /* The table now carries five columns, so give it a bit more room. */
 @media (min-width: 880px) { .hist-layout { grid-template-columns: 1fr 1fr; align-items: start; } }
-/* Free prose inside a card — smaller than body copy, flush to the edges. */
+/* Free prose inside a card â€” smaller than body copy, flush to the edges. */
 .about-text { font-size: 0.87rem; margin: 0; }
 .card {
   background: var(--surface); border: 1px solid var(--border);
@@ -1107,7 +1107,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
    splitting. Label and value at opposite ends of a line works for "Lot Size
    82 shares"; for a paragraph it leaves the label stranded above a wall of
    right-aligned text. kv-note is already how the markup says "this value is
-   prose" — kv-note-inline is the short suffix beside a figure and keeps the
+   prose" â€” kv-note-inline is the short suffix beside a figure and keeps the
    ordinary layout. */
 .kv:has(dd > .kv-note:not(.kv-note-inline)) {
   display: block;
@@ -1119,7 +1119,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
   line-height: 1.55;
 }
 /* Company & issue details: two columns of label/value rows once there is
-   room, one below that. The rows are .kv, so each already lays itself out —
+   room, one below that. The rows are .kv, so each already lays itself out â€”
    this only decides how many of them sit side by side. */
 .detail-grid { margin: 0; }
 @media (min-width: 700px) {
@@ -1209,7 +1209,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
 }
 .faq-item summary::-webkit-details-marker { display: none; }
 .faq-item summary::after { content: "+"; color: var(--text-muted); font-weight: 400; font-size: 1.2rem; flex: 0 0 auto; }
-.faq-item[open] summary::after { content: "−"; }
+.faq-item[open] summary::after { content: "âˆ’"; }
 .faq-item p { margin: 8px 0 2px; font-size: 0.87rem; color: var(--text-2); }
 
 /* ==========================================================================
@@ -1223,7 +1223,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .disclaimer {
   border-top: 1px solid var(--border); background: var(--surface);
   /* The extra room at the bottom is for the floating jump button. It is
-     fixed, so at full scroll it sits over the last 62px of the document —
+     fixed, so at full scroll it sits over the last 62px of the document â€”
      which, without this, is the copyright line. */
   padding: 22px 0 calc(78px + env(safe-area-inset-bottom));
   font-size: 0.76rem; color: var(--text-muted); margin-top: 36px;
@@ -1239,7 +1239,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
 }
 
 /* ==========================================================================
-   Financials — one metric at a time, as bars
+   Financials â€” one metric at a time, as bars
    ========================================================================== */
 :root { --fin-label-h: 24px; }
 .fin-tabs { margin-bottom: 2px; }
@@ -1286,7 +1286,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
   white-space: nowrap;
 }
 /* Takes whatever height the labels leave, and is what the bar's percentage
-   is measured against — so 100% means the tallest bar, every time. */
+   is measured against â€” so 100% means the tallest bar, every time. */
 .fin-track {
   flex: 1 1 auto;
   min-height: 0;
@@ -1329,7 +1329,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
 
 /* On a wide screen the prose was capped at 68ch inside a 1088px card, which
    left a third of the card empty beside it while the heading, the table and
-   the caption all ran full width — the paragraph looked indented rather than
+   the caption all ran full width â€” the paragraph looked indented rather than
    set. Side by side, the description keeps a line length worth reading and
    the facts fill what it does not use. */
 @media (min-width: 900px) {
@@ -1346,7 +1346,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
 
   /* The facts become a panel rather than a continuation of the table style.
      .kv puts its label and value at opposite edges, which reads well across
-     a full-width card and badly in a narrow column — with a single promoter
+     a full-width card and badly in a narrow column â€” with a single promoter
      row the label was stranded from its value with 200px between them, and
      the empty column below made the whole side look unfinished. Stacked and
      boxed, one row looks deliberate and three look like a list. */
@@ -1385,8 +1385,8 @@ td a:hover { color: var(--primary); text-decoration: none; }
 /* ==========================================================================
    GMP and the listing price it implies, in one cell
    ========================================================================== */
-/* Kept on one line: the cell reads as a single sentence — this premium
-   implies this price — and wrapping it mid-arrow breaks the sentence. The
+/* Kept on one line: the cell reads as a single sentence â€” this premium
+   implies this price â€” and wrapping it mid-arrow breaks the sentence. The
    table already scrolls sideways inside .table-wrap, so nothing is lost. */
 .gmp-est { white-space: nowrap; }
 /* Muted and thin, because the arrow is punctuation between two figures, not
@@ -1397,12 +1397,12 @@ td a:hover { color: var(--primary); text-decoration: none; }
   font-weight: 500;
 }
 /* Each figure is one unbreakable piece, so a wrap can only land between
-   them — never between the arrow and the number it belongs to. */
+   them â€” never between the arrow and the number it belongs to. */
 .gmp-est-part { white-space: nowrap; }
 
 /* On a phone card the cell has a column to itself and no sideways scroll to
    fall back on, so let it wrap rather than overflow. A notch smaller than the
-   other stats as well: "▲ ₹30 → ₹122 (+32.6%)" is three times the text of a
+   other stats as well: "â–² â‚¹30 â†’ â‚¹122 (+32.6%)" is three times the text of a
    price band and was the only thing in the card that needed three lines. */
 .ipo-card-grid .gmp-est { white-space: normal; font-size: 0.86rem; }
 
@@ -1425,7 +1425,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
    itself stays full width; only the paragraph inside it is capped. */
 .about-prose { max-width: 68ch; line-height: 1.72; font-size: 0.92rem; }
 
-/* Company names run long — "Rays of Belief Limited-" and the like — and with
+/* Company names run long â€” "Rays of Belief Limited-" and the like â€” and with
    the table's blanket nowrap one of them stretched the column far past what
    the rest of the row needed. This is the one cell that wraps. */
 td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
@@ -1504,7 +1504,7 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 }
 .news-filter-field:focus-within { border-color: var(--primary); box-shadow: var(--ring); }
 /* The wrapper already shows focus. Without this the global :focus-visible
-   rule draws a SECOND ring inside the pill — the double outline. */
+   rule draws a SECOND ring inside the pill â€” the double outline. */
 .news-filter-input:focus-visible { box-shadow: none; }
 .news-filter-icon { color: var(--text-muted); flex: 0 0 auto; }
 .news-filter-input {
@@ -1740,11 +1740,11 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 .news-card .news-title { font-size: 0.92rem; }
 
 /* ==========================================================================
-   Reveal — charts draw in and figures count up as they scroll into view
+   Reveal â€” charts draw in and figures count up as they scroll into view
 
    Everything here hangs off [data-anim="on"], which Reveal.jsx sets only
    AFTER mount and only when the reader has not asked for reduced motion.
-   Without it — no JavaScript, reduced motion, a crawler — the server's
+   Without it â€” no JavaScript, reduced motion, a crawler â€” the server's
    finished state is what renders. None of these rules may hide content in
    a way that survives with JS off.
    ========================================================================== */
@@ -1819,13 +1819,13 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 
 /* Company and status share one cell, stacked: the name is what a reader
    scans for and the badge qualifies it, so the badge sits under rather than
-   beside — beside would push the name around as statuses change width. */
+   beside â€” beside would push the name around as statuses change width. */
 .cell-company { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .cell-company:hover { text-decoration: none; }
 .cell-company-name { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 .cell-company:hover .cell-company-name { text-decoration-thickness: 2px; }
 
-/* Between the close and the listing. Warmer than closed, quieter than open —
+/* Between the close and the listing. Warmer than closed, quieter than open â€”
    it is a waiting room, not a result. */
 .badge-allotment { background: var(--primary-soft); color: var(--primary); }
 
@@ -1902,8 +1902,8 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 /* ==========================================================================
    Filter sheet (phone)
    ========================================================================== */
-/* The news feed pages the same way the IPO list does — numbered on a
-   desktop, growing on a phone — so exactly one of these is ever on screen. */
+/* The news feed pages the same way the IPO list does â€” numbered on a
+   desktop, growing on a phone â€” so exactly one of these is ever on screen. */
 .news-paged { display: none; }
 @media (min-width: 880px) {
   .news-paged { display: block; }
@@ -1954,7 +1954,7 @@ body.has-sheet .scroll-jump { display: none; }
   animation: sheet-fade 0.2s ease reverse forwards;
 }
 
-/* Its own row, and the only place a drag is read — put the gesture on the
+/* Its own row, and the only place a drag is read â€” put the gesture on the
    whole panel and every flick meant for the option list fights it. */
 .sheet-grip {
   padding: 10px 0 2px;
@@ -2072,7 +2072,7 @@ body.has-sheet .scroll-jump { display: none; }
   background: var(--primary);
   border-color: var(--primary);
 }
-/* Round for one-of, square for any-of — the shape is what tells a reader
+/* Round for one-of, square for any-of â€” the shape is what tells a reader
    whether picking this un-picks the last one. */
 .sheet-option[data-single] .sheet-box { border-radius: 50%; background: var(--surface); }
 .sheet-option[data-single][data-on] .sheet-box { border-color: var(--primary); }
@@ -2162,6 +2162,52 @@ body.has-sheet .scroll-jump { display: none; }
   font-size: 0.86rem;
   line-height: 1.6;
   color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Live share price
+   ========================================================================== */
+.live { display: grid; gap: 12px; }
+.live-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; }
+.live-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.live-ltp { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.live-ltp-muted { font-size: 1rem; font-weight: 600; color: var(--text-muted); }
+.live-change { font-size: 0.98rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.live-pct { font-weight: 600; opacity: 0.85; }
+.live-status { margin: 0; display: flex; align-items: center; gap: 7px; font-size: 0.78rem; color: var(--text-muted); }
+/* A dot that only pulses while the market is trading. Still, it is a
+   record; moving, it is a promise that the number is changing. */
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); flex: 0 0 auto; }
+.live-dot[data-on] { background: var(--up); box-shadow: 0 0 0 0 var(--up); animation: live-pulse 1.8s ease-out infinite; }
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 55%, transparent); }
+  100% { box-shadow: 0 0 0 9px transparent; }
+}
+
+.live-ohl {
+  display: flex; flex-wrap: wrap; gap: 6px 22px;
+  margin: 0; padding: 0;
+}
+.live-ohl > div { display: flex; gap: 6px; align-items: baseline; font-size: 0.8rem; }
+.live-ohl dt { color: var(--text-muted); }
+.live-ohl dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.live-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.live-tabs .tab:disabled { opacity: 0.45; cursor: default; transform: none; }
+.live-svg { margin-top: 2px; }
+.live-foot { margin: 0; }
+
+/* Yesterday's close, as a reference the day's candles can be read against. */
+.candle-baseline line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 4 4; opacity: 0.7; }
+.candle-baseline-label { font-size: 10px; }
+
+/* On a phone the 640-unit viewBox renders at about half size, which takes
+   11px axis text down to under six real pixels. A candle's shape survives
+   being shrunk; the numbers beside it do not, so they get their own size
+   there. 14 units still clears the 46-unit gutter the price labels sit in. */
+@media (max-width: 560px) {
+  .price-chart .gmp-axis { font-size: 14px; }
+  .price-chart .candle-baseline-label { font-size: 12px; }
 }
 
 /* ==========================================================================

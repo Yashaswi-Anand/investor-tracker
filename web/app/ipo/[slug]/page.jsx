@@ -28,7 +28,8 @@ import {
 } from "../../../lib/format";
 import { documentsFor } from "../../../lib/documents";
 import Financials from "../../components/Financials";
-import PriceChart from "../../components/PriceChart";
+import LiveChart from "../../components/LiveChart";
+import { dailyBars } from "../../components/PriceChart";
 import NewsList from "../../components/NewsList";
 import Reveal from "../../components/Reveal";
 import ShareButton from "../../components/ShareButton";
@@ -681,18 +682,14 @@ export default async function IpoDetailPage({ params }) {
             the only chart worth showing — so it comes before the timetable
             and before the premium history, which by then is a record of what
             the grey market guessed. */}
-        {ipo.status === "listed" && (
+        {ipo.status === "listed" && ipo.symbol && (
           <section className="card card-wide">
-            <h2>Price Since Listing</h2>
-            {(ipo.details || {}).prices?.length >= 2 ? (
-              <PriceChart ipo={ipo} />
-            ) : (
-              <p className="subtitle subtitle-flush">
-                {(ipo.details || {}).prices?.length === 1
-                  ? "One trading day so far — the chart starts from the second."
-                  : "Daily prices appear once NSE publishes the day's closing data, which is in the evening."}
-              </p>
-            )}
+            <h2>Share Price</h2>
+            {/* Live from NSE through our server, with the daily candles from
+                our own records as the second view and the fallback. The
+                daily bars are computed here, on the server, so the client
+                component ships the numbers and not the derivation. */}
+            <LiveChart symbol={ipo.symbol} name={ipo.name} daily={dailyBars(ipo)} />
           </section>
         )}
 
