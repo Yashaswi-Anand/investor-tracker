@@ -6,6 +6,16 @@ import { NEWS, SITE } from "../../lib/config";
 // whether there is a real publisher behind the domain. Both want the same
 // thing — the sources named, the limits admitted.
 
+// Static content, but not for a year.
+//
+// Next marks a prerendered page `s-maxage=31536000` on the assumption that a
+// deploy purges the CDN. Hostinger's does not, so an edit to this page was
+// invisible behind an edge copy until the cache felt like expiring — measured
+// at an hour and a half old and counting, still serving text two commits out
+// of date. Ten minutes is long enough that this costs nothing and short
+// enough that a correction actually reaches a reader.
+export const revalidate = 600;
+
 export const metadata = {
   // "About | Investor" was sixteen characters carrying no topic and no
   // entity, on the page that exists to establish both.
