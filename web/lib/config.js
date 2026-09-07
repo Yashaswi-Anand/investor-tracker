@@ -131,6 +131,67 @@ export const NSE = {
   sessionSeconds: 600,
 };
 
+/**
+ * The publisher, as structured data.
+ *
+ * A finance site is judged under YMYL, where Google's raters are told to look
+ * first for who is behind the information. This site had no Organization node
+ * anywhere: no name, no URL, no logo, nothing tying the domain to an entity.
+ * That is the single largest E-E-A-T gap a data site can have, and it is
+ * invisible in the HTML — the About page says all of this in prose and none of
+ * it in a form a machine reads.
+ *
+ * Referenced by @id from every other node rather than repeated, so the graph
+ * has one publisher and not one per page.
+ */
+export function organizationLd() {
+  return {
+    "@type": "Organization",
+    "@id": `${SITE.url}/#organization`,
+    name: SITE.name,
+    legalName: SITE.owner,
+    url: SITE.url,
+    logo: {
+      "@type": "ImageObject",
+      url: `${SITE.url}/icons/icon-512.png`,
+      width: 512,
+      height: 512,
+    },
+    description: SITE.description,
+    areaServed: { "@type": "Country", name: "India" },
+    knowsAbout: [
+      "Initial public offerings in India",
+      "Grey market premium",
+      "IPO subscription status",
+      "SME IPO",
+    ],
+    ...(SITE.contactEmail
+      ? {
+          contactPoint: {
+            "@type": "ContactPoint",
+            contactType: "customer support",
+            email: SITE.contactEmail,
+            areaServed: "IN",
+            availableLanguage: ["en", "hi"],
+          },
+        }
+      : {}),
+  };
+}
+
+/** The site itself, so Google stops guessing the name it shows in results. */
+export function webSiteLd() {
+  return {
+    "@type": "WebSite",
+    "@id": `${SITE.url}/#website`,
+    url: SITE.url,
+    name: SITE.name,
+    description: SITE.description,
+    publisher: { "@id": `${SITE.url}/#organization` },
+    inLanguage: "en-IN",
+  };
+}
+
 export function supabaseUrl(key) {
   return SUPABASE.url + SUPABASE.endpoints[key];
 }

@@ -1,11 +1,11 @@
-import { SITE } from "../lib/config";
+import { organizationLd, SITE, webSiteLd } from "../lib/config";
 import {
   getAllIpos,
   getRecentGmpSnapshots,
   gmpDeltas,
   gmpSparklines,
 } from "../lib/data";
-import { safeJsonLd } from "../lib/format";
+import { fmtStamp, safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
 import Reveal from "./components/Reveal";
 import TopGmp from "./components/TopGmp";
@@ -35,6 +35,15 @@ export default async function HomePage() {
     gmp_spark: sparks[ipo.slug] || null,
   }));
 
+  // The newest row's timestamp is the page's own freshness, and the whole
+  // proposition of a "today" query is that the answer is from today. It was
+  // stated nowhere on the homepage, in prose or in markup.
+  const lastUpdated = ipos.reduce(
+    (newest, ipo) =>
+      ipo.updated_at && (!newest || ipo.updated_at > newest) ? ipo.updated_at : newest,
+    null
+  );
+
   const open = ipos.filter((i) => i.status === "open");
   const upcoming = ipos.filter((i) => i.status === "upcoming");
 
@@ -43,17 +52,41 @@ export default async function HomePage() {
   // Only the IPOs actually emitted are counted — declaring a larger
   // numberOfItems than the list contains is a structured-data error.
   const listed = ipos.slice(0, 25);
+  // One graph rather than three loose nodes, so the list, the site and the
+  // publisher are linked rather than merely co-located. The list alone said
+  // what is on the page; it never said who is publishing it.
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: "Live IPOs in India",
-    numberOfItems: listed.length,
-    itemListElement: listed.map((ipo, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      name: `${ipo.name} IPO`,
-      url: `${SITE.url}/ipo/${ipo.slug}`,
-    })),
+    "@graph": [
+      organizationLd(),
+      webSiteLd(),
+      {
+        "@type": "CollectionPage",
+        "@id": `${SITE.url}/#webpage`,
+        url: SITE.url,
+        name: "Live IPO Tracker — GMP, Subscription and Allotment",
+        isPartOf: { "@id": `${SITE.url}/#website` },
+        about: { "@id": `${SITE.url}/#organization` },
+        // The reason anyone loads this page is that it is current. Saying so
+        // in the markup is the same claim the page makes in its own words.
+        dateModified: new Date(lastUpdated || Date.now()).toISOString(),
+        primaryImageOfPage: {
+          "@type": "ImageObject",
+          url: `${SITE.url}/icons/icon-512.png`,
+        },
+      },
+      {
+        "@type": "ItemList",
+        name: "Live IPOs in India",
+        numberOfItems: listed.length,
+        itemListElement: listed.map((ipo, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: `${ipo.name} IPO`,
+          url: `${SITE.url}/ipo/${ipo.slug}`,
+        })),
+      },
+    ],
   };
 
   return (
@@ -71,8 +104,27 @@ export default async function HomePage() {
               page metadata. */}
           <h1>
             IPO Insights.
-            <span className="hero-sub">Live Data. Smarter Decision</span>
+            {/* The second line carries the words people actually search.
+                "Live Data. Smarter Decision" is a slogan: it described the
+                product's manner and named none of its subject, so the H1 —
+                the strongest on-page signal there is — reinforced nothing
+                the title tag was competing for. */}
+            <span className="hero-sub">
+              Live GMP, subscription &amp; allotment for every Indian IPO
+            </span>
           </h1>
+
+          {/* Said out loud, not only in the markup. Every query this page
+              wants ends in "today", and the page never claimed a date. */}
+          {lastUpdated && (
+            <p className="hero-fresh">
+              Updated{" "}
+              <time dateTime={new Date(lastUpdated).toISOString()}>
+                {fmtStamp(lastUpdated)} IST
+              </time>{" "}
+              · {open.length} open · {upcoming.length} upcoming
+            </p>
+          )}
 
           <Reveal className="hero-stats" count>
             <div className="stat-tile">
