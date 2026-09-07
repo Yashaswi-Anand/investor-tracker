@@ -15,8 +15,10 @@ import { SITE, adsLive } from "../../lib/config";
 // to enter one — written before that page existed and left standing after it
 // shipped, which made this document untrue for four days. It is corrected
 // below. The reason it stays a short section rather than a long one is that
-// the PAN never reaches a server: it is typed, stored and used entirely
-// inside the reader's own browser, so there is no collection to disclose.
+// the PAN never reaches OUR server: it is typed and stored inside the
+// reader's own browser, and the one request that carries it goes from that
+// browser straight to KFin's allotment API (lib/kfin.js) — KFin receives it
+// under their policy, we never do, so there is no collection to disclose.
 // If that ever changes, this page and the Play Console Data safety form have
 // to change in the SAME commit, before the feature ships.
 
@@ -74,25 +76,38 @@ export default function PrivacyPage() {
         <h2>The one exception: your PAN</h2>
         <p>
           The <Link href="/allotment">allotment page</Link> has a box for PAN
-          numbers, so that it can hand you the right registrar with your PAN
-          ready to paste into their form. That is the only place on this site
-          that asks for anything personal, and it is worth being precise about
-          what happens to it.
+          numbers, so that it can check your allotment for you where the
+          registrar allows it, and hand you the right registrar with your PAN
+          ready where it does not. That is the only place on this site that
+          asks for anything personal, and it is worth being precise about what
+          happens to it.
         </p>
         <p>
-          <strong>A PAN you type there never reaches us.</strong> There is no
-          request on that page that carries one — not to our server, not to our
-          database, not to any third party. It is saved in your own
-          browser&apos;s local storage and read back by the page on your own
-          device. It is never put in a web address either, which would have
-          placed it in your browser history and in the logs of every machine
-          the request passed through.
+          <strong>A PAN you type there never reaches us.</strong> No request on
+          that page goes to our server or our database. It is saved in your
+          own browser&apos;s local storage and read back by the page on your
+          own device. It is never put in a web address either, which would
+          have placed it in your browser history and in the logs of every
+          machine the request passed through.
         </p>
         <p>
-          We also do not fetch your allotment result. Every registrar puts that
-          behind a CAPTCHA, so opening their page and reading the answer stays
-          with you; anything you record afterwards is a note to yourself, kept
-          in the same browser storage.
+          <strong>One request does carry it, and it does not come to us.</strong>{" "}
+          For issues whose registrar is KFin Technologies, pressing Check sends
+          the PAN from your browser directly to KFin&apos;s own allotment
+          server — the same request their page makes when you use it there —
+          and the answer comes back the same way. KFin receives it under{" "}
+          <a
+            href="https://www.kfintech.com/privacy-policy/"
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
+            their privacy policy
+          </a>
+          ; this site is not on the path and cannot see either the PAN or the
+          answer. For every other registrar the answer sits behind a CAPTCHA,
+          so opening their page and reading it stays with you, and anything you
+          record afterwards is a note to yourself, kept in the same browser
+          storage.
         </p>
 
         <h2>What is stored in your browser</h2>
@@ -109,11 +124,13 @@ export default function PrivacyPage() {
             page.
           </li>
           <li>
-            <code>ipo-allotment-picks</code> — which issues you selected there.
+            <code>ipo-allotment-marks</code> — what you recorded after checking
+            an issue on its registrar&apos;s site.
           </li>
           <li>
-            <code>ipo-allotment-marks</code> — what you recorded after checking
-            each one with its registrar.
+            <code>ipo-allotment-results</code> — what KFin answered for a PAN,
+            kept so you do not have to ask again. Includes the applicant name
+            as KFin holds it.
           </li>
         </ul>
         <p>
@@ -244,7 +261,9 @@ export default function PrivacyPage() {
           is processed on your own device, by code running in your own browser,
           and is never transmitted to or stored by us — so there is no copy of
           it for us to disclose, correct, export or erase, and no consent
-          notice we could meaningfully serve for data we never receive.
+          notice we could meaningfully serve for data we never receive. Where
+          your browser sends it to KFin at your request, KFin is the data
+          fiduciary for that request, as it is when you use their site.
         </p>
         <p>
           What that means in practice: the rights of access, correction,
