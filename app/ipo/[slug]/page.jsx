@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SITE } from "../../../lib/config";
+import { organizationLd, SITE, webSiteLd } from "../../../lib/config";
 import {
   getGmpHistory,
   getIpoBySlug,
@@ -12,7 +12,7 @@ import {
   dailyLatest,
   dailySeries,
   fmtDate,
-  fmtDateTime,
+  fmtStamp,
   fmtDelta,
   fmtIssueSize,
   fmtShortDate,
@@ -149,7 +149,7 @@ function GmpHistory({ history, ipo }) {
         {ipo.gmp != null && <>Latest GMP {inr(ipo.gmp)} · </>}
         Last updated{" "}
         <strong className="hist-stamp">
-          {fmtDateTime(ipo.updated_at || ipo.gmp_updated_at)} IST
+          {fmtStamp(ipo.updated_at || ipo.gmp_updated_at)} IST
         </strong>
       </p>
 
@@ -774,7 +774,38 @@ export default async function IpoDetailPage({ params }) {
   // markup describing answers the reader cannot see would be a violation.
   const faq = buildFaq(ipo);
 
+  // The page had a breadcrumb and an FAQ and no subject: nothing said what
+  // this document is ABOUT, so the strongest entity signal on the site's
+  // money pages was absent. The issuing company is modelled here as the
+  // thing the page describes, the site as its publisher, and the scraper's
+  // own stamp as dateModified — which is the claim the page makes in words
+  // at the top and made nowhere a machine could read.
   const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": `${SITE.url}/ipo/${ipo.slug}#webpage`,
+      url: `${SITE.url}/ipo/${ipo.slug}`,
+      name: `${ipo.short_name || ipo.name} IPO`,
+      isPartOf: { "@id": `${SITE.url}/#website` },
+      publisher: { "@id": `${SITE.url}/#organization` },
+      inLanguage: "en-IN",
+      ...(ipo.updated_at
+        ? { dateModified: new Date(ipo.updated_at).toISOString() }
+        : {}),
+      about: {
+        "@type": "Corporation",
+        name: ipo.name,
+        ...(details.about ? { description: details.about.slice(0, 400) } : {}),
+        ...(ipo.symbol ? { tickerSymbol: ipo.symbol } : {}),
+        ...(details.sector ? { industry: details.sector } : {}),
+        ...(details.incorporated
+          ? { foundingDate: String(details.incorporated) }
+          : {}),
+      },
+    },
+    organizationLd(),
+    webSiteLd(),
     {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
