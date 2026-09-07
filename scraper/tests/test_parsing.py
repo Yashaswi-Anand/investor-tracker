@@ -1029,6 +1029,37 @@ def test_zero_subscription_is_kept_when_nothing_was_bid():
     assert nse.parse_subscription(payload) == {"subscription_qib": 0.0}
 
 
+def test_all_zero_snapshots_are_not_recorded(monkeypatch):
+    """405 of the first 1,080 history rows were all zeros — a chart floor
+    that never happened. A snapshot that cannot tell "nothing bid yet" from
+    "could not read it" is not worth a row."""
+    sent = {}
+
+    class _Response:
+        status_code = 201
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return []
+
+    def fake_post(url, **kwargs):
+        sent["json"] = kwargs.get("json")
+        return _Response()
+
+    monkeypatch.setattr(db.requests, "post", fake_post)
+
+    written = db.append_subscription_history([
+        # Nothing but zeros: dropped.
+        {"slug": "a", "subscription_total": 0.0, "subscription_qib": 0.0},
+        # Zeros in the categories but a real total: kept, that total is news.
+        {"slug": "b", "subscription_total": 27.42, "subscription_qib": None},
+    ])
+    assert written == 1
+    assert [row["slug"] for row in sent["json"]] == ["b"]
+
+
 def test_unstamped_category_table_says_nothing():
     """The second half of the zero-subscription bug.
 

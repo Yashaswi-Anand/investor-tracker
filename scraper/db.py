@@ -389,18 +389,39 @@ def append_gmp_history(snapshots):
     return len(snapshots)
 
 
+def _all_zero(snapshot):
+    """A snapshot with nothing but zeros and nulls in it."""
+    return all(
+        snapshot.get(key) in (None, 0, 0.0)
+        for key in ("qib", "nii", "retail", "total")
+    )
+
+
 def append_subscription_history(rows):
-    """One snapshot per open IPO that reports subscription figures."""
+    """One snapshot per open IPO that reports subscription figures.
+
+    A snapshot in which every figure is zero or null is not recorded. It
+    cannot tell "nothing has been bid yet" from "we could not read the
+    figures", and on the day-wise chart it plots a floor at zero that never
+    happened. 405 of the first 1,080 rows written here were exactly that —
+    NSE's category endpoint publishes 0.00 for issues it has not filled in,
+    and every run faithfully wrote it down. See database/cleanup for the
+    statement that removes them.
+    """
     snapshots = [
-        {
-            "slug": row["slug"],
-            "qib": row.get("subscription_qib"),
-            "nii": row.get("subscription_nii"),
-            "retail": row.get("subscription_retail"),
-            "total": row.get("subscription_total"),
-        }
-        for row in rows
-        if row.get("subscription_total") is not None
+        snapshot
+        for snapshot in (
+            {
+                "slug": row["slug"],
+                "qib": row.get("subscription_qib"),
+                "nii": row.get("subscription_nii"),
+                "retail": row.get("subscription_retail"),
+                "total": row.get("subscription_total"),
+            }
+            for row in rows
+            if row.get("subscription_total") is not None
+        )
+        if not _all_zero(snapshot)
     ]
     if not snapshots:
         return 0
