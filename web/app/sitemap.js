@@ -5,10 +5,23 @@ import { getAllSlugs } from "../lib/data";
 export default async function sitemap() {
   const rows = await getAllSlugs();
 
+  // lastModified was `new Date()` for every static page, which reports the
+  // moment the sitemap was requested rather than the moment anything
+  // changed — so every crawl saw six pages that had "just changed" and none
+  // of them had. Crawlers learn to distrust a lastmod that is always now.
+  // The newest row we hold is the real answer for the pages built from it.
+  const newest = rows.reduce(
+    (latest, row) =>
+      row.updated_at && (!latest || new Date(row.updated_at) > latest)
+        ? new Date(row.updated_at)
+        : latest,
+    null
+  );
+
   return [
     {
       url: SITE.url,
-      lastModified: new Date(),
+      lastModified: newest,
       changeFrequency: "hourly",
       priority: 1,
     },
@@ -18,22 +31,27 @@ export default async function sitemap() {
       changeFrequency: "hourly",
       priority: 0.8,
     })),
-    // The other two pages people arrive at directly. Both carry their own
-    // title and description and are marked indexable, so leaving them out
-    // would be the two documents disagreeing about whether they exist.
-    // /allotment is deliberately not here: it is not linked from anywhere,
-    // and a sitemap entry for a page with no route into it asks Google to
-    // index something no reader can reach.
-    ...["/news", "/about", "/contact"].map((path) => ({
+    // /ipo lists every issue we hold, so it is the one page that reaches
+    // the ones the homepage's current-month view does not.
+    {
+      url: `${SITE.url}/ipo`,
+      lastModified: newest,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    // /allotment is here now: it is linked, indexable, and answers a query
+    // family — "<company> IPO allotment status" — that nothing else here
+    // does. It was excluded when nothing linked to it, which has changed.
+    ...["/news", "/allotment", "/about", "/contact"].map((path) => ({
       url: `${SITE.url}${path}`,
-      lastModified: new Date(),
+      lastModified: newest,
       changeFrequency: "daily",
       priority: 0.6,
     })),
-    // Indexable for the same reason, but they change once a year at most.
+    // These change once a year at most, and saying otherwise every time the
+    // sitemap is requested is the same lie as above, only slower to notice.
     ...["/privacy", "/terms"].map((path) => ({
       url: `${SITE.url}${path}`,
-      lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     })),

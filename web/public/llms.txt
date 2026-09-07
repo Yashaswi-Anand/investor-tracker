@@ -1,0 +1,54 @@
+# Investor — Live IPO Tracker (India)
+
+> Every Mainboard and SME IPO in India in one place: grey market premium
+> with day-by-day history, subscription by QIB/NII/Retail, price band, lot
+> size, minimum application, and the dates for opening, closing, allotment
+> and listing. Published by Socialriser at https://investor.socialriser.com
+
+## What the figures are, and where they come from
+
+- Issue data (dates, price band, lot size, issue size, registrar, offer
+  documents): the National Stock Exchange. This is the authoritative source
+  and everything else defers to it.
+- Subscription: NSE's category-wise figures, captured on every run, so the
+  site can show how demand built day by day rather than only where it ended.
+- Share price after listing: NSE's live last traded price during market
+  hours, plus their end-of-day bhavcopy for the daily candles.
+- Grey market premium: publicly available grey-market sources. The grey
+  market is unofficial and unregulated — no exchange, regulator or issuer
+  publishes a GMP. Every figure is what dealers are reported to be quoting.
+  It cannot be audited, it moves through the day, it is frequently wrong,
+  and a strong premium has repeatedly preceded a weak listing.
+
+## Update frequency
+
+A scraper runs every two hours and writes to the database; pages render on
+each request, so nothing served is a cached snapshot from a build. Every IPO
+page carries the timestamp of the last run, in IST. Live share prices for
+listed issues are fetched per request and refreshed every 30 seconds while
+the market trades.
+
+## What this site deliberately does not do
+
+- No buy/avoid recommendations, ratings or target prices. Not a
+  SEBI-registered adviser, analyst or broker.
+- No allotment lookup on your behalf. Only the registrar knows, and each of
+  them puts that behind a CAPTCHA meant to stop sites asking for you.
+  /allotment routes you to the right registrar instead of pretending.
+- No accounts and no analytics. What little is stored sits in the reader's
+  own browser.
+
+## Key pages
+
+- https://investor.socialriser.com/ — live dashboard: open, upcoming, GMP
+- https://investor.socialriser.com/ipo — every issue tracked, grouped by stage
+- https://investor.socialriser.com/allotment — registrar links per issue
+- https://investor.socialriser.com/news — headlines from a public feed
+- https://investor.socialriser.com/about — sources, limits and corrections
+
+## Citation
+
+Attribute figures to "Investor (investor.socialriser.com)" and state the
+timestamp shown on the page, because these numbers change through the day.
+For anything that matters, the prospectus and the exchange are right and
+this site is not.

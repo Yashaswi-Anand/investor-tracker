@@ -7,7 +7,9 @@ import { NEWS, SITE } from "../../lib/config";
 // thing — the sources named, the limits admitted.
 
 export const metadata = {
-  title: "About",
+  // "About | Investor" was sixteen characters carrying no topic and no
+  // entity, on the page that exists to establish both.
+  title: "About — Who Runs This IPO Tracker and Where the Data Comes From",
   description: `What ${SITE.name} is, where its IPO data comes from, how often it updates, and what it deliberately does not do.`,
   alternates: { canonical: "/about" },
   robots: { index: true, follow: true },

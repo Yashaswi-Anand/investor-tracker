@@ -37,8 +37,17 @@ export const metadata = {
     icon: [{ url: "/icons/favicon.png", type: "image/png" }],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
-  robots: { index: true, follow: true },
-  alternates: { canonical: "/" },
+  // No robots directive here either, for the same reason as the canonical
+  // below: index,follow is already the default, so stating it in the ROOT
+  // layout bought nothing and was inherited by Next's not-found boundary —
+  // which emits its own noindex first, leaving every 404 carrying two
+  // contradictory robots tags. Pages that need noindex say so themselves.
+  // No canonical here. A canonical in the ROOT layout is inherited by every
+  // page that does not set its own — which includes Next's not-found
+  // boundary, so a 404 was serving `canonical: https://investor...` and
+  // pointing at the homepage while also carrying two contradictory robots
+  // tags. The homepage sets its own canonical in app/page.jsx, as does
+  // every other route, so nothing loses one by removing it from here.
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -126,7 +135,11 @@ export default function RootLayout({ children }) {
             </p>
             <div className="footer-row">
               <div className="footer-links">
-                <Link href="/">All IPOs</Link>
+                <Link href="/">Live dashboard</Link>
+                {/* Site-wide, so every IPO page is two clicks from every
+                    other one and /allotment stops being an orphan. */}
+                <Link href="/ipo">All IPOs</Link>
+                <Link href="/allotment">Allotment status</Link>
                 <Link href="/about">About</Link>
                 <Link href="/contact">Contact</Link>
                 <Link href="/privacy">Privacy Policy</Link>
