@@ -120,12 +120,26 @@ and their [Next.js deploy guide](https://www.hostinger.com/support/how-to-deploy
    - Build: `npm run build`
    - Start: `npm run start -- -p $PORT`  ← the `$PORT` part is required
    - Node version: 20 (or 22)
-5. **Environment variables** — add three:
+5. **Environment variables** — add four:
    ```
    NEXT_PUBLIC_SUPABASE_URL      = https://YOUR-PROJECT-REF.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY = (anon public key)
    NEXT_PUBLIC_SITE_URL          = https://investor.socialriser.com
+   NEXT_PUBLIC_CONTACT_EMAIL     = contact@socialriser.com
    ```
+
+   > Every one of these is `NEXT_PUBLIC_`, which means its value is baked
+   > into the JavaScript bundle when `npm run build` runs — it is not read
+   > at startup. **Changing one and restarting the app does nothing**: the
+   > old value is already inside the built bundle. A change here needs a
+   > fresh deploy, which is either the Deploy/Redeploy button in hPanel or
+   > any push to the repository.
+   >
+   > `NEXT_PUBLIC_CONTACT_EMAIL` is the one that decides whether the contact
+   > page shows an address or its "no public address is configured yet"
+   > fallback, and whether the Organization schema carries a contactPoint.
+   > AdSense will not approve a publisher it cannot write to, so this is a
+   > prerequisite for that application rather than a nicety.
 6. **Deploy.** First build takes a few minutes. Open the temporary URL
    Hostinger gives — the dashboard should show live IPO data (the scraper
    already filled the database in Phase 2).
