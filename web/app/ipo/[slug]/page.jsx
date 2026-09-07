@@ -30,7 +30,14 @@ import { documentsFor } from "../../../lib/documents";
 import Financials from "../../components/Financials";
 import LiveChart from "../../components/LiveChart";
 import { dailyBars } from "../../../lib/bars";
-import { categoryRows, categoryStamp, lotLadder, RETAIL_CAP, SHNI_CAP } from "../../../lib/bids";
+import {
+  categoryRows,
+  categoryScope,
+  categoryStamp,
+  lotLadder,
+  RETAIL_CAP,
+  SHNI_CAP,
+} from "../../../lib/bids";
 import NewsList from "../../components/NewsList";
 import Reveal from "../../components/Reveal";
 import ShareButton from "../../components/ShareButton";
@@ -382,6 +389,7 @@ function CategoryBook({ details }) {
   if (!rows.length) return null;
 
   const stamp = categoryStamp(details);
+  const scope = categoryScope(details);
   const anyOffered = rows.some((r) => r.offered);
   const anyApplications = rows.some((r) => r.applications);
 
@@ -424,15 +432,26 @@ function CategoryBook({ details }) {
         </table>
       </div>
       <p className="subtitle table-foot">
+        {/* Which book, then when. An issue on both exchanges has two
+            different right answers for "how many shares were bid", and a
+            table that does not say which one it is showing invites the
+            reader to compare it against the other. */}
+        {scope === "nse" ? (
+          <>
+            Bids received <strong>on NSE</strong>
+          </>
+        ) : (
+          <>
+            Bids received <strong>across NSE and BSE</strong>
+          </>
+        )}
         {stamp ? (
           <>
-            NSE last updated this table <strong>{stamp}</strong>. It can run
-            behind the subscription figures above, which come from the live
-            issue feed.{" "}
+            , as at <strong>{stamp}</strong>
           </>
         ) : null}
-        The two NII rows are parts of the NII total above them, not additions
-        to it.
+        . The two NII rows are parts of the NII total above them, not
+        additions to it.
       </p>
     </>
   );

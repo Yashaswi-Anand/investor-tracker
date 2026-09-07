@@ -375,72 +375,116 @@ def category_stamp(payload):
     return stamp
 
 
+def _first(row, *keys):
+    """The first key that is actually present. NSE spells the same field
+    differently between issues — a mainboard book says noOfsharesBid and an
+    SME one says noOfshareBid, one 's' apart — and reading only one spelling
+    silently drops every issue that uses the other."""
+    for key in keys:
+        if row.get(key) not in (None, ""):
+            return row[key]
+    return None
+
+
+def _same_day(a, b):
+    """Both stamps land on the same date. NSE writes them as
+    '07-Sep-2026 12:42:00', so the date is the first token."""
+    if not a or not b:
+        return False
+    return str(a).split()[0].lower() == str(b).split()[0].lower()
+
+
 def parse_book(detail, categories=None):
     """One row per category: who bid how much, and how many of them there are.
 
-    THE LIVE NUMBERS COME FROM bidDetails, not from ipo-active-category.
-    Both responses carry per-category share counts and they do not agree,
-    because active-category lags: on Qualiance it sat frozen at the previous
-    Friday for three days while bidDetails tracked the book through the
-    morning. Reading share counts from the stale one and application counts
-    from the live one — which is what the first version of this did — put
-    69 lakh shares next to 4,172 applications when the real figure was 2.5
-    crore. It also lost retail entirely, because active-category omits the
-    row that bidDetails calls "Individual Investors".
+    TWO RESPONSES CARRY THIS, AND THEY MEASURE DIFFERENT BOOKS.
 
-    active-category is still asked, for the two fields bidDetails lacks: the
-    shares reserved for each category and the ratio between them. Both are
-    frequently zero, and a zero in either is dropped rather than shown.
+      ipo-active-category  every exchange the issue trades on. Its totals
+                           match demandGraphALL. It can also be days stale —
+                           on Qualiance it sat frozen at the previous Friday
+                           for three days while the issue went from twelve
+                           times subscribed to twenty-three.
+      bidDetails           NSE alone. Its totals match demandGraph exactly,
+                           and it is always current, being part of the same
+                           response as the live quote.
+
+    Measured on Pranav, a mainboard issue on both exchanges: bidDetails came
+    to 3.88 crore shares and active-category to 5.83 crore, against headline
+    figures of 1.73x on NSE and 2.60x across both. Neither is wrong; they
+    count different things. So the combined book is preferred when it is
+    current, and NSE's own is used when it is not — and `scope` records
+    which, because "2.60x across both exchanges" and "1.73x on NSE" are
+    different sentences and the page should not print one as the other.
+
+    Applications only ever appear in bidDetails, so they are merged in from
+    there whichever source supplied the shares.
     """
-    rows = (detail or {}).get("bidDetails") or []
-    extra = {}
-    for row in ((categories or {}).get("dataList") or []):
+    live_rows = (detail or {}).get("bidDetails") or []
+    cat_rows = ((categories or {}).get("dataList") or [])
+
+    live_stamp = re.sub(
+        r"^As on\s*", "", str(((detail or {}).get("demandGraph") or {}).get("timestamp") or "")
+    ).strip()
+    cat_stamp = category_stamp(categories)
+
+    # The combined book only wins while it is keeping up.
+    combined = bool(cat_rows) and _same_day(cat_stamp, live_stamp)
+
+    def indexed(rows, bid_keys, offered_keys):
+        out = {}
+        for row in rows:
+            sr = str(row.get("srNo") or "").strip()
+            if sr not in _BY_SR:
+                continue
+            out[sr] = (
+                _shares(_first(row, *bid_keys)),
+                _shares(_first(row, *offered_keys)),
+            )
+        return out
+
+    live = indexed(live_rows, ("noOfsharesBid", "noOfshareBid"), ("noOfSharesOffered",))
+    both = indexed(cat_rows, ("noOfSharesBid",), ("noOfShareOffered",))
+    chosen = both if combined else live
+
+    applications = {}
+    for row in live_rows:
         sr = str(row.get("srNo") or "").strip()
-        if sr in _BY_SR:
-            extra[sr] = row
+        count = to_int(row.get("noofapplication"))
+        if sr in _BY_SR and count:
+            applications[sr] = count
 
     out = []
-    for row in rows:
-        sr = str(row.get("srNo") or "").strip()
-        entry = _BY_SR.get(sr)
-        if not entry:
-            continue
-        key, label = entry
+    for sr, key, label in CATEGORY_ROWS:
+        bid, offered = chosen.get(sr, (None, None))
+        # A reservation is fixed when the issue is structured, so either
+        # response's copy of it is as good as the other's.
+        if offered is None:
+            offered = (live.get(sr) or (None, None))[1] or (both.get(sr) or (None, None))[1]
         item = {"key": key, "label": label}
-        bid = _shares(row.get("noOfshareBid"))
         if bid is not None:
             item["bid"] = bid
-        applications = to_int(row.get("noofapplication"))
-        if applications:
-            item["applications"] = applications
-
-        # Shares RESERVED for a category is a fixed quantity set when the
-        # issue was structured; it does not go stale the way a ratio does,
-        # so it is the one thing worth taking from the lagging endpoint.
-        side = extra.get(sr) or {}
-        offered = _shares(side.get("noOfShareOffered"))
         if offered is not None:
             item["offered"] = offered
-
-        # NSE's own ratio is NOT copied. It is computed by that endpoint at
-        # the time that endpoint last ran, so on Qualiance it read 4.80x
-        # three days after the fact while the same row's live bid against
-        # the same reservation came to 17.25x — a stale number under a live
-        # timestamp, which is the exact shape of bug this table exists to
-        # stop. Divided here instead, from two figures that are both current.
-        if offered and item.get("bid"):
-            item["times"] = round(item["bid"] / offered, 2)
-
+        if applications.get(sr):
+            item["applications"] = applications[sr]
+        # NSE's own ratio is never copied: it was computed whenever that
+        # endpoint last ran, and on a stale one that is days ago. Divided
+        # here from two figures that came out of the same response together.
+        if bid is not None and offered:
+            item["times"] = round(bid / offered, 2)
         if len(item) > 2:
             out.append(item)
 
     if not out:
         return None
-    # Stamped from the demand graph, which is the live clock on the same
-    # response bidDetails rides in.
-    stamp = ((detail or {}).get("demandGraph") or {}).get("timestamp") or ""
-    stamp = re.sub(r"^As on\s*", "", str(stamp)).strip()
-    return {"at": stamp, "rows": out} if stamp else {"rows": out}
+    book = {
+        "rows": out,
+        "scope": "all" if combined else "nse",
+    }
+    stamp = cat_stamp if combined else live_stamp
+    if stamp:
+        book["at"] = stamp
+    return book
 
 
 def parse_demand(detail):

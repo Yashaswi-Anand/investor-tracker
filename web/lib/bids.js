@@ -111,7 +111,20 @@ export function categoryRows(details) {
   }));
 }
 
-/** When NSE last wrote the category table, or null if it never has. */
+/** When the book shown was last written, or null if we do not know. */
 export function categoryStamp(details) {
   return (details || {}).category_bids?.at || null;
+}
+
+/**
+ * Which exchanges the book covers: "all" for the combined NSE+BSE table,
+ * "nse" when that table was too stale to use and NSE's own was read instead.
+ *
+ * Worth printing. On a mainboard issue the two differ by half again —
+ * measured at 3.88 crore shares on NSE against 5.83 crore across both — so
+ * a reader comparing this table to a figure quoted elsewhere needs to know
+ * which of the two they are looking at.
+ */
+export function categoryScope(details) {
+  return (details || {}).category_bids?.scope || null;
 }

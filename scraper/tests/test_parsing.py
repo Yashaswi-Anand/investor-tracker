@@ -1133,6 +1133,82 @@ def test_book_takes_share_counts_from_the_live_response():
     assert "times" not in rows["nii"]
 
 
+# Two live responses, kept verbatim, because the whole difficulty of
+# parse_book is that they disagree for two unrelated reasons at once.
+PRANAV_DETAIL = {  # mainboard, on both exchanges
+    "demandGraph": {"timestamp": "As on 07-Sep-2026 12:46:01 IST"},
+    # NSE spells it noOfsharesBid here and noOfshareBid on the SME issue.
+    "bidDetails": [
+        {"srNo": "1", "noOfSharesOffered": "4701558", "noOfsharesBid": "3360"},
+        {"srNo": "2", "noOfSharesOffered": "4440395", "noOfsharesBid": "12918240"},
+        {"srNo": "3", "noOfSharesOffered": "13321184", "noOfsharesBid": "25901760"},
+    ],
+}
+PRANAV_CAT = {  # current, and counting BOTH exchanges
+    "updateTime": "Updated as on 07-Sep-2026 12:42:00",
+    "dataList": [
+        {"srNo": "1", "noOfShareOffered": "4701558", "noOfSharesBid": "19560"},
+        {"srNo": "2", "noOfShareOffered": "4440395", "noOfSharesBid": "18438000"},
+        {"srNo": "3", "noOfShareOffered": "13321184", "noOfSharesBid": "39003360"},
+    ],
+}
+QUALIANCE_DETAIL = {  # SME
+    "demandGraph": {"timestamp": "As on 07-Sep-2026 10:48:01 IST"},
+    "bidDetails": [
+        {"srNo": "1", "noOfshareBid": "2768000", "noofapplication": "4"},
+        {"srNo": "3", "noOfshareBid": "54930000", "noofapplication": "27465"},
+    ],
+}
+QUALIANCE_CAT = {  # three days stale, and missing retail entirely
+    "updateTime": "Updated as on 04-Sep-2026 17:00:00",
+    "dataList": [
+        {"srNo": "1", "noOfShareOffered": "0", "noOfSharesBid": "2765000"},
+    ],
+}
+
+
+def test_book_reads_both_of_nses_spellings():
+    """A mainboard book says noOfsharesBid and an SME one says noOfshareBid,
+    one letter apart. Reading only the SME spelling dropped the bid figures
+    off every mainboard issue while still showing their reservations — a
+    table of categories that had apparently been offered shares and bid
+    nothing, under a headline saying the issue was twice subscribed."""
+    mainboard = {r["key"]: r for r in nse.parse_book(PRANAV_DETAIL, None)["rows"]}
+    assert mainboard["retail"]["bid"] == 25901760
+    sme = {r["key"]: r for r in nse.parse_book(QUALIANCE_DETAIL, None)["rows"]}
+    assert sme["retail"]["bid"] == 54930000
+
+
+def test_book_prefers_the_combined_exchanges_while_it_is_current():
+    """ipo-active-category counts every exchange the issue trades on and
+    bidDetails counts NSE alone — 5.83 crore against 3.88 crore on the same
+    issue at the same moment. Neither is wrong, so the combined one wins
+    while it is keeping up, and the scope records which was used."""
+    book = nse.parse_book(PRANAV_DETAIL, PRANAV_CAT)
+    rows = {r["key"]: r for r in book["rows"]}
+    assert book["scope"] == "all"
+    assert book["at"] == "07-Sep-2026 12:42:00"
+    assert rows["retail"]["bid"] == 39003360, "the combined figure, not NSE's"
+    assert rows["retail"]["times"] == round(39003360 / 13321184, 2)
+
+
+def test_book_falls_back_to_nse_alone_when_the_combined_book_is_stale():
+    """Qualiance's combined table sat on the previous Friday for three days
+    while the issue went from twelve times subscribed to twenty-three. A
+    fuller book that is days old is worth less than a narrower one that is
+    current — and it also omits retail, the row most readers are in."""
+    book = nse.parse_book(QUALIANCE_DETAIL, QUALIANCE_CAT)
+    rows = {r["key"]: r for r in book["rows"]}
+    assert book["scope"] == "nse"
+    assert book["at"] == "07-Sep-2026 10:48:01 IST", "the live stamp, not the stale one"
+    assert rows["qib"]["bid"] == 2768000, "not the stale table's 2765000"
+    assert "retail" in rows, "retail exists only in the live response"
+    assert rows["retail"]["applications"] == 27465
+    # A zero reservation is not a reservation.
+    assert "offered" not in rows["qib"]
+    assert "times" not in rows["qib"]
+
+
 def test_book_never_republishes_a_stale_ratio():
     """The bug an adversarial review caught in the previous commit.
 
@@ -1179,8 +1255,14 @@ def test_book_survives_the_category_endpoint_failing():
     assert "times" not in book["rows"][0]
 
 
-def test_book_takes_offered_and_ratio_from_the_category_table():
-    """The two fields bidDetails does not carry, when NSE fills them in."""
+def test_book_uses_the_combined_table_wholesale_when_it_is_current():
+    """Which source a row comes from is decided once, for the whole row.
+
+    Taking the bid from one response and the reservation from another would
+    produce a ratio describing neither book: bidDetails counts NSE and
+    ipo-active-category counts every exchange, so 2768000 over a reservation
+    from the combined table is a number nobody measured. When the combined
+    table is current it supplies the whole row."""
     detail = {
         "demandGraph": {"timestamp": "As on 07-Sep-2026 10:48:01 IST"},
         "bidDetails": [
@@ -1195,12 +1277,16 @@ def test_book_takes_offered_and_ratio_from_the_category_table():
              "noOfSharesBid": "2765000", "noOfTotalMeant": "5.72"},
         ],
     }
-    row = nse.parse_book(detail, good)["rows"][0]
-    assert row["bid"] == 2768000        # still the live count
-    assert row["offered"] == 483000     # only available from the other one
-    # Divided here rather than copied, even when the endpoint is current:
-    # 2768000 / 483000 = 5.73, against the 5.72 it computed a moment earlier.
-    assert row["times"] == 5.73
+    book = nse.parse_book(detail, good)
+    row = book["rows"][0]
+    assert book["scope"] == "all", "the combined table is current, so it wins"
+    assert row["bid"] == 2765000, "the combined count, not NSE's 2768000"
+    assert row["offered"] == 483000
+    # Derived, never copied: 2765000 / 483000 = 5.72, which happens to agree
+    # with the ratio NSE computed — but agreement is the point, not the source.
+    assert row["times"] == round(2765000 / 483000, 2)
+    # Applications live only in bidDetails, so they cross over regardless.
+    assert row["applications"] == 4
 
 
 def test_book_is_absent_when_nothing_has_been_bid():
