@@ -26,6 +26,26 @@ export const DOCUMENT_KINDS = {
     label: "Anchor Allocation",
     note: "Who was allotted before the issue opened",
   },
+  forms: {
+    field: "forms_url",
+    label: "Application Form",
+    note: "The blank ASBA form, as filed",
+  },
+  centers: {
+    field: "bidding_centers_url",
+    label: "Bidding Centres",
+    note: "Where a physical form can be handed in",
+  },
+  preanchor: {
+    field: "preanchor_url",
+    label: "Security Parameters",
+    note: "Tick size, lot and limits as filed with the exchange",
+  },
+  postanchor: {
+    field: "postanchor_url",
+    label: "Security Parameters (post-anchor)",
+    note: "The same, restated after the anchor book closed",
+  },
 };
 
 /** The NSE archive URL for one document, or null when it was never published. */

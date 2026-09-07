@@ -105,6 +105,11 @@ def normalize_list_item(raw):
         "price_band_low": low,
         "price_band_high": high,
         "issue_size_shares": to_int(raw.get("issueSize")),
+        # NSE is telling us about its own issues, so NSE is a given; the flag
+        # says whether BSE carries it too. It is SPARSE — set on some rows and
+        # null on others, including mainboard issues that certainly do list on
+        # both — so a missing flag means NSE did not say, never "NSE only".
+        "_is_bse": str(raw.get("isBse") or "") in ("1", "true", "True"),
         "open_date": open_date,
         "close_date": close_date,
         "subscription_total": to_float(raw.get("noOfTime")),
@@ -125,8 +130,12 @@ DETAIL_TITLES = (
     ("sponsor_bank", "Sponsor Bank"),
     ("upi_cutoff", "Cut-off time for UPI Mandate"),
     ("categories", "Categories"),
+    ("upi_categories", "Sub-Categories applicable for UPI"),
     ("max_retail", "Maximum Subscription Amount for Retail"),
     ("max_employee", "Maximum Subscription Amount for El"),
+    ("max_bid_qib", "Maximum Bid Quantity for QIB"),
+    ("max_bid_nii", "Maximum Bid Quantity for NIB"),
+    ("min_order_qty", "Minimum Order Quantity"),
     ("registrar_address", "Address of the Registrar"),
     ("registrar_contact", "Contact person name"),
     ("market_timings", "IPO Market Timings"),
@@ -137,9 +146,85 @@ DETAIL_LINKS = (
     ("rhp_url", "Red Herring Prospectus"),
     ("ratios_url", "Ratios / Basis of Issue Price"),
     ("anchor_url", "Anchor Allocation Report"),
+    ("forms_url", "Sample Application Forms"),
+    ("bidding_centers_url", "Bidding Centers"),
+    # NSE spells this one two ways: "Security Parameters (Pre Anchor)" on
+    # mainboard issues and a bare "Security Parameters" on some SME ones.
+    ("preanchor_url", "Security Parameters"),
+    ("postanchor_url", "Security Parameters (Post Anchor)"),
 )
 
 _URL = re.compile(r"https?://\S+")
+
+# "fresh issue aggregating up to Rs. 3,156 million and offer for sale of up
+# to 1,33,33,300 Equity Shares" — the one line that says how much of the
+# money reaches the company and how much reaches the people selling out.
+# Every IPO page shows that split; ours had the sentence and never read it.
+# Two ways NSE writes the same thing, and both turn up: an amount with a
+# unit ("aggregating up to Rs. 3,156 million") or a share count ("of up to
+# 35,52,000 Equity Shares"). A pattern that only understood rupees read the
+# first half of Pranav's sentence and nothing of Qualiance's.
+_FRESH = re.compile(
+    r"fresh\s+issue\b[^.;]{0,80}?"
+    r"(?:Rs\.?\s*)?([\d][\d,.]*)\s*"
+    r"(million|billion|crore|cr\b|lakh|equity\s+shares?)",
+    re.I,
+)
+_OFS = re.compile(
+    r"offer\s+for\s+sale\b[^.;]{0,80}?"
+    r"(?:Rs\.?\s*)?([\d][\d,.]*)\s*"
+    r"(million|billion|crore|cr\b|lakh|equity\s+shares?)",
+    re.I,
+)
+# NSE writes amounts in millions as often as in crore. One unit out and the
+# number is off by a factor of ten, so the conversion is explicit.
+_TO_CRORE = {
+    "million": 0.1,
+    "billion": 100.0,
+    "crore": 1.0,
+    "cr": 1.0,
+    "lakh": 0.01,
+}
+
+
+def _amount(text, unit):
+    """('3,156', 'million') -> ('cr', 315.6);  ('35,52,000', 'Equity Shares')
+    -> ('shares', 3552000). Returns None when the number is not a size."""
+    try:
+        value = float(str(text).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+    if value <= 0:
+        return None
+    word = re.sub(r"\s+", " ", (unit or "")).strip().lower()
+    if word.startswith("equity share"):
+        return "shares", int(value)
+    factor = _TO_CRORE.get(word.rstrip("."))
+    if factor is None:
+        return None
+    return "cr", round(value * factor, 2)
+
+
+def parse_issue_split(text):
+    """{'fresh_cr': .., 'ofs_cr': ..} from the Issue Size sentence.
+
+    Only the components NSE actually states are returned. A pure OFS issue
+    has no fresh component at all, and inventing a zero for it would read as
+    "the company raises nothing" rather than "this is entirely a sale by
+    existing holders" — which is the same fact but not the same sentence.
+    """
+    if not text:
+        return None
+    split = {}
+    for name, pattern in (("fresh", _FRESH), ("ofs", _OFS)):
+        match = pattern.search(text)
+        if not match:
+            continue
+        parsed = _amount(*match.groups())
+        if parsed:
+            kind, value = parsed
+            split[f"{name}_{kind}"] = value
+    return split or None
 
 
 def parse_company_details(info):
@@ -159,7 +244,14 @@ def parse_company_details(info):
             details[key] = value[:400]
 
     for key, prefix in DETAIL_LINKS:
-        title = next((t for t in info if t.startswith(prefix)), None)
+        # Mainboard issues title it "Security Parameters (Pre Anchor)", some
+        # SME ones just "Security Parameters" — so the pre-anchor prefix has
+        # to be the short one, which would otherwise also match the post
+        # document on an issue that only published that.
+        candidates = [t for t in info if t.startswith(prefix)]
+        if key == "preanchor_url":
+            candidates = [t for t in candidates if "post" not in t.lower()]
+        title = candidates[0] if candidates else None
         match = _URL.search(info.get(title) or "") if title else None
         if match:
             details[key] = match.group(0).rstrip('">,')
@@ -199,13 +291,27 @@ def parse_detail(detail, board=None):
         ]
         manager_list = parts[:10] or None
 
+    issue_size = (info.get("Issue Size") or "").strip('" ') or None
+
+    # Everything that belongs in the details blob rather than a column,
+    # gathered here so parse_detail stays the one place that reads a
+    # ipo-detail response.
+    details = parse_company_details(info) or {}
+    for key, value in (
+        ("issue_split", parse_issue_split(issue_size)),
+        ("applications", parse_applications(detail)),
+        ("demand", parse_demand(detail)),
+    ):
+        if value:
+            details[key] = value
+
     fields = {
         "lot_size": lot,
         "face_value": to_float(info.get("Face Value")),
-        "issue_size": (info.get("Issue Size") or "").strip('" ') or None,
+        "issue_size": issue_size,
         "lead_managers": manager_list,
         "registrar": (info.get("Name of the Registrar") or "").strip('" ') or None,
-        "details": parse_company_details(info),
+        "details": details or None,
     }
     if low is not None:
         fields["price_band_low"] = low
@@ -220,14 +326,153 @@ def parse_detail(detail, board=None):
     return {key: value for key, value in fields.items() if value is not None}
 
 
+# ---------------------------------------------------------------- bidding ---
+
+# NSE numbers the category rows, and the numbering is the only stable thing
+# about them: the labels run to eighty characters and change wording between
+# mainboard and SME, but "2.1" has meant big-ticket NII on every issue seen.
+# Sub-rows (1(a), 2.1(b) ...) split a category by investor type and are left
+# out — they triple the table's height to answer a question nobody asked.
+CATEGORY_ROWS = (
+    ("1", "qib", "QIB"),
+    ("2", "nii", "NII / HNI"),
+    ("2.1", "nii_big", "bNII · bids above \u20b910L"),
+    ("2.2", "nii_small", "sNII · bids \u20b92L\u2013\u20b910L"),
+    ("3", "retail", "Retail"),
+    ("4", "employee", "Employee"),
+    ("5", "shareholder", "Shareholder"),
+)
+_BY_SR = {sr: (key, label) for sr, key, label in CATEGORY_ROWS}
+
+
+def _shares(value):
+    """NSE writes share counts as '4643000', '9719000.0' or ''."""
+    number = to_float(value)
+    return int(number) if number and number > 0 else None
+
+
+def parse_categories(payload):
+    """The category table behind the one subscription figure we kept.
+
+    ipo-active-category has always returned, per category, the shares
+    offered, the shares bid for, and the ratio between them. Only the ratio
+    was read, and only for four categories — so the page could say retail
+    was subscribed 3.86 times but not how many shares that was, and could
+    not say anything at all about the split of NII into bids above and below
+    ten lakh rupees, which is the split that decides which HNI bucket an
+    applicant is competing in.
+
+    Rows whose numbers are all absent are dropped: NSE publishes the shape
+    of the table from the moment an issue opens, hours before there is
+    anything in it.
+    """
+    rows = (payload or {}).get("dataList") or []
+    out = []
+    for row in rows:
+        sr = str(row.get("srNo") or "").strip()
+        entry = _BY_SR.get(sr)
+        if not entry:
+            continue
+        key, label = entry
+        offered = _shares(row.get("noOfShareOffered"))
+        bid = _shares(row.get("noOfSharesBid"))
+        times = to_float(row.get("noOfTotalMeant"))
+        if offered is None and bid is None and not times:
+            continue
+        item = {"key": key, "label": label}
+        if offered is not None:
+            item["offered"] = offered
+        if bid is not None:
+            item["bid"] = bid
+        if times:
+            item["times"] = round(times, 2)
+        out.append(item)
+    return out or None
+
+
+def parse_applications(detail):
+    """How many applications each category actually sent in.
+
+    From bidDetails, which rides along in the same ipo-detail response the
+    lot size comes from. Subscription in times says how wanted an issue is;
+    the application count says how many people are standing in the queue,
+    and in an oversubscribed retail book that is the number that decides
+    whether anyone gets a full lot.
+    """
+    rows = (detail or {}).get("bidDetails") or []
+    out = []
+    for row in rows:
+        sr = str(row.get("srNo") or "").strip()
+        entry = _BY_SR.get(sr)
+        if not entry:
+            continue
+        key, label = entry
+        count = to_int(row.get("noofapplication"))
+        if not count:
+            continue
+        out.append({"key": key, "label": label, "applications": count})
+    return out or None
+
+
+def parse_demand(detail):
+    """The demand curve: cumulative shares bid for at each price in the band.
+
+    NSE publishes it, no aggregator shows it, and it answers a question the
+    subscription figure cannot: whether the book is stacked at the cut-off
+    price or spread down the band. Bids at the floor of the band are the
+    ones that get nothing if the issue prices at the top.
+    """
+    graph = (detail or {}).get("demandGraph") or {}
+    points = (detail or {}).get("demandDataNSE") or []
+    curve = []
+    for point in points:
+        price = to_float(point.get("price"))
+        qty = to_int(str(point.get("cumQty") or "").replace(",", ""))
+        if price and qty:
+            curve.append({"price": price, "qty": qty})
+    if not curve:
+        return None
+    curve.sort(key=lambda p: p["price"])
+    demand = {"curve": curve[:40]}
+    total = to_int(graph.get("totalBidRecieved") or graph.get("TOTAL_BIDS"))
+    if total:
+        demand["total_bids"] = total
+    offered = to_int(graph.get("totalIssueSize"))
+    if offered:
+        demand["offered"] = offered
+    times = to_float(graph.get("noOfTimesIssueSubscribed"))
+    if times:
+        demand["times"] = round(times, 2)
+    stamp = (graph.get("timestamp") or "").replace("As on ", "").strip()
+    if stamp:
+        demand["at"] = stamp
+    return demand
+
+
 def parse_subscription(payload):
-    """Category-wise subscription (in times) from ipo-active-category."""
+    """Category-wise subscription (in times) from ipo-active-category.
+
+    ZERO IS NOT ALWAYS ZERO. NSE publishes this table from the moment an
+    issue opens, and on some issues — every SME one seen so far — it leaves
+    every ratio at "0.00" for the whole bidding period while filling in the
+    share counts beside them. Qualiance sat on the site reading 0.00x in
+    every category while NSE's own demand graph, the same response's
+    activeCat timestamp, and the issue list all said 12.51x: the list row
+    had the right number and this function overwrote it with a zero.
+
+    So a ratio of zero is only believed when nothing has been bid. Once
+    shares are in the book, a zero here means NSE has not published the
+    ratio, and the honest thing is to write nothing and leave the figure
+    that came from the issue list standing.
+    """
     rows = (payload or {}).get("dataList") or []
     result = {}
     for row in rows:
         category = (row.get("category") or "").lower()
         times = to_float(row.get("noOfTotalMeant"))
         if times is None:
+            continue
+        if not times and _shares(row.get("noOfSharesBid")):
             continue
         value = round(times, 2)
         if "qualified institutional" in category:
@@ -241,6 +486,22 @@ def parse_subscription(payload):
         elif category == "total":
             result["subscription_total"] = value
     return result
+
+
+def _add_detail(row, key, value):
+    """Add one key to a row's details without dropping what is already there.
+
+    parse_detail builds the blob and the subscription call arrives after it,
+    so assigning row["details"] a second time would throw away the lot size
+    metadata to save a category table.
+    """
+    if not value:
+        return
+    details = row.get("details")
+    if not isinstance(details, dict):
+        details = {}
+        row["details"] = details
+    details[key] = value
 
 
 def fetch():
@@ -284,6 +545,8 @@ def fetch():
         if not symbol:
             continue
 
+        is_bse = row.pop("_is_bse", False)
+
         if config.FETCH_DETAILS:
             detail = _get_json(
                 session, config.nse_url("detail", symbol=symbol, series=series)
@@ -302,7 +565,17 @@ def fetch():
                 failures.append(f"subscription:{symbol}")
             else:
                 row.update(parse_subscription(subscription))
+                categories = parse_categories(subscription)
+                if categories:
+                    _add_detail(row, "category_bids", categories)
             time.sleep(config.DELAY_SECONDS)
+
+        # Only claimed when NSE actually set the flag. Writing ["NSE"] on a
+        # row whose flag was simply absent would put "Listing At: NSE" under a
+        # mainboard issue that lists on both — a wrong fact where the page
+        # could just as well carry none.
+        if is_bse:
+            _add_detail(row, "exchanges", ["NSE", "BSE"])
 
     failures = list_failures + failures
 

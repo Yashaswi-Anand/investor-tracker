@@ -975,6 +975,106 @@ def test_derive_status_promotes_allotment_to_listed_on_the_day():
     )
 
 
+def test_zero_subscription_never_overwrites_a_real_figure():
+    """The bug this exists to prevent.
+
+    NSE fills ipo-active-category's ratio column with "0.00" for the whole
+    bidding period on some issues — every SME one seen so far — while the
+    share counts beside it climb. Qualiance read 0.00x in every category on
+    the live site while the issue list, the demand graph and the same
+    response's own timestamp all said 12.51x. The list row had it right and
+    this parser wrote a zero over it.
+    """
+    payload = {
+        "dataList": [
+            {
+                "srNo": "1",
+                "category": "Qualified Institutional Buyers(QIBs)",
+                "noOfShareOffered": "0",
+                "noOfSharesBid": "2765000",
+                "noOfTotalMeant": "0.00",
+            },
+            {
+                "srNo": "2",
+                "category": "Non Institutional Investors",
+                "noOfShareOffered": "0",
+                "noOfSharesBid": "6954000",
+                "noOfTotalMeant": "0.00",
+            },
+        ]
+    }
+    # Shares were bid, so a 0.00 ratio is NSE not publishing one.
+    assert nse.parse_subscription(payload) == {}
+
+
+def test_zero_subscription_is_kept_when_nothing_was_bid():
+    """The other half: before the first bid, zero is the truth."""
+    payload = {
+        "dataList": [
+            {
+                "srNo": "1",
+                "category": "Qualified Institutional Buyers(QIBs)",
+                "noOfShareOffered": "100",
+                "noOfSharesBid": "0",
+                "noOfTotalMeant": "0.00",
+            }
+        ]
+    }
+    assert nse.parse_subscription(payload) == {"subscription_qib": 0.0}
+
+
+def test_categories_carry_the_nii_split():
+    """NII splits at ten lakh, and which side a bid falls on decides which
+    pool it is allotted from. NSE numbers those rows 2.1 and 2.2."""
+    payload = {
+        "dataList": [
+            {"srNo": "Sr.No.", "category": "Category"},
+            {"srNo": "2", "category": "Non Institutional Investors",
+             "noOfShareOffered": "1000", "noOfSharesBid": "6954000", "noOfTotalMeant": "3.5"},
+            {"srNo": "2.1", "category": "Non Institutional Investors(Bid amount of more than Ten Lakh Rupees)",
+             "noOfShareOffered": "600", "noOfSharesBid": "4643000", "noOfTotalMeant": "2.1"},
+            {"srNo": "2.2", "category": "Non Institutional Investors(Bid amount of more than Two Lakh Rupees upto Ten Lakh Rupees)",
+             "noOfShareOffered": "400", "noOfSharesBid": "2311000", "noOfTotalMeant": "1.4"},
+            # Sub-rows split a category by investor type; they are not rungs.
+            {"srNo": "2.1(a)", "category": "Corporates", "noOfSharesBid": "19000"},
+        ]
+    }
+    rows = nse.parse_categories(payload)
+    assert [r["key"] for r in rows] == ["nii", "nii_big", "nii_small"]
+    assert rows[1]["bid"] == 4643000
+    assert rows[2]["offered"] == 400
+
+
+def test_issue_split_reads_rupees_and_shares():
+    """NSE states the fresh/OFS halves either as an amount with a unit or as
+    a share count, and both turn up in the same week."""
+    rupees = nse.parse_issue_split(
+        "Initial public offer comprising of fresh issue aggregating up to "
+        "Rs. 3,156 million and offer for sale of up to 2,856,869 Equity Shares"
+    )
+    assert rupees == {"fresh_cr": 315.6, "ofs_shares": 2856869}
+
+    shares = nse.parse_issue_split(
+        "Initial Public Offer comprising of Fresh Issue of up to 35,52,000 "
+        "Equity Shares (including Market Maker portion of 1,80,000 shares)"
+    )
+    assert shares == {"fresh_shares": 3552000}
+
+    assert nse.parse_issue_split("") is None
+
+
+def test_missing_bse_flag_is_not_an_nse_only_claim():
+    """isBse is sparse: NSE sets it on some rows and leaves it null on
+    others, mainboard issues included. Absent means NSE did not say, and
+    saying "Listing At: NSE" on that would be a wrong fact, not a thin one."""
+    assert nse.normalize_list_item(
+        {"companyName": "X Ltd", "symbol": "X", "isBse": "1"}
+    )["_is_bse"] is True
+    assert nse.normalize_list_item(
+        {"companyName": "X Ltd", "symbol": "X", "isBse": None}
+    )["_is_bse"] is False
+
+
 def test_price_window_matches_what_the_chart_keeps():
     """Carrying a row longer than the chart displays would be work with
     nowhere to go; carrying it for less would truncate the chart."""
