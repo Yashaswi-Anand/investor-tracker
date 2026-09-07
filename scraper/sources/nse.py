@@ -299,7 +299,6 @@ def parse_detail(detail, board=None):
     details = parse_company_details(info) or {}
     for key, value in (
         ("issue_split", parse_issue_split(issue_size)),
-        ("applications", parse_applications(detail)),
         ("demand", parse_demand(detail)),
     ):
         if value:
@@ -376,61 +375,30 @@ def category_stamp(payload):
     return stamp
 
 
-def parse_categories(payload):
-    """The category table behind the one subscription figure we kept.
+def parse_book(detail, categories=None):
+    """One row per category: who bid how much, and how many of them there are.
 
-    ipo-active-category has always returned, per category, the shares
-    offered, the shares bid for, and the ratio between them. Only the ratio
-    was read, and only for four categories — so the page could say retail
-    was subscribed 3.86 times but not how many shares that was, and could
-    not say anything at all about the split of NII into bids above and below
-    ten lakh rupees, which is the split that decides which HNI bucket an
-    applicant is competing in.
+    THE LIVE NUMBERS COME FROM bidDetails, not from ipo-active-category.
+    Both responses carry per-category share counts and they do not agree,
+    because active-category lags: on Qualiance it sat frozen at the previous
+    Friday for three days while bidDetails tracked the book through the
+    morning. Reading share counts from the stale one and application counts
+    from the live one — which is what the first version of this did — put
+    69 lakh shares next to 4,172 applications when the real figure was 2.5
+    crore. It also lost retail entirely, because active-category omits the
+    row that bidDetails calls "Individual Investors".
 
-    Rows whose numbers are all absent are dropped: NSE publishes the shape
-    of the table from the moment an issue opens, hours before there is
-    anything in it.
-    """
-    stamp = category_stamp(payload)
-    if not stamp:
-        return None
-
-    rows = (payload or {}).get("dataList") or []
-    out = []
-    for row in rows:
-        sr = str(row.get("srNo") or "").strip()
-        entry = _BY_SR.get(sr)
-        if not entry:
-            continue
-        key, label = entry
-        offered = _shares(row.get("noOfShareOffered"))
-        bid = _shares(row.get("noOfSharesBid"))
-        times = to_float(row.get("noOfTotalMeant"))
-        if offered is None and bid is None and not times:
-            continue
-        item = {"key": key, "label": label}
-        if offered is not None:
-            item["offered"] = offered
-        if bid is not None:
-            item["bid"] = bid
-        if times:
-            item["times"] = round(times, 2)
-        out.append(item)
-    # The age rides with the rows. This endpoint is routinely days behind
-    # the issue list, and a share count with no date on it reads as live.
-    return {"at": stamp, "rows": out} if out else None
-
-
-def parse_applications(detail):
-    """How many applications each category actually sent in.
-
-    From bidDetails, which rides along in the same ipo-detail response the
-    lot size comes from. Subscription in times says how wanted an issue is;
-    the application count says how many people are standing in the queue,
-    and in an oversubscribed retail book that is the number that decides
-    whether anyone gets a full lot.
+    active-category is still asked, for the two fields bidDetails lacks: the
+    shares reserved for each category and the ratio between them. Both are
+    frequently zero, and a zero in either is dropped rather than shown.
     """
     rows = (detail or {}).get("bidDetails") or []
+    extra = {}
+    for row in ((categories or {}).get("dataList") or []):
+        sr = str(row.get("srNo") or "").strip()
+        if sr in _BY_SR:
+            extra[sr] = row
+
     out = []
     for row in rows:
         sr = str(row.get("srNo") or "").strip()
@@ -438,11 +406,32 @@ def parse_applications(detail):
         if not entry:
             continue
         key, label = entry
-        count = to_int(row.get("noofapplication"))
-        if not count:
-            continue
-        out.append({"key": key, "label": label, "applications": count})
-    return out or None
+        item = {"key": key, "label": label}
+        bid = _shares(row.get("noOfshareBid"))
+        if bid is not None:
+            item["bid"] = bid
+        applications = to_int(row.get("noofapplication"))
+        if applications:
+            item["applications"] = applications
+
+        side = extra.get(sr) or {}
+        offered = _shares(side.get("noOfShareOffered"))
+        if offered is not None:
+            item["offered"] = offered
+        times = to_float(side.get("noOfTotalMeant"))
+        if times:
+            item["times"] = round(times, 2)
+
+        if len(item) > 2:
+            out.append(item)
+
+    if not out:
+        return None
+    # Stamped from the demand graph, which is the live clock on the same
+    # response bidDetails rides in.
+    stamp = ((detail or {}).get("demandGraph") or {}).get("timestamp") or ""
+    stamp = re.sub(r"^As on\s*", "", str(stamp)).strip()
+    return {"at": stamp, "rows": out} if stamp else {"rows": out}
 
 
 def parse_demand(detail):
@@ -585,6 +574,7 @@ def fetch():
 
         is_bse = row.pop("_is_bse", False)
 
+        detail = None
         if config.FETCH_DETAILS:
             detail = _get_json(
                 session, config.nse_url("detail", symbol=symbol, series=series)
@@ -611,9 +601,9 @@ def fetch():
                 row.update(parsed)
                 if before and not row.get("subscription_total"):
                     row["subscription_total"] = before
-                categories = parse_categories(subscription)
-                if categories:
-                    _add_detail(row, "category_bids", categories)
+                book = parse_book(detail, subscription)
+                if book:
+                    _add_detail(row, "category_bids", book)
                 # Writing nothing is not enough on its own. The old parser
                 # already stored 0.00 in these columns, and silence leaves a
                 # stored value alone — so the page would show a real total

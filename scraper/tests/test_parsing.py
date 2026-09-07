@@ -1077,24 +1077,91 @@ def test_unstamped_category_table_says_nothing():
         ],
     }
     assert nse.parse_subscription(payload) == {}
-    assert nse.parse_categories(payload) is None
     assert nse.category_stamp(payload) is None
 
 
-def test_category_table_carries_its_own_age():
-    """This endpoint was measured three days behind the issue list on a live
-    issue, so its numbers may not travel without their date."""
-    payload = {
-        "updateTime": "Updated as on 04-Sep-2026 17:00:00",
-        "dataList": [
-            {"srNo": "1", "category": "Qualified Institutional Buyers(QIBs)",
-             "noOfShareOffered": "483000", "noOfSharesBid": "2765000", "noOfTotalMeant": "5.72"},
+def test_category_stamp_reads_a_written_table():
+    """The stamp is what separates a table NSE has filled from one it has
+    only declared. Kept because parse_subscription still turns on it."""
+    assert nse.category_stamp(
+        {"updateTime": "Updated as on 04-Sep-2026 17:00:00"}
+    ) == "04-Sep-2026 17:00:00"
+    assert nse.category_stamp({"updateTime": "Updated as on null"}) is None
+    assert nse.category_stamp({}) is None
+
+
+def test_book_takes_share_counts_from_the_live_response():
+    """The bug this exists to prevent.
+
+    Both responses carry per-category share counts and they disagree, because
+    ipo-active-category lags — three days, on Qualiance, while bidDetails
+    tracked the book through the morning. Building the table from the stale
+    one put 69 lakh shares beside 4,172 applications when the real figure was
+    2.5 crore, and lost retail entirely, because active-category omits the
+    row bidDetails calls "Individual Investors".
+    """
+    detail = {
+        "demandGraph": {"timestamp": "As on 07-Sep-2026 10:48:01 IST"},
+        "bidDetails": [
+            {"srNo": "1", "category": "QIBs",
+             "noOfshareBid": "2768000", "noofapplication": "4"},
+            {"srNo": "2", "category": "Non Institutional Investors",
+             "noOfshareBid": "24998000", "noofapplication": "4172"},
+            {"srNo": "3", "category": "Individual Investors (IND)",
+             "noOfshareBid": "54930000", "noofapplication": "27465"},
         ],
     }
-    assert nse.category_stamp(payload) == "04-Sep-2026 17:00:00"
-    parsed = nse.parse_categories(payload)
-    assert parsed["at"] == "04-Sep-2026 17:00:00"
-    assert parsed["rows"][0]["key"] == "qib"
+    stale = {
+        "updateTime": "Updated as on 04-Sep-2026 17:00:00",
+        "dataList": [
+            # Three days old, and 3.6x under the live figure.
+            {"srNo": "2", "category": "Non Institutional Investors",
+             "noOfShareOffered": "0", "noOfSharesBid": "6954000",
+             "noOfTotalMeant": "0.00"},
+        ],
+    }
+    book = nse.parse_book(detail, stale)
+
+    assert book["at"] == "07-Sep-2026 10:48:01 IST"
+    rows = {row["key"]: row for row in book["rows"]}
+    # Retail exists only in the live response, and must survive.
+    assert set(rows) == {"qib", "nii", "retail"}
+    assert rows["nii"]["bid"] == 24998000, "the stale 6954000 must not win"
+    assert rows["retail"]["applications"] == 27465
+    # A zero offered / zero ratio from the stale table is dropped, not shown.
+    assert "offered" not in rows["nii"]
+    assert "times" not in rows["nii"]
+
+
+def test_book_takes_offered_and_ratio_from_the_category_table():
+    """The two fields bidDetails does not carry, when NSE fills them in."""
+    detail = {
+        "demandGraph": {"timestamp": "As on 07-Sep-2026 10:48:01 IST"},
+        "bidDetails": [
+            {"srNo": "1", "category": "QIBs",
+             "noOfshareBid": "2768000", "noofapplication": "4"},
+        ],
+    }
+    good = {
+        "updateTime": "Updated as on 07-Sep-2026 10:45:00",
+        "dataList": [
+            {"srNo": "1", "category": "QIBs", "noOfShareOffered": "483000",
+             "noOfSharesBid": "2765000", "noOfTotalMeant": "5.72"},
+        ],
+    }
+    row = nse.parse_book(detail, good)["rows"][0]
+    assert row["bid"] == 2768000        # still the live count
+    assert row["offered"] == 483000     # only available from the other one
+    assert row["times"] == 5.72
+
+
+def test_book_is_absent_when_nothing_has_been_bid():
+    """A row of nothing but a label is not a row."""
+    assert nse.parse_book({"bidDetails": [
+        {"srNo": "1", "category": "QIBs", "noOfshareBid": "0",
+         "noofapplication": "0"},
+    ]}) is None
+    assert nse.parse_book({}) is None
 
 
 def test_categories_carry_the_nii_split():
@@ -1114,7 +1181,18 @@ def test_categories_carry_the_nii_split():
             {"srNo": "2.1(a)", "category": "Corporates", "noOfSharesBid": "19000"},
         ]
     }
-    rows = nse.parse_categories(payload)["rows"]
+    rows = nse.parse_book(
+        {
+            "bidDetails": [
+                {"srNo": "2", "noOfshareBid": "6954000"},
+                {"srNo": "2.1", "noOfshareBid": "4643000"},
+                {"srNo": "2.2", "noOfshareBid": "2311000"},
+                # Sub-rows split a category by investor type; not rungs.
+                {"srNo": "2.1(a)", "noOfshareBid": "19000"},
+            ]
+        },
+        payload,
+    )["rows"]
     assert [r["key"] for r in rows] == ["nii", "nii_big", "nii_small"]
     assert rows[1]["bid"] == 4643000
     assert rows[2]["offered"] == 400
