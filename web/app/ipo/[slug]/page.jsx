@@ -908,6 +908,24 @@ export default async function IpoDetailPage({ params }) {
               <SubscriptionBar label="Employee" value={ipo.subscription_emp} />
               <SubscriptionBar label="Total" value={ipo.subscription_total} />
               </Reveal>
+              {/* Only a total, because NSE's category endpoint had nothing in
+                  it. Saying so beats leaving four categories silently absent,
+                  and it certainly beats the 0.00x that used to stand in their
+                  place — the exchange publishes the overall figure live and
+                  the category split on its own schedule, sometimes days
+                  behind and sometimes not at all. */}
+              {ipo.subscription_total != null &&
+                [
+                  ipo.subscription_qib,
+                  ipo.subscription_nii,
+                  ipo.subscription_retail,
+                  ipo.subscription_emp,
+                ].every((value) => value == null) && (
+                  <p className="subtitle subtitle-flush">
+                    NSE has published the overall figure but not the
+                    category-wise split for this issue yet.
+                  </p>
+                )}
             </>
           )}
           <CategoryBook details={ipo.details} />

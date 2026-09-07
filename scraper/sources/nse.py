@@ -344,6 +344,15 @@ CATEGORY_ROWS = (
 )
 _BY_SR = {sr: (key, label) for sr, key, label in CATEGORY_ROWS}
 
+# The per-category columns this endpoint owns. Not subscription_total, which
+# comes from the issue list and is never this endpoint's to blank.
+CATEGORY_COLUMNS = (
+    "subscription_qib",
+    "subscription_nii",
+    "subscription_retail",
+    "subscription_emp",
+)
+
 
 def _shares(value):
     """NSE writes share counts as '4643000', '9719000.0' or ''."""
@@ -598,12 +607,25 @@ def fetch():
                 # replace one with nothing: a zero here over a real number
                 # there is how an issue 0.20x away came to read 0.00x.
                 before = row.get("subscription_total")
-                row.update(parse_subscription(subscription))
+                parsed = parse_subscription(subscription)
+                row.update(parsed)
                 if before and not row.get("subscription_total"):
                     row["subscription_total"] = before
                 categories = parse_categories(subscription)
                 if categories:
                     _add_detail(row, "category_bids", categories)
+                # Writing nothing is not enough on its own. The old parser
+                # already stored 0.00 in these columns, and silence leaves a
+                # stored value alone — so the page would show a real total
+                # over a row of fabricated zeros. Say the columns are unknown
+                # and let the page print nothing for them.
+                unknown = [
+                    column
+                    for column in CATEGORY_COLUMNS
+                    if column not in parsed
+                ]
+                if unknown:
+                    row["_clear"] = unknown
             time.sleep(config.DELAY_SECONDS)
 
         # Only claimed when NSE actually set the flag. Writing ["NSE"] on a

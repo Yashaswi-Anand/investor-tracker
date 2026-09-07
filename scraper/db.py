@@ -271,6 +271,14 @@ def apply_locks(rows, existing):
             for key, value in payload.items()
             if key in ("slug", "name") or not _is_empty(value)
         }
+        # The deliberate exception. Silence means "I have nothing to add",
+        # which is why it can never blank a column — but a source sometimes
+        # knows the stored value is WRONG, and has no right value to put
+        # there. Naming those columns in _clear says so explicitly, and a
+        # locked column still wins.
+        for key in row.get("_clear") or ():
+            if key not in PROTECTED_COLUMNS and key not in locked:
+                payload[key] = None
         cleaned.append(payload)
     return cleaned
 
