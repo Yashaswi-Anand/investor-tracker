@@ -42,7 +42,7 @@ export default async function sitemap() {
     // /allotment is here now: it is linked, indexable, and answers a query
     // family — "<company> IPO allotment status" — that nothing else here
     // does. It was excluded when nothing linked to it, which has changed.
-    ...["/news", "/allotment", "/about", "/contact"].map((path) => ({
+    ...["/news", "/allotment", "/about", "/editorial", "/contact"].map((path) => ({
       url: `${SITE.url}${path}`,
       lastModified: newest,
       changeFrequency: "daily",

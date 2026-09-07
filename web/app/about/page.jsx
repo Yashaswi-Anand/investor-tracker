@@ -163,6 +163,7 @@ export default function AboutPage() {
         </p>
 
         <p className="back-row">
+          <Link href="/editorial">Editorial standards</Link> ·{" "}
           <Link href="/">← Back to all IPOs</Link> ·{" "}
           <Link href="/contact">Contact</Link> ·{" "}
           <Link href="/privacy">Privacy Policy</Link>
