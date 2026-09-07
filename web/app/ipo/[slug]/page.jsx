@@ -26,7 +26,7 @@ import {
   STATUS_LABEL,
   times,
 } from "../../../lib/format";
-import { documentsFor } from "../../../lib/documents";
+import { documentsFor, documentUrl } from "../../../lib/documents";
 import Financials from "../../components/Financials";
 import LiveChart from "../../components/LiveChart";
 import { dailyBars } from "../../../lib/bars";
@@ -1121,6 +1121,34 @@ export default async function IpoDetailPage({ params }) {
             {!(Array.isArray(manual.strengths) && manual.strengths.length) && (
               <p className="subtitle sub-hist-caption">
                 As stated by the company in its prospectus — not our assessment.
+              </p>
+            )}
+            {/* Strengths render on 17 of 25 issues and risks on none: the
+                source publishes the company's competitive strengths and not
+                its risk factors. Printing one half of a prospectus argument
+                and staying silent about the other is the wrong shape for a
+                page people read before committing money, so where the other
+                half is missing the page says where to find it rather than
+                leaving the omission to be noticed. */}
+            {!(Array.isArray(risks) && risks.length > 0) && (
+              <p className="subtitle sub-hist-caption">
+                <strong>The company&apos;s own risk factors are not shown
+                here.</strong>{" "}
+                {documentUrl(ipo, "rhp") ? (
+                  <>
+                    They run to dozens of pages in the{" "}
+                    <a href={`/api/doc/${ipo.slug}/rhp`} rel="nofollow">
+                      Red Herring Prospectus
+                    </a>
+                    , under &ldquo;Risk Factors&rdquo;, and are worth the read
+                    before applying.
+                  </>
+                ) : (
+                  <>
+                    They are set out under &ldquo;Risk Factors&rdquo; in the
+                    company&apos;s prospectus.
+                  </>
+                )}
               </p>
             )}
           </section>
