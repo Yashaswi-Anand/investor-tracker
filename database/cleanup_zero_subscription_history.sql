@@ -36,6 +36,35 @@
 -- This is not reversible. The rows carry no information, but they are rows.
 -- ===========================================================================
 
+-- IF THIS APPEARED TO RUN AND CHANGED NOTHING, READ THIS FIRST.
+--
+-- subscription_history has RLS enabled and carries a SELECT policy only —
+-- there is no DELETE policy on it (see the policy block in schema.sql). A
+-- DELETE issued as anon or authenticated therefore matches no rows and
+-- reports "Success. No rows returned", which looks exactly like a delete
+-- that worked. Only postgres (the SQL Editor's default) and the service_role
+-- key bypass RLS.
+--
+-- So run statement 0 below rather than the DELETE on its own: it deletes and
+-- counts in the same statement, and a result of 0 means RLS stopped it, not
+-- that the table was already clean.
+
+-- 0. THE ONE TO RUN. Deletes and tells you how many went.
+with gone as (
+  delete from public.subscription_history
+  where coalesce(qib, 0)    = 0
+    and coalesce(nii, 0)    = 0
+    and coalesce(retail, 0) = 0
+    and coalesce(total, 0)  = 0
+  returning 1
+)
+select count(*) as rows_deleted from gone;
+-- Expected on 7 Sep 2026: 405. A 0 means RLS blocked it — check the role
+-- selector in the SQL Editor is postgres, then run it again.
+
+
+-- The rest is the same thing taken slowly, if you would rather look first.
+
 -- 1. LOOK FIRST. What would go, and from which issues.
 select
   slug,
