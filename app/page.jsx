@@ -7,6 +7,7 @@ import {
 } from "../lib/data";
 import { fmtStamp, safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
+import MarketSummary from "./components/MarketSummary";
 import Reveal from "./components/Reveal";
 import TopGmp from "./components/TopGmp";
 
@@ -149,6 +150,18 @@ export default async function HomePage() {
           </Reveal>
         </div>
       </section>
+
+      {/* Before the table, because it is the answer someone arrives with a
+          question for — and because a table is unquotable by anything that is
+          not a person reading it. */}
+      <div className="container">
+        <MarketSummary
+          open={open}
+          upcoming={upcoming}
+          listed={ipos.filter((i) => i.status === "listed")}
+          stamp={lastUpdated ? fmtStamp(lastUpdated) : null}
+        />
+      </div>
 
       <div className="container sheet">
         <IpoList ipos={ipos} />
