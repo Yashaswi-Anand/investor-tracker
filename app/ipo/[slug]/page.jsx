@@ -994,7 +994,16 @@ export default async function IpoDetailPage({ params }) {
                   and it certainly beats the 0.00x that used to stand in their
                   place — the exchange publishes the overall figure live and
                   the category split on its own schedule, sometimes days
-                  behind and sometimes not at all. */}
+                  behind and sometimes not at all.
+
+                  There are two different reasons the bars can be bare, and
+                  one sentence covered both until a table appeared underneath
+                  it saying the opposite. On an SME issue NSE publishes the
+                  bids category by category and puts a zero against every
+                  reservation, so the split is right there and only the
+                  multiple is unobtainable — telling that reader the split has
+                  not been published is a plain contradiction of the next
+                  thing on the page. */}
               {ipo.subscription_total != null &&
                 [
                   ipo.subscription_qib,
@@ -1003,8 +1012,9 @@ export default async function IpoDetailPage({ params }) {
                   ipo.subscription_emp,
                 ].every((value) => value == null) && (
                   <p className="subtitle subtitle-flush">
-                    NSE has published the overall figure but not the
-                    category-wise split for this issue yet.
+                    {categoryRows(details).some((row) => row.bid != null)
+                      ? "NSE publishes what each category bid for on this issue but not how many shares were reserved for it, so the bids below stand without a multiple against them."
+                      : "NSE has published the overall figure but not the category-wise split for this issue yet."}
                   </p>
                 )}
             </>
