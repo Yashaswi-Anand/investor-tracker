@@ -190,8 +190,12 @@ export default function TermsPage() {
 
         <h2>Contact</h2>
         <p>
-          Questions about these terms can be sent to the contact address listed
-          on our Google Play listing.
+          {/* This used to send readers to "the contact address listed on our
+              Google Play listing" — an app that was never published, so the
+              only contact route the terms offered was a dead end, on the one
+              document where being reachable is the point. */}
+          Questions about these terms can be sent to us on the{" "}
+          <Link href="/contact">contact page</Link>.
         </p>
 
         <p className="back-row">
