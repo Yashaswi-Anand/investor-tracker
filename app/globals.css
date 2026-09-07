@@ -1054,6 +1054,15 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .news-card,
 .card.faq { margin-top: 14px; }
 
+/* The same hole, one level up. A page that lays its cards straight into
+   .container has no grid to supply a row-gap, so on /allotment four
+   sections ran together into a single slab with no line between them.
+   Adjacent siblings only: the first card keeps its position under the
+   page heading, and cards inside .grid are untouched because their parent
+   is .grid, not .container — giving them this margin as well would double
+   the space the grid already provides. */
+.container > .card + .card { margin-top: 14px; }
+
 /* A row of short cards, sized against each other rather than the page. Any
    of them may be absent — the source publishes risks for some issues only —
    and auto-fit means whichever survive divide the row between them instead
