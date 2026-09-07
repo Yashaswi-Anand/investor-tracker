@@ -4,7 +4,7 @@ import { organizationLd, SITE, webSiteLd } from "../../lib/config";
 import { getAllIpos } from "../../lib/data";
 import { fmtDate, safeJsonLd } from "../../lib/format";
 import { registrarFor } from "../../lib/registrars";
-import { AllotmentProvider, IssueRows, PanBox } from "../components/Allotment";
+import { AllotmentProvider, IssuePicker, PanBox } from "../components/Allotment";
 
 // Which issues are at allotment moves during the day, like everything else
 // here, so this is not a build-time snapshot.
@@ -71,8 +71,6 @@ function issueOf(ipo) {
 export default async function AllotmentPage() {
   const all = await getAllIpos();
   const issues = all.filter((ipo) => SHOWN.has(ipo.status)).sort(order).map(issueOf);
-  const atAllotment = issues.filter((i) => i.status === "allotment").length;
-  const listed = issues.length - atAllotment;
 
   const coming = all
     .filter((ipo) => COMING.has(ipo.status))
@@ -168,103 +166,7 @@ export default async function AllotmentPage() {
               {coming.length ? <Coming ipos={coming} /> : null}
             </section>
           ) : (
-            issues.map((issue, index) => (
-              <section
-                key={issue.slug}
-                className="card card-wide allot-issue"
-                id={issue.slug}
-              >
-                {/* A label, not a heading: the headings on this page are the
-                    issues, one query each, and a group title above them would
-                    only push those down a level. */}
-                {index === 0 && atAllotment > 0 ? (
-                  <p className="allot-group">
-                    At allotment · {atAllotment}
-                  </p>
-                ) : null}
-                {index === atAllotment && listed > 0 ? (
-                  <p className="allot-group">
-                    Listed · {listed} — the registrar&apos;s lookup stays open
-                    after listing
-                  </p>
-                ) : null}
-                <div className="result-head">
-                  <div>
-                    <h2 className="allot-issue-title">
-                      {issue.short_name || issue.name} IPO allotment status
-                    </h2>
-                    <p className="allot-issue-meta">
-                      {issue.board ? `${issue.board} · ` : ""}
-                      Registrar{" "}
-                      <strong>{issue.registrar?.name || "not published"}</strong>
-                      {issue.allotment_date
-                        ? ` · Allotment ${fmtDate(issue.allotment_date, true)}`
-                        : ""}
-                      {issue.listing_date
-                        ? ` · ${issue.status === "listed" ? "Listed" : "Lists"} ${fmtDate(issue.listing_date, true)}`
-                        : ""}
-                    </p>
-                  </div>
-                  {issue.registrar?.portal ? (
-                    <a
-                      className="result-open"
-                      href={issue.registrar.portal}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                    >
-                      Open {issue.registrar.short}
-                      <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-                        <path
-                          d="M6 3h7v7M13 3 4 12"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </a>
-                  ) : null}
-                </div>
-
-                {issue.direct ? (
-                  <p className="allot-direct">
-                    Checked with KFin directly from your browser, the way their
-                    own page does it — nothing passes through this site. KFin
-                    lists this issue as <strong>{issue.lookup.name}</strong>.
-                  </p>
-                ) : issue.registrar ? (
-                  <ol className="result-steps">
-                    {issue.registrar.steps.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                    <li>Come back and set the row below to what it said</li>
-                  </ol>
-                ) : (
-                  <p className="allot-direct">
-                    NSE has not published a registrar for this issue yet. The
-                    prospectus names one; it will appear here when the next
-                    scrape finds it.
-                  </p>
-                )}
-
-                <IssueRows
-                  slug={issue.slug}
-                  name={issue.name}
-                  direct={issue.direct}
-                  lookup={issue.lookup}
-                  portal={issue.registrar?.portal || null}
-                  registrarShort={issue.registrar?.short || "the registrar"}
-                />
-
-                <p className="allot-issue-foot">
-                  <Link href={`/ipo/${issue.slug}`}>
-                    {issue.short_name || issue.name} IPO page
-                  </Link>{" "}
-                  — GMP, subscription by category, timetable and documents.
-                </p>
-              </section>
-            ))
+            <IssuePicker issues={issues} />
           )}
         </AllotmentProvider>
 

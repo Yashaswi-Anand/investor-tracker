@@ -4,12 +4,13 @@
  * The interactive half of the allotment page: PANs, and what each issue's
  * registrar says about them.
  *
- * SPLIT IN THREE so the page's structure is in the HTML and only the
- * PAN-dependent rows wait for the browser. The previous version was one
- * client component that rendered nothing until localStorage had been read,
- * which left a crawler holding a page whose only heading said the site could
- * not look anything up. Now the issues, their registrars and the steps are
- * server-rendered by the page, and these three fill in the rows.
+ * SPLIT SO THAT ONLY THE PAN-DEPENDENT ROWS WAIT FOR THE BROWSER. The
+ * previous version was one client component that rendered nothing until
+ * localStorage had been read, which left a crawler holding a page whose only
+ * heading said the site could not look anything up. Now the provider holds
+ * the PANs, PanBox collects them, IssuePicker renders the chosen issue — its
+ * heading, registrar and steps come out in the server HTML for the default
+ * choice — and IssueRows fills in the rows once the PANs are known.
  *
  * WHERE THE PANs LIVE. This browser, and nowhere else on this site. A PAN is
  * a government identifier: it is never sent to our server — no request here
@@ -30,6 +31,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { fmtDate } from "../../lib/format";
 import { lookupKfin } from "../../lib/kfin";
 
 const PAN_KEY = "ipo-pans";
@@ -547,6 +549,169 @@ export function IssueRows({ slug, name, direct, lookup, portal, registrarShort }
           Open {registrarShort} above, then set each row to what their page said.
         </p>
       ) : null}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+
+/**
+ * One issue at a time, chosen from a dropdown.
+ *
+ * Eighteen stacked sections was the whole list on one screen, and the owner
+ * was right that nobody reads a page that way: you know which issue you
+ * applied for. So the list is the dropdown, grouped as the page groups it,
+ * and the section below is the one you picked. The choice rides in the URL
+ * hash — no PAN in it, nothing stored, and a link to a specific issue's
+ * check is a link that works.
+ *
+ * The first at-allotment issue is rendered on the server, so the raw HTML
+ * still carries a real heading and a real registrar, and the dropdown's
+ * option text carries every other company's name.
+ */
+export function IssuePicker({ issues }) {
+  const [slug, setSlug] = useState(issues[0]?.slug || "");
+
+  useEffect(() => {
+    const wanted = decodeURIComponent((window.location.hash || "").slice(1));
+    if (wanted && issues.some((i) => i.slug === wanted)) setSlug(wanted);
+  }, [issues]);
+
+  const pick = (next) => {
+    setSlug(next);
+    try {
+      window.history.replaceState(null, "", `#${next}`);
+    } catch {
+      /* history refused; the choice still stands for this page view */
+    }
+  };
+
+  const issue = issues.find((i) => i.slug === slug) || issues[0];
+  if (!issue) return null;
+
+  const atAllotment = issues.filter((i) => i.status === "allotment");
+  const listed = issues.filter((i) => i.status === "listed");
+
+  const optionText = (i) =>
+    `${i.short_name || i.name} — ${i.registrar?.short || "registrar not published"}` +
+    (i.listing_date
+      ? ` · ${i.status === "listed" ? "listed" : "lists"} ${fmtDate(i.listing_date)}`
+      : "");
+
+  return (
+    <>
+      <section className="card card-wide">
+        <h2>Select IPO</h2>
+        <p className="subtitle subtitle-flush">
+          {atAllotment.length} at allotment, {listed.length} listed. Pick the
+          one you applied for.
+        </p>
+        <label className="allot-pick">
+          <span className="allot-pick-label">IPO</span>
+          <select
+            className="allot-select"
+            value={issue.slug}
+            onChange={(event) => pick(event.target.value)}
+          >
+            {atAllotment.length ? (
+              <optgroup label={`At allotment (${atAllotment.length})`}>
+                {atAllotment.map((i) => (
+                  <option key={i.slug} value={i.slug}>
+                    {optionText(i)}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            {listed.length ? (
+              <optgroup label={`Listed (${listed.length})`}>
+                {listed.map((i) => (
+                  <option key={i.slug} value={i.slug}>
+                    {optionText(i)}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+          </select>
+        </label>
+      </section>
+
+      <section className="card card-wide allot-issue" id={issue.slug}>
+        <div className="result-head">
+          <div>
+            <h2 className="allot-issue-title">
+              {issue.short_name || issue.name} IPO allotment status
+            </h2>
+            <p className="allot-issue-meta">
+              {issue.board ? `${issue.board} · ` : ""}
+              Registrar <strong>{issue.registrar?.name || "not published"}</strong>
+              {issue.allotment_date
+                ? ` · Allotment ${fmtDate(issue.allotment_date, true)}`
+                : ""}
+              {issue.listing_date
+                ? ` · ${issue.status === "listed" ? "Listed" : "Lists"} ${fmtDate(issue.listing_date, true)}`
+                : ""}
+            </p>
+          </div>
+          {issue.registrar?.portal ? (
+            <a
+              className="result-open"
+              href={issue.registrar.portal}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+            >
+              Open {issue.registrar.short}
+              <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                <path
+                  d="M6 3h7v7M13 3 4 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </a>
+          ) : null}
+        </div>
+
+        {issue.direct ? (
+          <p className="allot-direct">
+            Checked with KFin directly from your browser, the way their own
+            page does it — nothing passes through this site. KFin lists this
+            issue as <strong>{issue.lookup.name}</strong>.
+          </p>
+        ) : issue.registrar ? (
+          <ol className="result-steps">
+            {issue.registrar.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+            <li>Come back and set the row below to what it said</li>
+          </ol>
+        ) : (
+          <p className="allot-direct">
+            NSE has not published a registrar for this issue yet. The
+            prospectus names one; it will appear here when the next scrape
+            finds it.
+          </p>
+        )}
+
+        <IssueRows
+          key={issue.slug}
+          slug={issue.slug}
+          name={issue.name}
+          direct={issue.direct}
+          lookup={issue.lookup}
+          portal={issue.registrar?.portal || null}
+          registrarShort={issue.registrar?.short || "the registrar"}
+        />
+
+        <p className="allot-issue-foot">
+          <Link href={`/ipo/${issue.slug}`}>
+            {issue.short_name || issue.name} IPO page
+          </Link>{" "}
+          — GMP, subscription by category, timetable and documents.
+        </p>
+      </section>
     </>
   );
 }
