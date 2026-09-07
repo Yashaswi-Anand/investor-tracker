@@ -2279,6 +2279,35 @@ body.has-sheet .scroll-jump { display: none; }
 .hero-fresh time { font-weight: 700; opacity: 1; }
 
 /* ==========================================================================
+   /ipo — the full index
+   ========================================================================== */
+.ipo-index-group { margin-top: 26px; }
+.ipo-index-group h2 { display: flex; align-items: baseline; gap: 9px; }
+.ipo-index-count {
+  font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; padding: 2px 9px;
+}
+.ipo-index-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.ipo-index-row {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  justify-content: space-between; gap: 3px 16px;
+  padding: 11px 0; border-bottom: 1px solid var(--border);
+}
+.ipo-index-row:last-child { border-bottom: none; }
+.ipo-index-link { display: block; text-decoration: none; }
+.ipo-index-link:hover .ipo-index-name { color: var(--primary); }
+.ipo-index-name { display: block; font-weight: 700; color: var(--text); }
+.ipo-index-meta {
+  display: block; margin-top: 2px;
+  font-size: 0.78rem; color: var(--text-muted);
+}
+.ipo-index-dates {
+  font-size: 0.78rem; color: var(--text-2);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* ==========================================================================
    Application ladder + category book
    ========================================================================== */
 /* These two live inside a card and must show at every width. They cannot

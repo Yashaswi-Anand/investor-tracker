@@ -11,9 +11,12 @@ export const metadata = {
   description:
     "Check IPO allotment for one or more PAN numbers across every issue at once. Each issue's registrar in one place, with your PAN a tap from the form.",
   alternates: { canonical: "/allotment" },
-  // Unlinked and unlisted, so it should not be indexed either — the three
-  // have to agree or the page is orphaned in search results.
-  robots: { index: false, follow: false },
+  // It was hidden because nothing linked to it. That was true when the menu
+  // entry came out; it is not true now that the footer and every IPO page
+  // reach it, and "<company> IPO allotment status" is among the highest
+  // intent queries this niche has. A page that answers it, kept out of the
+  // index on a premise that expired, is the whole query family forfeited.
+  robots: { index: true, follow: true },
 };
 
 /**
