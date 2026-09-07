@@ -435,16 +435,25 @@ function CategoryBook({ details }) {
         {/* Which book, then when. An issue on both exchanges has two
             different right answers for "how many shares were bid", and a
             table that does not say which one it is showing invites the
-            reader to compare it against the other. */}
+            reader to compare it against the other.
+
+            A row written before the scraper began recording `scope` has no
+            answer here, and the first version of this defaulted such rows to
+            "across NSE and BSE" — which was wrong for every one of them,
+            since the code that wrote them read NSE alone. Absent means
+            unknown, and unknown says nothing. */}
+        Bids received
         {scope === "nse" ? (
           <>
-            Bids received <strong>on NSE</strong>
+            {" "}
+            <strong>on NSE</strong>
           </>
-        ) : (
+        ) : scope === "all" ? (
           <>
-            Bids received <strong>across NSE and BSE</strong>
+            {" "}
+            <strong>across NSE and BSE</strong>
           </>
-        )}
+        ) : null}
         {stamp ? (
           <>
             , as at <strong>{stamp}</strong>
