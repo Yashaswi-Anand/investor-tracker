@@ -1,0 +1,71 @@
+# ===========================================================================
+# One-off data repairs. Manual only — this workflow has no schedule and
+# never runs on a push, because everything it can do deletes something.
+#
+# To run it:
+#   Actions -> maintenance -> Run workflow
+#     command: pick one
+#     confirm: leave empty for a dry run. Type DELETE to actually write.
+#
+# The dry run prints every row the real run would remove, and the job that
+# does the writing refuses to start unless confirm reads exactly DELETE.
+# ===========================================================================
+
+name: maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "What to run"
+        required: true
+        default: clean-zero-subscriptions
+        type: choice
+        options:
+          - clean-zero-subscriptions
+      confirm:
+        description: 'Type DELETE to write. Anything else is a dry run.'
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scraper/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scraper/requirements.txt
+
+      # Always. Even when confirm says DELETE, so the log carries a record of
+      # what was there immediately before it went.
+      - name: Dry run
+        working-directory: scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python maintenance.py "${{ inputs.command }}"
+
+      - name: Apply
+        if: ${{ inputs.confirm == 'DELETE' }}
+        working-directory: scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python maintenance.py "${{ inputs.command }}" --apply
+
+      - name: Nothing was written
+        if: ${{ inputs.confirm != 'DELETE' }}
+        run: |
+          echo "Dry run only — confirm was not DELETE, so nothing was deleted."
+          echo "Re-run with confirm: DELETE to apply what the step above listed."
