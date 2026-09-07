@@ -1192,6 +1192,44 @@ def test_book_prefers_the_combined_exchanges_while_it_is_current():
     assert rows["retail"]["times"] == round(39003360 / 13321184, 2)
 
 
+def test_combined_book_must_also_carry_every_category():
+    """Fresh is not enough; it has to be complete.
+
+    Qualiance's combined table is written on time and still has no retail row
+    in it at all — not stale, absent. Choosing it on freshness alone produced
+    a retail row carrying fifty thousand applications and no shares bid,
+    because the applications came from the live book and the shares from a
+    table that does not have that category. A book that cannot show retail is
+    not the better book.
+    """
+    detail = {
+        "demandGraph": {"timestamp": "As on 07-Sep-2026 14:00:00 IST"},
+        "bidDetails": [
+            {"srNo": "1", "noOfshareBid": "2768000", "noofapplication": "4"},
+            {"srNo": "3", "noOfshareBid": "100442000", "noofapplication": "50221"},
+        ],
+    }
+    current_but_partial = {
+        "updateTime": "Updated as on 07-Sep-2026 14:00:00",
+        "dataList": [{"srNo": "1", "noOfShareOffered": "0", "noOfSharesBid": "2768000"}],
+    }
+    book = nse.parse_book(detail, current_but_partial)
+    rows = {r["key"]: r for r in book["rows"]}
+    assert book["scope"] == "nse", "the complete book wins over the fresher one"
+    assert rows["retail"]["bid"] == 100442000
+    assert rows["retail"]["applications"] == 50221
+
+
+def test_a_row_of_applications_alone_is_not_a_row():
+    """Applications ride along from the live book whichever source supplied
+    the shares. Without shares behind them they describe nothing."""
+    book = nse.parse_book({
+        "demandGraph": {"timestamp": "As on 07-Sep-2026 14:00:00 IST"},
+        "bidDetails": [{"srNo": "3", "noofapplication": "50221"}],
+    })
+    assert book is None
+
+
 def test_book_falls_back_to_nse_alone_when_the_combined_book_is_stale():
     """Qualiance's combined table sat on the previous Friday for three days
     while the issue went from twelve times subscribed to twenty-three. A

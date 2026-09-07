@@ -427,7 +427,12 @@ def parse_book(detail, categories=None):
     ).strip()
     cat_stamp = category_stamp(categories)
 
-    # The combined book only wins while it is keeping up.
+    # The combined book has to be keeping up AND carrying every category the
+    # live one does. On Qualiance it omits retail entirely — not stale, just
+    # absent — so choosing it for freshness alone produced a retail row with
+    # fifty thousand applications behind it and no shares bid, which is the
+    # same "missing means nothing" hole in a new place. A book that cannot
+    # show retail is not the better book.
     combined = bool(cat_rows) and _same_day(cat_stamp, live_stamp)
 
     def indexed(rows, bid_keys, offered_keys):
@@ -444,6 +449,13 @@ def parse_book(detail, categories=None):
 
     live = indexed(live_rows, ("noOfsharesBid", "noOfshareBid"), ("noOfSharesOffered",))
     both = indexed(cat_rows, ("noOfSharesBid",), ("noOfShareOffered",))
+
+    # Every category the live book can price, the combined one must price too.
+    covered = {sr for sr, (bid, _) in both.items() if bid is not None}
+    needed = {sr for sr, (bid, _) in live.items() if bid is not None}
+    if combined and not needed <= covered:
+        combined = False
+
     chosen = both if combined else live
 
     applications = {}
@@ -472,7 +484,8 @@ def parse_book(detail, categories=None):
         # here from two figures that came out of the same response together.
         if bid is not None and offered:
             item["times"] = round(bid / offered, 2)
-        if len(item) > 2:
+        # A count of applications with no shares behind it is not a row.
+        if bid is not None or offered is not None:
             out.append(item)
 
     if not out:
