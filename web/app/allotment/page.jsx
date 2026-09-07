@@ -11,7 +11,7 @@ import { AllotmentProvider, IssueRows, PanBox } from "../components/Allotment";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "IPO Allotment Status by PAN — Check Every Issue at Allotment",
+  title: "IPO Allotment Status by PAN — Every Issue at Allotment or Listed",
   description:
     "Check IPO allotment status by PAN number for every issue whose allotment is out. KFin issues are checked directly from your browser; for the rest, the right registrar with your PAN ready. Nothing is sent to us.",
   alternates: { canonical: "/allotment" },
@@ -19,17 +19,26 @@ export const metadata = {
 };
 
 /**
- * Issues at allotment, and only those.
+ * Issues at allotment, then issues that have listed.
  *
- * Listed ones used to be here too, on the reasoning that a registrar keeps
- * the lookup open after listing. In practice it doubled the list with issues
- * whose answer is already in the reader's demat account, and the one thing
- * this page has to be is short enough to work through. An issue drops off it
- * the day it lists — by then the shares are either there or they are not.
+ * Every registrar keeps the lookup open after listing, and a reader who did
+ * not check on allotment day still wants the answer — the demat statement
+ * says what arrived, not what was applied for or in which category. So the
+ * page carries both, at-allotment first because that is where the question
+ * is live, then listed newest-first so the ones people are still asking
+ * about sit above the ones they are not.
  */
-const AT_ALLOTMENT = new Set(["allotment"]);
+const SHOWN = new Set(["allotment", "listed"]);
 /** Still bidding or just closed: the ones whose allotment is next. */
 const COMING = new Set(["open", "closed"]);
+
+/** At-allotment issues first (soonest listing on top), then listed, newest first. */
+function order(a, b) {
+  if (a.status !== b.status) return a.status === "allotment" ? -1 : 1;
+  const ad = String(a.listing_date || "");
+  const bd = String(b.listing_date || "");
+  return a.status === "allotment" ? ad.localeCompare(bd) : bd.localeCompare(ad);
+}
 
 function issueOf(ipo) {
   const registrar = registrarFor(ipo);
@@ -47,6 +56,7 @@ function issueOf(ipo) {
     slug: ipo.slug,
     name: ipo.name,
     short_name: ipo.short_name,
+    status: ipo.status,
     board: ipo.board,
     allotment_date: ipo.allotment_date,
     listing_date: ipo.listing_date,
@@ -60,10 +70,9 @@ function issueOf(ipo) {
 
 export default async function AllotmentPage() {
   const all = await getAllIpos();
-  const issues = all
-    .filter((ipo) => AT_ALLOTMENT.has(ipo.status))
-    .sort((a, b) => String(a.listing_date || "").localeCompare(String(b.listing_date || "")))
-    .map(issueOf);
+  const issues = all.filter((ipo) => SHOWN.has(ipo.status)).sort(order).map(issueOf);
+  const atAllotment = issues.filter((i) => i.status === "allotment").length;
+  const listed = issues.length - atAllotment;
 
   const coming = all
     .filter((ipo) => COMING.has(ipo.status))
@@ -148,10 +157,10 @@ export default async function AllotmentPage() {
 
           {issues.length === 0 ? (
             <section className="card card-wide">
-              <h2>No issue is at allotment right now</h2>
+              <h2>No issue is at allotment or recently listed</h2>
               <p className="subtitle subtitle-flush">
                 An issue appears here from the day its basis of allotment is
-                finalised until the day it lists.
+                finalised, and stays while it is listed.
                 {coming.length
                   ? " These are next:"
                   : " Nothing is open or awaiting allotment at the moment."}
@@ -159,12 +168,26 @@ export default async function AllotmentPage() {
               {coming.length ? <Coming ipos={coming} /> : null}
             </section>
           ) : (
-            issues.map((issue) => (
+            issues.map((issue, index) => (
               <section
                 key={issue.slug}
                 className="card card-wide allot-issue"
                 id={issue.slug}
               >
+                {/* A label, not a heading: the headings on this page are the
+                    issues, one query each, and a group title above them would
+                    only push those down a level. */}
+                {index === 0 && atAllotment > 0 ? (
+                  <p className="allot-group">
+                    At allotment · {atAllotment}
+                  </p>
+                ) : null}
+                {index === atAllotment && listed > 0 ? (
+                  <p className="allot-group">
+                    Listed · {listed} — the registrar&apos;s lookup stays open
+                    after listing
+                  </p>
+                ) : null}
                 <div className="result-head">
                   <div>
                     <h2 className="allot-issue-title">
@@ -178,7 +201,7 @@ export default async function AllotmentPage() {
                         ? ` · Allotment ${fmtDate(issue.allotment_date, true)}`
                         : ""}
                       {issue.listing_date
-                        ? ` · Lists ${fmtDate(issue.listing_date, true)}`
+                        ? ` · ${issue.status === "listed" ? "Listed" : "Lists"} ${fmtDate(issue.listing_date, true)}`
                         : ""}
                     </p>
                   </div>
