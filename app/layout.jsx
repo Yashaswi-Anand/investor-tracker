@@ -1,3 +1,4 @@
+import { Plus_Jakarta_Sans } from "next/font/google";
 import Link from "next/link";
 import { SITE } from "../lib/config";
 import Logo from "./components/Logo";
@@ -90,18 +91,33 @@ const THEME_INIT = `(function(){try{var t=localStorage.getItem("theme");if(t!=="
  */
 const CHUNK_RECOVERY = `(function(){var K="ipo-chunk-reload";addEventListener("error",function(e){var el=e.target;if(!el||el.tagName!=="SCRIPT")return;if(String(el.src||"").indexOf("/_next/static/")<0)return;try{var last=parseInt(sessionStorage.getItem(K)||"0",10);if(Date.now()-last<15000)return;sessionStorage.setItem(K,String(Date.now()))}catch(err){return}location.reload()},true)})();`;
 
+/**
+ * The typeface, self-hosted.
+ *
+ * It used to arrive as a <link> to fonts.googleapis.com — the one
+ * render-blocking resource on the site, on a third-party origin, needing a
+ * DNS lookup, a TLS handshake and a CSS round trip before the first
+ * paragraph could paint, and two <link rel=preconnect> tags to soften a
+ * cost that did not need paying. next/font fetches the files at build time,
+ * serves them from our own origin, inlines the @font-face rules, and
+ * computes a size-adjusted fallback so the swap does not shift the layout.
+ */
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-jakarta",
+  // The stack the CSS already names, so the adjusted metrics are computed
+  // against what a reader actually sees before the webfont arrives.
+  fallback: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Arial"],
+});
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={jakarta.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <script dangerouslySetInnerHTML={{ __html: CHUNK_RECOVERY }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
       </head>
       <body>
         <header className="site-header">

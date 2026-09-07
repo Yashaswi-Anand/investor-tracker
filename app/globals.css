@@ -69,9 +69,13 @@
   --ring: 0 0 0 3px rgba(15, 93, 122, 0.28);
 
   --header-h: 60px;
-  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-num: "Plus Jakarta Sans", ui-rounded, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* next/font sets --font-jakarta on <html>; the literal name is kept as a
+     second stop so a page rendered before that variable exists still asks
+     for the right face rather than falling straight to the system stack. */
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: var(--font-jakarta), "Plus Jakarta Sans", ui-rounded, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
 }
 
 /* ---- Dark tokens (defined once, applied two ways) ---- */
