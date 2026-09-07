@@ -64,16 +64,34 @@ export async function generateMetadata({ params }) {
     ipo.price_band_low != null && ipo.price_band_high != null
       ? `₹${ipo.price_band_low}–₹${ipo.price_band_high}`
       : "TBA";
-  const title = `${ipo.name} IPO — GMP Today, Date, Price Band`;
-  const description = `${ipo.name} IPO: GMP ${
-    ipo.gmp != null ? `₹${ipo.gmp}` : "TBA"
-  }, price band ${band}, lot size ${ipo.lot_size ?? "TBA"}. Opens ${fmtDate(
-    ipo.open_date,
-    true
-  )}, closes ${fmtDate(
-    ipo.close_date,
-    true
-  )}. Subscription status, allotment and listing details.`;
+  // The short name where there is one: "Rays of Belief Limited (For Profit
+  // Social Enterprise) FPSE IPO — GMP Today, Date, Price Band" is 96
+  // characters before the site name is appended, and Google truncates near
+  // 60. What survived was the company's legal suffix, not the topic.
+  const label = ipo.short_name || ipo.name;
+
+  // One title per lifecycle stage. Every page carried the pre-listing one,
+  // so a company that listed a fortnight ago still advertised its price band
+  // to anyone searching its name — answering a question nobody was asking
+  // and matching none of the queries it could still win.
+  const titles = {
+    upcoming: `${label} IPO — Date, Price Band, GMP`,
+    open: `${label} IPO — GMP Today, Subscription Status`,
+    closed: `${label} IPO — Subscription, Allotment Date, GMP`,
+    allotment: `${label} IPO Allotment Status — Date & Listing`,
+    listed: `${label} IPO — Listing Price, Share Price & Gain`,
+  };
+  const title = titles[ipo.status] || titles.upcoming;
+
+  const gmp = ipo.gmp != null ? `₹${ipo.gmp}` : "TBA";
+  const descriptions = {
+    upcoming: `${label} IPO opens ${fmtDate(ipo.open_date, true)}. Price band ${band}, lot ${ipo.lot_size ?? "TBA"}, GMP ${gmp}. Dates, minimum investment and how to apply.`,
+    open: `${label} IPO GMP ${gmp} today. Price band ${band}, lot ${ipo.lot_size ?? "TBA"}. Live subscription by QIB, NII and retail. Closes ${fmtDate(ipo.close_date, true)}.`,
+    closed: `${label} IPO closed ${fmtDate(ipo.close_date, true)} — final subscription by category, GMP ${gmp}, allotment ${fmtDate(ipo.allotment_date, true)} and listing date.`,
+    allotment: `${label} IPO allotment ${fmtDate(ipo.allotment_date, true)}. Check status with the registrar, plus final subscription, GMP ${gmp} and listing on ${fmtDate(ipo.listing_date, true)}.`,
+    listed: `${label} IPO listed ${fmtDate(ipo.listing_date, true)} at ${ipo.listing_price != null ? `₹${ipo.listing_price}` : "TBA"}. Live share price, listing gain, and the full subscription and GMP record.`,
+  };
+  const description = descriptions[ipo.status] || descriptions.upcoming;
 
   return {
     title,
@@ -542,12 +560,16 @@ function IssueDetails({ ipo }) {
                     ZIP NSE serves, so this opens a document instead of
                     downloading an archive a phone cannot open. If anything
                     about that fails it redirects to the ZIP, which is where
-                    this link used to go. */}
+                    this link used to go.
+
+                    nofollow because robots.txt now disallows /api/: a
+                    followed link to a blocked URL is a crawl request Google
+                    is told to refuse, five times over on every IPO page. */}
                 <a
                   className="doc-link"
                   href={`/api/doc/${ipo.slug}/${doc.kind}`}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="nofollow noopener noreferrer"
                 >
                   <span className="doc-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" width="17" height="17" fill="none">
