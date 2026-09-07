@@ -139,7 +139,9 @@ export default function RootLayout({ children }) {
                   NSE Source
                 </a>
               </div>
-              <span>© {new Date().getFullYear()} {SITE.name}</span>
+              <span>
+                © {new Date().getFullYear()} {SITE.owner}. All rights reserved.
+              </span>
             </div>
           </div>
         </footer>
