@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { NEWS, SITE } from "../../lib/config";
 import { getAllIpos } from "../../lib/data";
 import { getNews, matchNews } from "../../lib/news";
@@ -60,6 +62,32 @@ export default async function NewsPage() {
           ; each one opens the full story on their site.
         </p>
       </section>
+
+      {/* The slugs were computed already — matchNews ran over every IPO to
+          build the filter — and then thrown away, so the one page on the
+          site whose subject is named companies linked to none of them. It
+          also gives the page an H2: it went H1 straight to sixteen H3s. */}
+      {companies.length > 0 && (
+        <section className="card card-wide news-companies">
+          <h2>Companies in the news</h2>
+          <p className="subtitle subtitle-flush">
+            Each links to that issue&apos;s own page — GMP history,
+            subscription by category, timetable and offer documents.
+          </p>
+          <ul className="news-company-list">
+            {companies.map((company) => (
+              <li key={company.slug}>
+                <Link href={`/ipo/${company.slug}`}>
+                  {company.name}
+                  <span className="news-company-count">
+                    {company.indices.length}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {articles.length === 0 ? (
         <section className="card card-wide">
