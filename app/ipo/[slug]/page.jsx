@@ -30,7 +30,7 @@ import { documentsFor } from "../../../lib/documents";
 import Financials from "../../components/Financials";
 import LiveChart from "../../components/LiveChart";
 import { dailyBars } from "../../../lib/bars";
-import { categoryRows, lotLadder, RETAIL_CAP, SHNI_CAP } from "../../../lib/bids";
+import { categoryRows, categoryStamp, lotLadder, RETAIL_CAP, SHNI_CAP } from "../../../lib/bids";
 import NewsList from "../../components/NewsList";
 import Reveal from "../../components/Reveal";
 import ShareButton from "../../components/ShareButton";
@@ -381,6 +381,7 @@ function CategoryBook({ details }) {
   const rows = categoryRows(details);
   if (!rows.length) return null;
 
+  const stamp = categoryStamp(details);
   const anyOffered = rows.some((r) => r.offered);
   const anyApplications = rows.some((r) => r.applications);
 
@@ -423,8 +424,15 @@ function CategoryBook({ details }) {
         </table>
       </div>
       <p className="subtitle table-foot">
-        Share counts and application counts as published by NSE. The two NII
-        rows are parts of the NII total above them, not additions to it.
+        {stamp ? (
+          <>
+            NSE last updated this table <strong>{stamp}</strong>. It can run
+            behind the subscription figures above, which come from the live
+            issue feed.{" "}
+          </>
+        ) : null}
+        The two NII rows are parts of the NII total above them, not additions
+        to it.
       </p>
     </>
   );
