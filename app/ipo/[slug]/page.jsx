@@ -30,6 +30,7 @@ import { documentsFor } from "../../../lib/documents";
 import Financials from "../../components/Financials";
 import LiveChart from "../../components/LiveChart";
 import { dailyBars } from "../../../lib/bars";
+import { categoryRows, lotLadder, RETAIL_CAP, SHNI_CAP } from "../../../lib/bids";
 import NewsList from "../../components/NewsList";
 import Reveal from "../../components/Reveal";
 import ShareButton from "../../components/ShareButton";
@@ -260,14 +261,174 @@ function SubscriptionHistory({ history }) {
 const ISSUE_DETAIL_ROWS = [
   ["issue_type", "Issue Type"],
   ["discount", "Discount"],
+  ["min_order_qty", "Minimum Order"],
   ["categories", "Categories"],
+  ["upi_categories", "UPI Eligible"],
   ["max_retail", "Max Bid (Retail)"],
   ["max_employee", "Max Bid (Employee)"],
+  ["max_bid_qib", "Max Bid (QIB)"],
+  ["max_bid_nii", "Max Bid (NII)"],
   ["tick_size", "Tick Size"],
   ["market_timings", "Bidding Hours"],
   ["upi_cutoff", "UPI Mandate Cut-off"],
   ["sponsor_bank", "Sponsor Bank"],
 ];
+
+
+/**
+ * Fresh issue against offer for sale — where the money actually goes.
+ *
+ * A fresh issue is new shares, and the cash reaches the company. An offer
+ * for sale is existing holders selling out, and the cash reaches them; the
+ * business gets nothing from it. Both sit in one sentence in NSE\'s issue
+ * size text, which this page has always printed whole and never read. Only
+ * the components NSE states are shown — a pure OFS has no fresh half, and
+ * printing a zero for it would say the company raises nothing rather than
+ * that it was never raising anything.
+ */
+function IssueSplit({ split }) {
+  if (!split) return null;
+  const line = (cr, shares) =>
+    cr != null
+      ? `₹${cr} Cr`
+      : shares != null
+        ? `${shares.toLocaleString("en-IN")} shares`
+        : null;
+  const fresh = line(split.fresh_cr, split.fresh_shares);
+  const ofs = line(split.ofs_cr, split.ofs_shares);
+  if (!fresh && !ofs) return null;
+
+  return (
+    <>
+      {fresh && (
+        <KV label="Fresh Issue">
+          {fresh}
+          <span className="kv-note kv-note-inline"> (to the company)</span>
+        </KV>
+      )}
+      {ofs && (
+        <KV label="Offer for Sale">
+          {ofs}
+          <span className="kv-note kv-note-inline"> (to selling holders)</span>
+        </KV>
+      )}
+    </>
+  );
+}
+
+/**
+ * What an application costs at each rung of the book.
+ *
+ * The single "minimum investment" figure answers one question — the cheapest
+ * way in — and hides the one that decides how an applicant is treated. SEBI
+ * sorts bids by rupee value, not by who makes them: under two lakh is retail
+ * and allotted by lottery, above it the bid competes proportionately in an
+ * HNI pool. Someone adding one more lot to a ₹1.9 lakh bid changes which of
+ * those they are in, and until now nothing on this page said so.
+ */
+function LotLadder({ ipo }) {
+  const rows = lotLadder(ipo);
+  if (rows.length < 2) return null;
+
+  return (
+    <>
+      <p className="subtitle sub-hist-caption">Application sizes</p>
+      <div className="table-wrap">
+        <table className="hist ladder-table">
+          <thead>
+            <tr>
+              <th scope="col">Category</th>
+              <th scope="col" className="num">Lots</th>
+              <th scope="col" className="num">Shares</th>
+              <th scope="col" className="num">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.label}>
+                <th scope="row">
+                  {row.label}
+                  {row.note && <span className="kv-note ladder-note">{row.note}</span>}
+                </th>
+                <td className="num">{row.lots}</td>
+                <td className="num">{row.shares.toLocaleString("en-IN")}</td>
+                <td className="num">{inr(Math.round(row.amount))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="subtitle table-foot">
+        Priced at the top of the band, which is what a cut-off bid pays.
+        Retail ends at {inr(RETAIL_CAP)} and S-HNI at {inr(SHNI_CAP)}; these
+        are SEBI&apos;s limits, not the issuer&apos;s.
+      </p>
+    </>
+  );
+}
+
+/**
+ * The category table behind the subscription bars.
+ *
+ * NSE has always returned shares offered, shares bid and the application
+ * count per category in the same response the one subscription number came
+ * from. The bars say retail wanted the issue four times over; this says how
+ * many shares that was and how many people were holding them — and it
+ * carries the split of NII into bids above and below ten lakh, which is the
+ * line that decides which HNI pool an application lands in.
+ */
+function CategoryBook({ details }) {
+  const rows = categoryRows(details);
+  if (!rows.length) return null;
+
+  const anyOffered = rows.some((r) => r.offered);
+  const anyApplications = rows.some((r) => r.applications);
+
+  return (
+    <>
+      <p className="subtitle sub-hist-caption">Category-wise bidding</p>
+      <div className="table-wrap">
+        <table className="hist cat-table">
+          <thead>
+            <tr>
+              <th scope="col">Category</th>
+              {anyOffered && <th scope="col" className="num">Offered</th>}
+              <th scope="col" className="num">Bid for</th>
+              {anyApplications && <th scope="col" className="num">Applications</th>}
+              <th scope="col" className="num">Times</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.key} data-nested={row.nested || undefined}>
+                <th scope="row">{row.label}</th>
+                {anyOffered && (
+                  <td className="num">
+                    {row.offered ? row.offered.toLocaleString("en-IN") : "—"}
+                    {row.pct != null && (
+                      <span className="kv-note cat-pct">{row.pct.toFixed(1)}%</span>
+                    )}
+                  </td>
+                )}
+                <td className="num">{row.bid ? row.bid.toLocaleString("en-IN") : "—"}</td>
+                {anyApplications && (
+                  <td className="num">
+                    {row.applications ? row.applications.toLocaleString("en-IN") : "—"}
+                  </td>
+                )}
+                <td className="num">{row.times != null ? `${row.times}x` : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="subtitle table-foot">
+        Share counts and application counts as published by NSE. The two NII
+        rows are parts of the NII total above them, not additions to it.
+      </p>
+    </>
+  );
+}
 
 /**
  * Company and issue detail collected by the scraper.
@@ -284,7 +445,8 @@ function IssueDetails({ ipo }) {
   const issueRows = ISSUE_DETAIL_ROWS.filter(([key]) => details[key]);
   const documents = documentsFor(ipo);
 
-  if (!details.objects && !issueRows.length && !documents.length) return null;
+  const ladder = lotLadder(ipo).length >= 2;
+  if (!details.objects && !issueRows.length && !documents.length && !ladder) return null;
 
   return (
     <section className="card card-wide">
@@ -299,6 +461,8 @@ function IssueDetails({ ipo }) {
           <p className="about-text">{details.objects}</p>
         </>
       )}
+
+      <LotLadder ipo={ipo} />
 
       {issueRows.length > 0 && (
         <>
@@ -678,6 +842,12 @@ export default async function IpoDetailPage({ params }) {
               ) : null}
             </KV>
             <KV label="Face Value">{inr(ipo.face_value)}</KV>
+            <IssueSplit split={(ipo.details || {}).issue_split} />
+            {Array.isArray((ipo.details || {}).exchanges) && (
+              <KV label="Listing At">
+                {(ipo.details || {}).exchanges.join(" · ")}
+              </KV>
+            )}
             <KV label="Issue Size">
               <span className="kv-note">
                 {ipo.issue_size || "—"}
@@ -732,6 +902,7 @@ export default async function IpoDetailPage({ params }) {
               </Reveal>
             </>
           )}
+          <CategoryBook details={ipo.details} />
           <SubscriptionHistory history={subscriptionHistory} />
         </section>
 

@@ -2266,6 +2266,40 @@ body.has-sheet .scroll-jump { display: none; }
 }
 
 /* ==========================================================================
+   Application ladder + category book
+   ========================================================================== */
+/* Both tables sit inside a card that already scrolls them; these rules only
+   set the parts that differ from the site's other tables. */
+.ladder-table th[scope="row"],
+.cat-table th[scope="row"] { font-weight: 700; white-space: nowrap; }
+/* .hist bolds its first row because there the newest entry leads. Neither of
+   these tables has a "latest"; their first row is just the first rung. */
+.ladder-table tbody tr:first-child td,
+.cat-table tbody tr:first-child td { font-weight: inherit; }
+.ladder-note {
+  display: block; font-weight: 500; margin-top: 1px;
+  white-space: normal;
+}
+/* The percentage of the book a category was given, under the share count it
+   belongs to rather than in a column of its own. */
+.cat-pct { display: block; font-weight: 600; margin-top: 1px; }
+/* The two NII rows are parts of the row above them, so they are indented and
+   set quieter — the same relationship an outline uses. */
+.cat-table tr[data-nested] th[scope="row"] {
+  padding-inline-start: 22px; font-weight: 600; color: var(--text-2);
+  position: relative;
+}
+.cat-table tr[data-nested] th[scope="row"]::before {
+  content: ""; position: absolute; left: 9px; top: 50%;
+  width: 7px; height: 1px; background: var(--border-strong);
+}
+.cat-table tr[data-nested] td { color: var(--text-2); }
+
+/* A sentence under a table saying where its numbers came from, or which
+   limit they are measured against. */
+.table-foot { margin: 7px 0 0; font-size: 0.74rem; }
+
+/* ==========================================================================
    Offer documents
    ========================================================================== */
 .doc-list { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
