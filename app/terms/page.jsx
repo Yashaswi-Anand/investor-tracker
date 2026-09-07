@@ -130,11 +130,13 @@ export default function TermsPage() {
 
         <h2>The allotment page</h2>
         <p>
-          That page does not check your allotment. It cannot: every registrar
-          puts the answer behind a CAPTCHA, which is there precisely to stop a
-          site like this asking on someone&apos;s behalf, and we do not work
-          around it. What the page does is hand you the right registrar for
-          each issue with your PAN ready to paste, and keep a note of what you
+          For issues whose registrar is KFin Technologies, that page asks KFin
+          directly from your browser — the same request KFin&apos;s own page
+          makes — and shows you what KFin answered. For every other registrar
+          it cannot: they put the answer behind a CAPTCHA, which is there
+          precisely to stop a site like this asking on someone&apos;s behalf,
+          and we do not work around it. There the page hands you the right
+          registrar with your PAN ready to paste, and keeps a note of what you
           found.
         </p>
         <p>

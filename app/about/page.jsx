@@ -139,11 +139,13 @@ export default function AboutPage() {
             are not a SEBI-registered adviser, analyst or broker.
           </li>
           <li>
-            <strong>No allotment lookup.</strong> Only the registrar knows, and
-            every one of them puts that behind a CAPTCHA meant to stop sites
-            like this asking on your behalf. The{" "}
-            <Link href="/allotment">allotment page</Link> takes you to the
-            right registrar instead of pretending otherwise.
+            <strong>Allotment lookup only where the registrar allows it.</strong>{" "}
+            KFin&apos;s allotment API answers a browser directly, so the{" "}
+            <Link href="/allotment">allotment page</Link> asks it from yours,
+            with the PAN never touching this site. Every other registrar puts
+            the answer behind a CAPTCHA meant to stop sites asking on your
+            behalf, and there the page takes you to them instead of pretending
+            otherwise.
           </li>
           <li>
             <strong>No accounts, no tracking.</strong> There is no sign-in and

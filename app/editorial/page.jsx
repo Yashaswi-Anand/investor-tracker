@@ -162,10 +162,12 @@ export default function EditorialPage() {
             date and status, never by arrangement.
           </li>
           <li>
-            <strong>No allotment lookup.</strong> Only the registrar knows, and
-            each puts it behind a CAPTCHA meant to stop sites asking on your
-            behalf. The <Link href="/allotment">allotment page</Link> routes you
-            to the right registrar rather than pretending otherwise.
+            <strong>No allotment lookup through us.</strong> Only the registrar
+            knows. Where one answers a browser directly — KFin does — the{" "}
+            <Link href="/allotment">allotment page</Link> asks it from yours
+            and the PAN never touches this site; where the answer sits behind
+            a CAPTCHA, the page routes you to the registrar rather than working
+            around it.
           </li>
         </ul>
 
