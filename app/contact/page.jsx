@@ -9,6 +9,16 @@ import { SITE } from "../../lib/config";
 // receives names and messages, which means holding personal data this site
 // otherwise never touches. An address costs nothing and can be replied to.
 
+// Static content, but not for a year.
+//
+// Next marks a prerendered page `s-maxage=31536000` on the assumption that a
+// deploy purges the CDN. Hostinger's does not, so an edit to this page was
+// invisible behind an edge copy until the cache felt like expiring — measured
+// at an hour and a half old and counting, still serving text two commits out
+// of date. Ten minutes is long enough that this costs nothing and short
+// enough that a correction actually reaches a reader.
+export const revalidate = 600;
+
 export const metadata = {
   title: "Contact",
   description: `How to reach ${SITE.name} — corrections to IPO data, questions about the site, and press or partnership enquiries.`,

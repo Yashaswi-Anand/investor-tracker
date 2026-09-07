@@ -7,6 +7,16 @@ import { SITE } from "../../lib/config";
 // "apply / avoid" calls, have a lawyer read this page first — those change
 // what it has to say.
 
+// Static content, but not for a year.
+//
+// Next marks a prerendered page `s-maxage=31536000` on the assumption that a
+// deploy purges the CDN. Hostinger's does not, so an edit to this page was
+// invisible behind an edge copy until the cache felt like expiring — measured
+// at an hour and a half old and counting, still serving text two commits out
+// of date. Ten minutes is long enough that this costs nothing and short
+// enough that a correction actually reaches a reader.
+export const revalidate = 600;
+
 export const metadata = {
   title: "Terms of Use",
   description: `Terms of use for ${SITE.name} — an independent IPO information service for India. Not investment advice.`,
