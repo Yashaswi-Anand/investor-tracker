@@ -55,6 +55,12 @@ export const metadata = {
     title: SITE.shortName,
   },
   formatDetection: { telephone: false },
+  // Only when a token is configured — an empty verification block would put
+  // <meta name="google-site-verification" content=""> on every page, which
+  // is worse than absent because it looks like a failed attempt.
+  ...(SITE.googleVerification
+    ? { verification: { google: SITE.googleVerification } }
+    : {}),
 };
 
 export const viewport = {
