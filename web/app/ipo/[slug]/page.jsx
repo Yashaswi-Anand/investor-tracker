@@ -340,7 +340,7 @@ function LotLadder({ ipo }) {
   return (
     <>
       <p className="subtitle sub-hist-caption">Application sizes</p>
-      <div className="table-wrap">
+      <div className="table-scroll">
         <table className="hist ladder-table">
           <thead>
             <tr>
@@ -396,7 +396,7 @@ function CategoryBook({ details }) {
   return (
     <>
       <p className="subtitle sub-hist-caption">Category-wise bidding</p>
-      <div className="table-wrap">
+      <div className="table-scroll">
         <table className="hist cat-table">
           <thead>
             <tr>
@@ -960,6 +960,33 @@ export default async function IpoDetailPage({ params }) {
           <SubscriptionHistory history={subscriptionHistory} />
         </section>
 
+        {/* Straight after the demand, because they answer the question the
+            demand raises. Subscription says how many people want the issue;
+            the accounts say what they are buying. Between them sat the
+            description, the strengths, the risks and the lead managers —
+            four cards of prose separating a number from the thing that
+            justifies it. */}
+        {details.financials ? (
+          <section className="card card-wide">
+            <h2>Financials</h2>
+            <Financials financials={details.financials} />
+          </section>
+        ) : (
+          manual.financials &&
+          typeof manual.financials === "object" && (
+            <section className="card">
+              <h2>Financials</h2>
+              <dl>
+                {Object.entries(manual.financials).map(([key, value]) => (
+                  <KV key={key} label={key}>
+                    {String(value)}
+                  </KV>
+                ))}
+              </dl>
+            </section>
+          )
+        )}
+
         {about && (
           <section className="card card-wide about-card">
             <h2>About {ipo.short_name || ipo.name}</h2>
@@ -1072,27 +1099,6 @@ export default async function IpoDetailPage({ params }) {
           </section>
         )}
         </div>
-
-        {details.financials ? (
-          <section className="card card-wide">
-            <h2>Financials</h2>
-            <Financials financials={details.financials} />
-          </section>
-        ) : (
-          manual.financials &&
-          typeof manual.financials === "object" && (
-            <section className="card">
-              <h2>Financials</h2>
-              <dl>
-                {Object.entries(manual.financials).map(([key, value]) => (
-                  <KV key={key} label={key}>
-                    {String(value)}
-                  </KV>
-                ))}
-              </dl>
-            </section>
-          )
-        )}
 
         {/* Mechanics last: they matter at the moment of applying, not while
             deciding, so the business comes first and the UPI cut-off after. */}

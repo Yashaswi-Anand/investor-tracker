@@ -1336,13 +1336,14 @@ td a:hover { color: var(--primary); text-decoration: none; }
    set. Side by side, the description keeps a line length worth reading and
    the facts fill what it does not use. */
 @media (min-width: 900px) {
+  /* The description runs the full width of the card and the facts sit under
+     it. Beside it they were a narrow column holding two short lines against
+     twenty of prose, and the taller the description the more of that column
+     was empty — on Pranav, whose description runs to a screen and a half,
+     the promoters ended level with the first paragraph and nothing followed
+     them for six hundred pixels. */
   .about-split {
-    display: grid;
-    /* Weighted towards the prose: the facts are a handful of short lines and
-       an even split gave them more room than they have anything to put in. */
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-    column-gap: 30px;
-    align-items: start;
+    display: block;
   }
   /* The cap has done its job once the column itself is the right width. */
   .about-split .about-prose { max-width: none; }
@@ -1354,8 +1355,10 @@ td a:hover { color: var(--primary); text-decoration: none; }
      the empty column below made the whole side look unfinished. Stacked and
      boxed, one row looks deliberate and three look like a list. */
   .about-split .about-meta {
-    display: block;
-    margin-top: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 34px;
+    margin-top: 18px;
     padding: 15px 17px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -2268,6 +2271,27 @@ body.has-sheet .scroll-jump { display: none; }
 /* ==========================================================================
    Application ladder + category book
    ========================================================================== */
+/* These two live inside a card and must show at every width. They cannot
+   reuse .table-wrap: that one is the home page's IPO table, which is hidden
+   below 880px because the same rows are rendered as cards there instead —
+   so borrowing it took the application ladder off every phone. Same frame,
+   same scroll, no breakpoint. */
+.table-scroll {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.table-scroll::-webkit-scrollbar { height: 8px; }
+.table-scroll::-webkit-scrollbar-track { background: var(--surface-2); }
+.table-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+
 /* Both tables sit inside a card that already scrolls them; these rules only
    set the parts that differ from the site's other tables. */
 .ladder-table th[scope="row"],

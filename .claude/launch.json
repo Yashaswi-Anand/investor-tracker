@@ -5,14 +5,23 @@
       "name": "web",
       "cwd": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
     },
     {
       "name": "web-prod",
       "cwd": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["start", "--", "--port", "3100"],
+      "runtimeArgs": [
+        "start",
+        "--",
+        "--port",
+        "3100"
+      ],
       "port": 3100
     }
   ]
