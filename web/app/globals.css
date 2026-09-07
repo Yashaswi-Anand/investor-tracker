@@ -2304,6 +2304,22 @@ body.has-sheet .scroll-jump { display: none; }
   background: var(--surface); border-radius: 999px; padding: 1px 7px;
 }
 
+/* The homepage's summary in sentences. Deliberately plain: it is there to
+   be read and quoted, not looked at, so it gets reading measure and nothing
+   competing for attention with the table below it. */
+.market-summary {
+  max-width: 74ch;
+  margin: 20px auto 0;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--text-2);
+}
+.market-summary p { margin: 0 0 9px; }
+.market-summary strong { color: var(--text); }
+.market-summary a { font-weight: 700; }
+.market-summary-caveat { color: var(--text-muted); }
+.market-summary-stamp { font-size: 0.8rem; color: var(--text-muted); }
+
 /* ==========================================================================
    /ipo — the full index
    ========================================================================== */
