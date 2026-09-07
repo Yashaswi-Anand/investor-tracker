@@ -1133,6 +1133,52 @@ def test_book_takes_share_counts_from_the_live_response():
     assert "times" not in rows["nii"]
 
 
+def test_book_never_republishes_a_stale_ratio():
+    """The bug an adversarial review caught in the previous commit.
+
+    Reservation is a fixed quantity and safe to take from the lagging
+    endpoint. Its RATIO is not: it was computed whenever that endpoint last
+    ran. On Qualiance it read 4.80x three days after the fact, and the row
+    was published under the live timestamp beside a live bid that divided by
+    the same reservation to 17.25x. The earlier test missed it because its
+    stale ratio was "0.00", which the truthiness check already dropped — any
+    non-zero one sailed through.
+    """
+    detail = {
+        "demandGraph": {"timestamp": "As on 07-Sep-2026 10:48:01 IST"},
+        "bidDetails": [
+            {"srNo": "2", "noOfshareBid": "24998000", "noofapplication": "4172"},
+        ],
+    }
+    stale = {
+        "updateTime": "Updated as on 04-Sep-2026 17:00:00",
+        "dataList": [
+            {"srNo": "2", "noOfShareOffered": "1449000",
+             "noOfSharesBid": "6954000", "noOfTotalMeant": "4.80"},
+        ],
+    }
+    row = nse.parse_book(detail, stale)["rows"][0]
+    assert row["offered"] == 1449000        # a reservation does not go stale
+    assert row["times"] == 17.25            # 24998000 / 1449000, both current
+    assert row["times"] != 4.80, "NSE's own ratio must never be republished"
+
+
+def test_book_survives_the_category_endpoint_failing():
+    """Its primary source is the detail response, so the flakier of the two
+    calls going down must not take a book we already hold with it."""
+    detail = {
+        "demandGraph": {"timestamp": "As on 07-Sep-2026 10:48:01 IST"},
+        "bidDetails": [
+            {"srNo": "3", "noOfshareBid": "54930000", "noofapplication": "27465"},
+        ],
+    }
+    book = nse.parse_book(detail, None)
+    assert book["rows"][0]["bid"] == 54930000
+    assert book["rows"][0]["applications"] == 27465
+    # No reservation to divide by, so no ratio is claimed.
+    assert "times" not in book["rows"][0]
+
+
 def test_book_takes_offered_and_ratio_from_the_category_table():
     """The two fields bidDetails does not carry, when NSE fills them in."""
     detail = {
@@ -1152,7 +1198,9 @@ def test_book_takes_offered_and_ratio_from_the_category_table():
     row = nse.parse_book(detail, good)["rows"][0]
     assert row["bid"] == 2768000        # still the live count
     assert row["offered"] == 483000     # only available from the other one
-    assert row["times"] == 5.72
+    # Divided here rather than copied, even when the endpoint is current:
+    # 2768000 / 483000 = 5.73, against the 5.72 it computed a moment earlier.
+    assert row["times"] == 5.73
 
 
 def test_book_is_absent_when_nothing_has_been_bid():

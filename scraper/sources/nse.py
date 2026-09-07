@@ -414,13 +414,22 @@ def parse_book(detail, categories=None):
         if applications:
             item["applications"] = applications
 
+        # Shares RESERVED for a category is a fixed quantity set when the
+        # issue was structured; it does not go stale the way a ratio does,
+        # so it is the one thing worth taking from the lagging endpoint.
         side = extra.get(sr) or {}
         offered = _shares(side.get("noOfShareOffered"))
         if offered is not None:
             item["offered"] = offered
-        times = to_float(side.get("noOfTotalMeant"))
-        if times:
-            item["times"] = round(times, 2)
+
+        # NSE's own ratio is NOT copied. It is computed by that endpoint at
+        # the time that endpoint last ran, so on Qualiance it read 4.80x
+        # three days after the fact while the same row's live bid against
+        # the same reservation came to 17.25x — a stale number under a live
+        # timestamp, which is the exact shape of bug this table exists to
+        # stop. Divided here instead, from two figures that are both current.
+        if offered and item.get("bid"):
+            item["times"] = round(item["bid"] / offered, 2)
 
         if len(item) > 2:
             out.append(item)
@@ -585,6 +594,7 @@ def fetch():
                 row.update(parse_detail(detail, row.get("board")))
             time.sleep(config.DELAY_SECONDS)
 
+        categories = None
         if row.get("status") == "open":
             subscription = _get_json(
                 session, config.nse_url("active_category", symbol=symbol)
@@ -601,9 +611,7 @@ def fetch():
                 row.update(parsed)
                 if before and not row.get("subscription_total"):
                     row["subscription_total"] = before
-                book = parse_book(detail, subscription)
-                if book:
-                    _add_detail(row, "category_bids", book)
+                categories = subscription
                 # Writing nothing is not enough on its own. The old parser
                 # already stored 0.00 in these columns, and silence leaves a
                 # stored value alone — so the page would show a real total
@@ -617,6 +625,14 @@ def fetch():
                 if unknown:
                     row["_clear"] = unknown
             time.sleep(config.DELAY_SECONDS)
+
+        # Built from the detail response, so it survives a failure of the
+        # category endpoint — which is the flakier of the two and carries
+        # only the reservation. Gating the book on that call meant a live
+        # book already in hand was thrown away whenever it timed out.
+        book = parse_book(detail, categories)
+        if book:
+            _add_detail(row, "category_bids", book)
 
         # Only claimed when NSE actually set the flag. Writing ["NSE"] on a
         # row whose flag was simply absent would put "Listing At: NSE" under a

@@ -85,15 +85,29 @@ export function categoryRows(details) {
 
   // The sub-rows of NII already sit inside the NII total, so a percentage
   // taken against their sum would count that book twice.
-  const base = rows
-    .filter((r) => !r.key.startsWith("nii_"))
-    .reduce((sum, r) => sum + (r.offered || 0), 0);
+  const top = rows.filter((r) => !r.key.startsWith("nii_"));
+  // A share of the book is only meaningful when the whole book is in the
+  // denominator. Rows come from NSE's live response and reservations from
+  // its category table, which does not carry every row — so with QIB's
+  // reservation alone the arithmetic said QIB had 100% of an issue whose
+  // retail half was three times larger. Either every top-level row has its
+  // reservation or no percentage is shown.
+  const complete = top.length > 0 && top.every((r) => r.offered);
+  const base = complete ? top.reduce((sum, r) => sum + r.offered, 0) : 0;
+
+  // Applications used to live in their own details key. Rows written before
+  // that changed still hold them there, and those issues have closed, so
+  // nothing will ever rewrite them — read the old shape rather than drop a
+  // column off every page that already had one.
+  const legacy = new Map(
+    ((details || {}).applications || []).map((a) => [a.key, a.applications])
+  );
 
   return rows.map((r) => ({
     ...r,
     nested: r.key.startsWith("nii_"),
     pct: base && r.offered ? (r.offered / base) * 100 : null,
-    applications: r.applications ?? null,
+    applications: r.applications ?? legacy.get(r.key) ?? null,
   }));
 }
 
