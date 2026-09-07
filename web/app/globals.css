@@ -2272,16 +2272,6 @@ body.has-sheet .scroll-jump { display: none; }
   .price-chart .candle-baseline-label { font-size: 12px; }
 }
 
-/* The homepage's freshness claim, under the hero heading. Small and quiet:
-   it is a fact the page has to state, not a thing to look at. */
-.hero-fresh {
-  margin: 10px 0 0;
-  font-size: 0.82rem;
-  color: var(--on-brand);
-  opacity: 0.82;
-}
-.hero-fresh time { font-weight: 700; opacity: 1; }
-
 /* The companies a headline names, linked to their own pages. Chips rather
    than a list: it is a set of destinations, not a sequence to read. */
 .news-companies { margin-bottom: 14px; }

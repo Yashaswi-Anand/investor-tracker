@@ -5,7 +5,7 @@ import {
   gmpDeltas,
   gmpSparklines,
 } from "../lib/data";
-import { fmtStamp, safeJsonLd } from "../lib/format";
+import { safeJsonLd } from "../lib/format";
 import IpoList from "./components/IpoList";
 import Reveal from "./components/Reveal";
 import TopGmp from "./components/TopGmp";
@@ -36,8 +36,10 @@ export default async function HomePage() {
   }));
 
   // The newest row's timestamp is the page's own freshness, and the whole
-  // proposition of a "today" query is that the answer is from today. It was
-  // stated nowhere on the homepage, in prose or in markup.
+  // proposition of a "today" query is that the answer is from today. Read
+  // only by dateModified now that the visible line is gone — the claim still
+  // has to be made somewhere, and a machine is the reader that cannot infer
+  // it from the tiles.
   const lastUpdated = ipos.reduce(
     (newest, ipo) =>
       ipo.updated_at && (!newest || ipo.updated_at > newest) ? ipo.updated_at : newest,
@@ -46,7 +48,6 @@ export default async function HomePage() {
 
   const open = ipos.filter((i) => i.status === "open");
   const upcoming = ipos.filter((i) => i.status === "upcoming");
-
 
   // Structured data helps Google show rich results for the listing page.
   // Only the IPOs actually emitted are counted — declaring a larger
@@ -114,18 +115,12 @@ export default async function HomePage() {
             </span>
           </h1>
 
-          {/* Said out loud, not only in the markup. Every query this page
-              wants ends in "today", and the page never claimed a date. */}
-          {lastUpdated && (
-            <p className="hero-fresh">
-              Updated{" "}
-              <time dateTime={new Date(lastUpdated).toISOString()}>
-                {fmtStamp(lastUpdated)} IST
-              </time>{" "}
-              · {open.length} open · {upcoming.length} upcoming
-            </p>
-          )}
-
+          {/* The freshness line that used to sit here said its two counts
+              twice: the tiles directly below already read "Open now 2" and
+              "Upcoming 7", larger and first. `lastUpdated` still carries the
+              claim as dateModified in the JSON-LD above, which is the half a
+              search engine reads; the visible sentence was repeating tiles a
+              reader had not scrolled past yet. */}
           <Reveal className="hero-stats" count>
             <div className="stat-tile">
               <div className="k">Open now</div>
