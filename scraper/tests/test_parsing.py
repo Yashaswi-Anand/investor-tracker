@@ -89,6 +89,10 @@ NSE_DETAIL = {
 }
 
 NSE_CATEGORY = {
+    # Every table NSE has actually written to carries this. Its absence is
+    # what distinguishes "nobody has bid" from "NSE never filled this in",
+    # so the fixture has to have it or it is not a populated table.
+    "updateTime": "Updated as on 05-Sep-2026 17:00:00",
     "dataList": [
         {"category": "Category", "noOfTotalMeant": "No. of times"},
         {"category": "Qualified Institutional Buyers(QIBs)", "noOfTotalMeant": "0.09124148108843086"},
@@ -986,6 +990,7 @@ def test_zero_subscription_never_overwrites_a_real_figure():
     this parser wrote a zero over it.
     """
     payload = {
+        "updateTime": "Updated as on 05-Sep-2026 17:00:00",
         "dataList": [
             {
                 "srNo": "1",
@@ -1010,6 +1015,7 @@ def test_zero_subscription_never_overwrites_a_real_figure():
 def test_zero_subscription_is_kept_when_nothing_was_bid():
     """The other half: before the first bid, zero is the truth."""
     payload = {
+        "updateTime": "Updated as on 05-Sep-2026 17:00:00",
         "dataList": [
             {
                 "srNo": "1",
@@ -1023,10 +1029,48 @@ def test_zero_subscription_is_kept_when_nothing_was_bid():
     assert nse.parse_subscription(payload) == {"subscription_qib": 0.0}
 
 
+def test_unstamped_category_table_says_nothing():
+    """The second half of the zero-subscription bug.
+
+    ipo-active-category returns "Updated as on null" for a table NSE has
+    never filled. Pranav's read that through its whole first morning while
+    the issue list showed it 0.20x away, and every ratio in it was 0.00 —
+    which the old guard let through, because nothing had been bid in the
+    table either. An unwritten table has no ratios to report.
+    """
+    payload = {
+        "updateTime": "Updated as on null",
+        "dataList": [
+            {"srNo": "None", "category": "Total",
+             "noOfShareOffered": "0.0", "noOfSharesBid": "0.0", "noOfTotalMeant": "0.00"},
+        ],
+    }
+    assert nse.parse_subscription(payload) == {}
+    assert nse.parse_categories(payload) is None
+    assert nse.category_stamp(payload) is None
+
+
+def test_category_table_carries_its_own_age():
+    """This endpoint was measured three days behind the issue list on a live
+    issue, so its numbers may not travel without their date."""
+    payload = {
+        "updateTime": "Updated as on 04-Sep-2026 17:00:00",
+        "dataList": [
+            {"srNo": "1", "category": "Qualified Institutional Buyers(QIBs)",
+             "noOfShareOffered": "483000", "noOfSharesBid": "2765000", "noOfTotalMeant": "5.72"},
+        ],
+    }
+    assert nse.category_stamp(payload) == "04-Sep-2026 17:00:00"
+    parsed = nse.parse_categories(payload)
+    assert parsed["at"] == "04-Sep-2026 17:00:00"
+    assert parsed["rows"][0]["key"] == "qib"
+
+
 def test_categories_carry_the_nii_split():
     """NII splits at ten lakh, and which side a bid falls on decides which
     pool it is allotted from. NSE numbers those rows 2.1 and 2.2."""
     payload = {
+        "updateTime": "Updated as on 05-Sep-2026 17:00:00",
         "dataList": [
             {"srNo": "Sr.No.", "category": "Category"},
             {"srNo": "2", "category": "Non Institutional Investors",
@@ -1039,7 +1083,7 @@ def test_categories_carry_the_nii_split():
             {"srNo": "2.1(a)", "category": "Corporates", "noOfSharesBid": "19000"},
         ]
     }
-    rows = nse.parse_categories(payload)
+    rows = nse.parse_categories(payload)["rows"]
     assert [r["key"] for r in rows] == ["nii", "nii_big", "nii_small"]
     assert rows[1]["bid"] == 4643000
     assert rows[2]["offered"] == 400

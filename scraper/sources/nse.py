@@ -351,6 +351,22 @@ def _shares(value):
     return int(number) if number and number > 0 else None
 
 
+def category_stamp(payload):
+    """When ipo-active-category last had anything put in it.
+
+    NSE returns the field as "Updated as on 04-Sep-2026 17:00:00", or as the
+    literal string "Updated as on null" for a table it has never filled. The
+    difference matters more than it looks: this endpoint lags the rest of
+    NSE badly — measured three days behind on a live issue — so its age has
+    to travel with its numbers rather than being thrown away.
+    """
+    raw = str((payload or {}).get("updateTime") or "").strip()
+    stamp = re.sub(r"^Updated as on\s*", "", raw).strip()
+    if not stamp or stamp.lower() in ("null", "none", "-"):
+        return None
+    return stamp
+
+
 def parse_categories(payload):
     """The category table behind the one subscription figure we kept.
 
@@ -366,6 +382,10 @@ def parse_categories(payload):
     of the table from the moment an issue opens, hours before there is
     anything in it.
     """
+    stamp = category_stamp(payload)
+    if not stamp:
+        return None
+
     rows = (payload or {}).get("dataList") or []
     out = []
     for row in rows:
@@ -387,7 +407,9 @@ def parse_categories(payload):
         if times:
             item["times"] = round(times, 2)
         out.append(item)
-    return out or None
+    # The age rides with the rows. This endpoint is routinely days behind
+    # the issue list, and a share count with no date on it reads as live.
+    return {"at": stamp, "rows": out} if out else None
 
 
 def parse_applications(detail):
@@ -465,6 +487,13 @@ def parse_subscription(payload):
     ratio, and the honest thing is to write nothing and leave the figure
     that came from the issue list standing.
     """
+    # No timestamp means NSE has never written to this table for this
+    # issue — Pranav's read "Updated as on null" through its whole first
+    # morning while the issue list showed it 0.20x away. Reading ratios out
+    # of a table that was never filled is how a zero gets published.
+    if not category_stamp(payload):
+        return {}
+
     rows = (payload or {}).get("dataList") or []
     result = {}
     for row in rows:
@@ -564,7 +593,14 @@ def fetch():
             if subscription is None:
                 failures.append(f"subscription:{symbol}")
             else:
+                # ipo-current-issue is live; this table lags it and sometimes
+                # never fills at all. So it may refine a figure and may not
+                # replace one with nothing: a zero here over a real number
+                # there is how an issue 0.20x away came to read 0.00x.
+                before = row.get("subscription_total")
                 row.update(parse_subscription(subscription))
+                if before and not row.get("subscription_total"):
+                    row["subscription_total"] = before
                 categories = parse_categories(subscription)
                 if categories:
                     _add_detail(row, "category_bids", categories)
