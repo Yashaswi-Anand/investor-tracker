@@ -372,6 +372,14 @@ def category_stamp(payload):
     stamp = re.sub(r"^Updated as on\s*", "", raw).strip()
     if not stamp or stamp.lower() in ("null", "none", "-"):
         return None
+    # The zone, because the other book carries one. demandGraph stamps itself
+    # "07-Sep-2026 17:00:05 IST" and this endpoint stamps the same instant
+    # "07-Sep-2026 17:00:00", so two pages of the same site printed what looked
+    # like two different time zones for the same 5pm. NSE is an IST exchange
+    # and publishes nothing in any other zone; saying so is naming the clock
+    # already being read, not converting it.
+    if re.search(r"\d{1,2}:\d{2}", stamp) and not stamp.split()[-1].isalpha():
+        stamp += " IST"
     return stamp
 
 

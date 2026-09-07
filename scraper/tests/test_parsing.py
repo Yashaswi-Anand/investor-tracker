@@ -1085,9 +1085,25 @@ def test_category_stamp_reads_a_written_table():
     only declared. Kept because parse_subscription still turns on it."""
     assert nse.category_stamp(
         {"updateTime": "Updated as on 04-Sep-2026 17:00:00"}
-    ) == "04-Sep-2026 17:00:00"
+    ) == "04-Sep-2026 17:00:00 IST"
     assert nse.category_stamp({"updateTime": "Updated as on null"}) is None
     assert nse.category_stamp({}) is None
+
+
+def test_category_stamp_names_the_zone_only_once():
+    """Both books print an instant; only one of them names the zone.
+
+    A reader comparing an SME page stamped "17:00:05 IST" against a mainboard
+    page stamped "17:00:00" has no way to know the two are the same clock.
+    Adding IST is naming what NSE already publishes — so it must not be added
+    twice, and must not be attached to a bare date that carries no time.
+    """
+    assert nse.category_stamp(
+        {"updateTime": "Updated as on 07-Sep-2026 17:00:00 IST"}
+    ) == "07-Sep-2026 17:00:00 IST"
+    assert nse.category_stamp({"updateTime": "Updated as on 07-Sep-2026"}) == (
+        "07-Sep-2026"
+    )
 
 
 def test_book_takes_share_counts_from_the_live_response():
@@ -1187,7 +1203,7 @@ def test_book_prefers_the_combined_exchanges_while_it_is_current():
     book = nse.parse_book(PRANAV_DETAIL, PRANAV_CAT)
     rows = {r["key"]: r for r in book["rows"]}
     assert book["scope"] == "all"
-    assert book["at"] == "07-Sep-2026 12:42:00"
+    assert book["at"] == "07-Sep-2026 12:42:00 IST"
     assert rows["retail"]["bid"] == 39003360, "the combined figure, not NSE's"
     assert rows["retail"]["times"] == round(39003360 / 13321184, 2)
 
