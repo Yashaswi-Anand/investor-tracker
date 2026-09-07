@@ -1,8 +1,7 @@
-import Link from "next/link";
-
 import { NEWS, SITE } from "../../lib/config";
 import { getAllIpos } from "../../lib/data";
 import { getNews, matchNews } from "../../lib/news";
+import NewsCompanies from "../components/NewsCompanies";
 import NewsFilter from "../components/NewsFilter";
 
 // Same reasoning as every other page here: the feed moves during the day and
@@ -30,9 +29,14 @@ export const metadata = {
 function companiesInTheNews(articles, ipos) {
   const index = new Map(articles.map((a, i) => [a.link, i]));
   return ipos
+    // Open and upcoming only. A headline about an issue that listed weeks ago
+    // is history; one about an issue closing tomorrow is a reason to open the
+    // page, and mixing them makes a reader sort the live from the finished.
+    .filter((ipo) => ipo.status === "open" || ipo.status === "upcoming")
     .map((ipo) => ({
       slug: ipo.slug,
       name: ipo.short_name || ipo.name,
+      board: (ipo.board || "Mainboard").toLowerCase(),
       indices: matchNews(articles, ipo)
         .map((a) => index.get(a.link))
         .filter((i) => i != null),
@@ -63,31 +67,7 @@ export default async function NewsPage() {
         </p>
       </section>
 
-      {/* The slugs were computed already — matchNews ran over every IPO to
-          build the filter — and then thrown away, so the one page on the
-          site whose subject is named companies linked to none of them. It
-          also gives the page an H2: it went H1 straight to sixteen H3s. */}
-      {companies.length > 0 && (
-        <section className="card card-wide news-companies">
-          <h2>Companies in the news</h2>
-          <p className="subtitle subtitle-flush">
-            Each links to that issue&apos;s own page — GMP history,
-            subscription by category, timetable and offer documents.
-          </p>
-          <ul className="news-company-list">
-            {companies.map((company) => (
-              <li key={company.slug}>
-                <Link href={`/ipo/${company.slug}`}>
-                  {company.name}
-                  <span className="news-company-count">
-                    {company.indices.length}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <NewsCompanies companies={companies} />
 
       {articles.length === 0 ? (
         <section className="card card-wide">
