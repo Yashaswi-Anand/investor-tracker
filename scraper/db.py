@@ -124,8 +124,18 @@ LISTING_COLUMNS = ("listing_price", "listing_gain_pct")
 # `details` comes back so the scraper can MERGE into it rather than
 # replacing it: each source fills different keys, and a source being down
 # must not erase what another one found last week.
+# The board is read back for the KFin matcher alone. It never changes and is
+# never written from here — but a row carried in by fetch_unfinished is a
+# skeleton with no board on it, and KFin lists an SME issue and a mainboard
+# issue of the same company under two different ids. Without this the matcher
+# cannot tell them apart and correctly refuses to answer for either.
+_LOOKUP_COLUMNS = ("board",)
+
 _EXISTING_COLUMNS = (
-    ("slug", "locked", "gmp", "details") + TIMETABLE_COLUMNS + LISTING_COLUMNS
+    ("slug", "locked", "gmp", "details")
+    + TIMETABLE_COLUMNS
+    + LISTING_COLUMNS
+    + _LOOKUP_COLUMNS
 )
 
 
@@ -154,7 +164,7 @@ def fetch_existing(slugs):
             "details": row.get("details") or {},
             **{
                 column: row.get(column)
-                for column in TIMETABLE_COLUMNS + LISTING_COLUMNS
+                for column in TIMETABLE_COLUMNS + LISTING_COLUMNS + _LOOKUP_COLUMNS
             },
         }
         for row in response.json()

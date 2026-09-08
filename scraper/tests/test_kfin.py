@@ -157,3 +157,82 @@ def test_fetch_makes_no_request_when_no_issue_is_at_kfin(monkeypatch):
     rows = [{"slug": "deepa", "name": "Deepa Jewellers Limited", "board": "Mainboard",
              "registrar": "Bigshare Services Private Limited"}]
     assert kfin.fetch(rows) == {}
+
+
+# --------------------------------------------------------------------------
+# The regression that made the whole step a no-op in production.
+# --------------------------------------------------------------------------
+def test_resolve_fills_a_carried_skeleton_from_the_stored_row():
+    """db.fetch_unfinished returns slug, name, status, symbol and dates —
+    deliberately nothing else. Every issue this step can answer for has
+    already closed, so NSE no longer lists it and the skeleton is the ONLY
+    row there is. Reading registrar off it finds nothing."""
+    skeleton = {"slug": "ashutosh-fibre-limited", "name": "Ashutosh Fibre Limited",
+                "status": "listed", "updated_at": "2026-09-08T05:00:00Z"}
+    assert not kfin.is_kfin(skeleton), "the bug: the skeleton looks like no registrar at all"
+
+    existing = {"ashutosh-fibre-limited": {
+        "registrar": "Kfintech Technologies Limited",
+        "registrar_url": "https://ipostatus.kfintech.com/",
+        "board": "SME",
+    }}
+    view = kfin.resolve(skeleton, existing)
+    assert kfin.is_kfin(view)
+    assert view["board"] == "SME"
+    assert view["updated_at"] == "2026-09-08T05:00:00Z", "the run's stamp, not the stored one"
+
+
+def test_resolve_prefers_this_run_over_what_is_stored():
+    """A registrar NSE published today wins over one stored last week."""
+    view = kfin.resolve(
+        {"slug": "x", "name": "New Name", "board": "Mainboard",
+         "registrar": "KFin Technologies Limited"},
+        {"x": {"name": "Old Name", "board": "SME", "registrar": "Bigshare Services"}},
+    )
+    assert view["name"] == "New Name"
+    assert view["board"] == "Mainboard"
+    assert view["registrar"] == "KFin Technologies Limited"
+
+
+def test_fetch_matches_carried_rows_that_only_the_database_knows(monkeypatch):
+    """End to end over the shape a real run has: NSE hands over the open and
+    upcoming issues, fetch_unfinished carries the closed ones as skeletons,
+    and only the second kind can be matched — KFin does not list an issue
+    until it has closed."""
+    monkeypatch.setattr(
+        kfin, "fetch_directory", lambda session=None: kfin.parse_directory(BUNDLE)
+    )
+    rows = [
+        # From NSE: full row, but KFin has no entry for it yet.
+        {"slug": "pranav", "name": "Pranav Constructions Limited", "board": "Mainboard",
+         "registrar": "KFin Technologies Limited", "updated_at": "2026-09-08T05:00:00Z"},
+        # Carried skeletons: everything the matcher needs is in `existing`.
+        {"slug": "ashutosh", "name": "Ashutosh Fibre Limited", "status": "listed",
+         "updated_at": "2026-09-08T05:00:00Z"},
+        {"slug": "shanti", "name": "Shanti Inorganics Limited", "status": "listed",
+         "updated_at": "2026-09-08T05:00:00Z"},
+        {"slug": "deepa", "name": "Deepa Jewellers Limited", "status": "listed",
+         "updated_at": "2026-09-08T05:00:00Z"},
+    ]
+    existing = {
+        "ashutosh": {"registrar": "Kfintech Technologies Limited", "board": "SME"},
+        "shanti": {"registrar": "KFin Technologies Limited", "board": "SME"},
+        "deepa": {"registrar": "Bigshare Services Private Limited", "board": "Mainboard"},
+    }
+    out = kfin.fetch(rows, existing)
+    assert set(out) == {"ashutosh", "shanti"}, "Bigshare is not ours; Pranav is not listed by KFin yet"
+    assert out["ashutosh"]["client_id"] == "34024394990", "the SME id, chosen by the stored board"
+    assert out["shanti"]["client_id"] == "85357713080"
+
+
+def test_fetch_without_existing_still_works_for_full_rows(monkeypatch):
+    """The other caller shape: a row NSE returned in full needs no stored
+    fallback, and passing no `existing` at all must not throw."""
+    monkeypatch.setattr(
+        kfin, "fetch_directory", lambda session=None: kfin.parse_directory(BUNDLE)
+    )
+    out = kfin.fetch([
+        {"slug": "rays", "name": "Rays of Belief Limited- For Profit Social Enterprise (FPSE)",
+         "board": "Mainboard", "registrar": "KFin Technologies Limited"}
+    ])
+    assert out["rays"]["client_id"] == "60121009540"

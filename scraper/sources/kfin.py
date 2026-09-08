@@ -205,6 +205,35 @@ def match(row, issues):
     return picked[0][0] if len(picked) == 1 else None
 
 
+def resolve(row, existing=None):
+    """The row as the matcher needs to see it: what this run fetched, filled
+    in from what is already stored.
+
+    THE BUG THIS EXISTS TO FIX. Every issue this step can actually answer for
+    has already closed, and NSE drops an issue from its lists within a day or
+    two of that — so those rows do not come from NSE at all. They are carried
+    in by db.fetch_unfinished, which by design returns a SKELETON: slug, name,
+    status, symbol and the dates, and nothing else. No registrar, no board.
+
+    is_kfin() read only the row, found neither field, and decided not one
+    issue was KFin's — so the step returned empty before it ever asked KFin
+    for anything. Three scrapes ran that way and stored nothing, and the
+    allotment page kept offering the hand-off for issues it should have been
+    checking directly. The stored row had the registrar the whole time; this
+    reads it.
+    """
+    stored = (existing or {}).get(row.get("slug")) or {}
+    return {
+        "slug": row.get("slug"),
+        "name": row.get("name") or stored.get("name"),
+        "short_name": row.get("short_name") or stored.get("short_name"),
+        "board": row.get("board") or stored.get("board"),
+        "registrar": row.get("registrar") or stored.get("registrar"),
+        "registrar_url": row.get("registrar_url") or stored.get("registrar_url"),
+        "updated_at": row.get("updated_at"),
+    }
+
+
 def fetch(ipo_rows, existing=None):
     """{slug: lookup record} for every KFin issue KFin's directory knows.
 
@@ -216,7 +245,8 @@ def fetch(ipo_rows, existing=None):
     Never raises: a directory that cannot be read this run leaves whatever
     was stored last time in place, since an id does not change once issued.
     """
-    ours = [row for row in ipo_rows if is_kfin(row)]
+    ours = [resolve(row, existing) for row in ipo_rows]
+    ours = [row for row in ours if is_kfin(row)]
     if not ours:
         return {}
 
