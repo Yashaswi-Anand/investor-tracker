@@ -70,6 +70,10 @@ function issueOf(ipo) {
     lookup: direct
       ? { client_id: lookup.client_id, endpoint: lookup.endpoint, name: lookup.name }
       : null,
+    // What the registrar calls this issue in their own dropdown. Only for the
+    // ones we hand off — the reader's first step there is finding it in a list
+    // of forty, under a spelling that is not ours.
+    handoff: direct ? null : (ipo.details || {}).handoff || null,
   };
 }
 
@@ -151,7 +155,8 @@ export default async function AllotmentPage() {
             </li>
             <li>
               <strong>Everyone else keeps a CAPTCHA.</strong> Bigshare, MUFG
-              Intime and Skyline are opened for you with the PAN ready.
+              Intime and Skyline are opened for you with the PAN ready and the
+              name they file the issue under.
             </li>
           </ul>
         </div>
