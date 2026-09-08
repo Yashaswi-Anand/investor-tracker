@@ -20,6 +20,7 @@ import config
 import db
 import util
 from sources import gmp as gmp_source
+from sources import handoff as handoff_source
 from sources import kfin as kfin_source
 from sources import nse
 from sources import listing as listing_source
@@ -260,6 +261,23 @@ def run():
                 merged["lookup"] = lookup
                 row["details"] = merged
         print(f"      {len(lookup_by_slug)} KFin issues carry a lookup id")
+
+        # The registrars we cannot check FOR the reader still publish the name
+        # they file each issue under, in the same list their own page loads
+        # before any CAPTCHA exists. Reading it turns "pick the company" into
+        # "pick THIS one" — no identifier sent, no challenge touched.
+        try:
+            handoff_by_slug = handoff_source.fetch(rows, existing)
+        except Exception as error:  # noqa: BLE001 - a convenience, not the run
+            print(f"      (handoff names unavailable: {error})")
+            handoff_by_slug = {}
+        for row in rows:
+            named = handoff_by_slug.get(row["slug"])
+            if named:
+                merged = dict(row.get("details") or {})
+                merged["handoff"] = named
+                row["details"] = merged
+        print(f"      {len(handoff_by_slug)} issues carry the registrar's own name")
 
         # After the timetable, because it needs listing_date, and before the
         # derive step, because apply_listing_status reads the same column.

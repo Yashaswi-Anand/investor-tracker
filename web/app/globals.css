@@ -3245,3 +3245,16 @@ body.has-sheet .scroll-jump { display: none; }
   .result-marks { width: 100%; }
   .result-select { width: 100%; border-radius: var(--radius-sm); }
 }
+
+/* The registrar's own spelling for an issue we hand off. Set apart from the
+   steps: it is the fact the reader needs before step one, not a step. */
+.allot-handoff-name {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.allot-handoff-name strong {
+  font-weight: 800;
+  color: var(--text);
+}

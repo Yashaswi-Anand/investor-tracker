@@ -392,7 +392,15 @@ function Verdict({ result }) {
  * `direct` with a `lookup` means KFin, and the row asks KFin itself. Anything
  * else is the hand-off: copy the PAN, go, come back and record it.
  */
-export function IssueRows({ slug, name, direct, lookup, portal, registrarShort }) {
+export function IssueRows({
+  slug,
+  name,
+  direct,
+  lookup,
+  portal,
+  registrarShort,
+  handoff,
+}) {
   const { ready, pans, marks, setMarks, results, setResults } = useAllotment();
   const [busy, setBusy] = useState({});
   const [copied, setCopied] = useState(null);
@@ -523,9 +531,13 @@ export function IssueRows({ slug, name, direct, lookup, portal, registrarShort }
           <button
             type="button"
             className="ghost-btn"
-            onClick={() => copyText(name, "name")}
+            onClick={() => copyText(handoff?.name || name, "name")}
           >
-            {copied === "name" ? "Company name copied" : "Copy company name"}
+            {copied === "name"
+              ? "Copied — paste it in their dropdown"
+              : handoff
+                ? `Copy “${handoff.name}”`
+                : "Copy company name"}
           </button>
         )}
 
@@ -676,9 +688,18 @@ function Rail({ issue, today }) {
 export function IssuePicker({ issues, today }) {
   const [slug, setSlug] = useState(issues[0]?.slug || "");
 
+  // On mount AND on every later hash change. Without the listener the
+  // selection ignored a hash that arrived while the page was already open —
+  // a link into a particular issue worked on a cold load and silently did
+  // nothing from anywhere on the site that already had this page rendered.
   useEffect(() => {
-    const wanted = decodeURIComponent((window.location.hash || "").slice(1));
-    if (wanted && issues.some((i) => i.slug === wanted)) setSlug(wanted);
+    const follow = () => {
+      const wanted = decodeURIComponent((window.location.hash || "").slice(1));
+      if (wanted && issues.some((i) => i.slug === wanted)) setSlug(wanted);
+    };
+    follow();
+    window.addEventListener("hashchange", follow);
+    return () => window.removeEventListener("hashchange", follow);
   }, [issues]);
 
   const pick = (next) => {
@@ -806,6 +827,16 @@ export function IssuePicker({ issues, today }) {
             {issue.registrar.short} keeps this behind a CAPTCHA — the last step
             is yours
           </p>
+          {/* The step that actually goes wrong is the first one. Their
+              dropdown lists this issue under their own spelling, in a list of
+              forty, and it is not what we call it. Read from the same list
+              their page loads. */}
+          {issue.handoff ? (
+            <p className="allot-handoff-name">
+              On their page it is listed as{" "}
+              <strong>{issue.handoff.name}</strong>
+            </p>
+          ) : null}
           <ol className="result-steps">
             {issue.registrar.steps.map((step) => (
               <li key={step}>{step}</li>
@@ -828,6 +859,7 @@ export function IssuePicker({ issues, today }) {
         lookup={issue.lookup}
         portal={issue.registrar?.portal || null}
         registrarShort={issue.registrar?.short || "the registrar"}
+        handoff={issue.handoff}
       />
 
       <p className="allot-issue-foot">
