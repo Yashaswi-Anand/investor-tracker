@@ -2584,31 +2584,6 @@ body.has-sheet .scroll-jump { display: none; }
 /* ==========================================================================
    Allotment check
    ========================================================================== */
-.allot-head { margin-bottom: 18px; }
-
-/* The one thing on this page nobody must skim past. Bordered and tinted
-   rather than set as another paragraph, because the first version said the
-   same thing in the lede and a reader still took an unmarked row for a "no". */
-.allot-notice {
-  margin-top: 18px;
-  padding: 16px 18px;
-  border: 1px solid var(--warn);
-  border-left-width: 4px;
-  border-radius: var(--radius);
-  background: var(--warn-soft);
-  color: var(--text);
-}
-.allot-notice-title {
-  margin: 0 0 8px;
-  font-size: 0.98rem;
-  font-weight: 800;
-  color: var(--warn);
-}
-.allot-notice-title::before { content: none; }
-.allot-notice p { margin: 0 0 8px; font-size: 0.86rem; line-height: 1.65; }
-.allot-notice p:last-child { margin-bottom: 0; }
-.allot-notice strong { font-weight: 800; }
-.allot-notice-alt { font-size: 0.82rem; opacity: 0.9; }
 
 /* Numbered because it is a sequence and the order is the whole instruction. */
 .result-steps {
@@ -2621,18 +2596,6 @@ body.has-sheet .scroll-jump { display: none; }
   color: var(--text-muted);
 }
 
-.result-copy-name {
-  margin-top: 6px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--primary);
-  font: inherit;
-  font-size: 0.74rem;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: underline;
-}
 
 .pan-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; }
 .pan-input {
@@ -2672,7 +2635,9 @@ body.has-sheet .scroll-jump { display: none; }
 .pan-error { margin: 8px 2px 0; font-size: 0.8rem; color: var(--down); }
 .pan-empty { margin: 12px 0 0; font-size: 0.84rem; color: var(--text-muted); }
 .pan-privacy { margin: 16px 0 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; }
-.pan-erase { color: var(--down); }
+/* Inline, but still a real target: padding rather than a box, so it reads as
+   the link it is while clearing the 24px floor. */
+.pan-erase { color: var(--down); padding: 4px 2px; }
 
 /* The storage keys, in the privacy policy. */
 .policy-list { margin: 10px 0 12px; padding-left: 20px; display: grid; gap: 6px; }
@@ -2694,8 +2659,11 @@ body.has-sheet .scroll-jump { display: none; }
   font-weight: 700;
   letter-spacing: 0.06em;
 }
+/* 28px, not 22. A PAN chip's remove button is a small target next to text
+   the reader may be trying to select, and 22 was under every touch-target
+   guideline there is. */
 .pan-remove {
-  width: 22px; height: 22px;
+  width: 28px; height: 28px;
   display: grid; place-items: center;
   border: none;
   border-radius: 50%;
@@ -2804,12 +2772,89 @@ body.has-sheet .scroll-jump { display: none; }
   color: var(--primary);
 }
 
-/* ---------------------------------------------------------------------------
-   Allotment page: one section per issue, and the rows inside it.
-   --------------------------------------------------------------------------- */
-/* The dropdown that is the list. Full width, because the option text carries
-   the company, the registrar and the date, and a narrow control clips it. */
-.allot-pick { display: grid; gap: 6px; margin-top: 12px; }
+/* ==========================================================================
+   Allotment — the page someone opens on allotment morning to ask one
+   question. Everything here is ordered by that: the verdict is the loudest
+   thing on the row, the rail answers what comes next, and the machinery of
+   picking an issue is quiet.
+   ========================================================================== */
+
+/* The band the page opens on. Same gradient as the header so the two read as
+   one surface, with the promise stated in it rather than in a warning box
+   further down, where the first version buried the only thing that decides
+   whether a reader types a PAN at all. */
+.allot-hero {
+  background: var(--brand-grad);
+  color: var(--on-brand);
+  padding: 26px 0 30px;
+}
+.allot-hero-title {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.allot-hero-lede {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  opacity: 0.92;
+}
+.allot-hero-points {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.allot-hero-points li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  opacity: 0.9;
+}
+/* A rule, not a bullet glyph: three claims of equal weight, and a dot would
+   read as a list of features rather than three separate assurances. */
+.allot-hero-points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.55;
+}
+.allot-hero-points strong { font-weight: 800; opacity: 1; }
+@media (min-width: 760px) {
+  .allot-hero-title { font-size: 1.75rem; }
+  .allot-hero-points { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+}
+
+/* The cards sit up into the band, the way the homepage list does. */
+.allot-body { margin-top: -14px; position: relative; z-index: 1; padding-bottom: 8px; }
+
+.allot-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.allot-card-head h2 { margin-bottom: 4px; }
+.allot-count {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---- the picker, in the card whose content it controls ------------------ */
+.allot-pick { display: grid; gap: 6px; }
 .allot-pick-label {
   font-size: 0.72rem;
   font-weight: 800;
@@ -2817,46 +2862,218 @@ body.has-sheet .scroll-jump { display: none; }
   text-transform: uppercase;
   color: var(--text-muted);
 }
+/* The chevron is drawn rather than left to the platform: a native arrow sits
+   at a different size and colour in every browser, and this control is the
+   first thing on the card. */
+.allot-pick-control { position: relative; display: block; }
+.allot-pick-control svg {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--primary);
+}
 .allot-select {
   width: 100%;
-  min-height: 44px;
-  padding: 9px 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
+  min-height: 48px;
+  padding: 10px 40px 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
   color: var(--text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 700;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
-.allot-select:focus { outline: none; border-color: var(--primary); }
-.allot-issue-title { margin: 0; font-size: 1.05rem; font-weight: 800; line-height: 1.3; }
-.allot-issue-title::before { content: none; }
-.allot-issue-meta { margin: 4px 0 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
-.allot-issue-meta strong { font-weight: 700; color: var(--text); }
-.allot-issue-foot { margin: 4px 0 0; font-size: 0.78rem; color: var(--text-muted); }
+.allot-select:focus-visible { outline: none; box-shadow: var(--ring); border-color: var(--primary); }
 
-/* The one-line explanation of a direct check. Set like the steps list it
-   replaces, so the two kinds of section read at the same weight. */
-.allot-direct {
-  margin: 10px 0 0;
-  font-size: 0.8rem;
-  line-height: 1.55;
+/* ---- who the issue is --------------------------------------------------- */
+.allot-issue-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.allot-issue-id { flex: 1 1 auto; min-width: 0; }
+
+/* Registrars publish no usable logo, so a monogram carries the identity.
+   Teal for the ones that hand off, green for the one that answers live —
+   the same distinction the row below makes, made once at the top. */
+.allot-mark {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.allot-mark[data-direct] { background: var(--up-soft); color: var(--up); }
+
+.allot-issue-title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.allot-issue-title::before { content: none; }
+.allot-issue-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
-.allot-direct strong { color: var(--text); }
+.allot-pill {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.allot-pill[data-tone="live"] { background: var(--up-soft); color: var(--up); }
+.allot-registrar { font-weight: 600; }
+.allot-issue-foot { margin: 16px 0 0; font-size: 0.78rem; color: var(--text-muted); }
 
-.allot-rows-empty { margin: 14px 0 6px; font-size: 0.84rem; color: var(--text-muted); }
-.allot-rows-foot { margin: -8px 0 4px; font-size: 0.76rem; color: var(--text-muted); }
+/* ---- the timetable rail ------------------------------------------------- */
+.allot-rail {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.allot-rail-step {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding-top: 20px;
+  text-align: center;
+}
+/* The connecting line is drawn from each step back to the previous one, so
+   it never runs past either end of the rail. */
+.allot-rail-step::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: var(--border);
+}
+.allot-rail-step:first-child::before { content: none; }
+.allot-rail-step[data-state="done"]::before,
+.allot-rail-step[data-state="next"]::before { background: var(--primary); }
+.allot-rail-dot {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border-strong);
+}
+.allot-rail-step[data-state="done"] .allot-rail-dot {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+/* The step the issue is at now, ringed rather than merely filled. */
+.allot-rail-step[data-state="next"] .allot-rail-dot {
+  background: var(--surface);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.allot-rail-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.allot-rail-step[data-state="next"] .allot-rail-label { color: var(--primary); }
+.allot-rail-date {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
 
-.lookup-batch { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 0; }
+/* ---- which of the two paths this issue is on ---------------------------- */
+.allot-direct {
+  margin: 18px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.allot-direct strong { color: var(--text); font-weight: 700; }
+.allot-live-pill {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--up-soft);
+  color: var(--up);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+.allot-handoff {
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+}
+.allot-handoff-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--warn);
+}
+.allot-handoff .result-steps { margin-top: 8px; color: var(--text-2); }
+
+/* ---- the rows ----------------------------------------------------------- */
+.allot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 18px 0 0;
+}
+.allot-summary { margin: 0; font-size: 0.82rem; color: var(--text-muted); }
+.allot-summary-won { color: var(--up); font-weight: 800; }
+.allot-rows-empty { margin: 16px 0 0; font-size: 0.84rem; color: var(--text-muted); }
+.allot-rows-foot { margin: 10px 0 0; font-size: 0.76rem; color: var(--text-muted); }
+
 .lookup-btn {
-  padding: 8px 15px;
+  min-height: 40px;
+  padding: 9px 16px;
   border-radius: 999px;
   border: 1px solid var(--primary);
   background: var(--primary);
-  color: var(--on-primary, #fff);
+  color: #fff;
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
@@ -2865,8 +3082,33 @@ body.has-sheet .scroll-jump { display: none; }
 }
 .lookup-btn:hover { filter: brightness(1.06); }
 .lookup-btn:disabled { opacity: 0.55; cursor: default; filter: none; }
+.lookup-btn-lg { min-height: 44px; padding: 11px 20px; font-size: 0.85rem; }
+.ghost-btn {
+  min-height: 40px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ghost-btn:hover { background: var(--surface-2); }
 
-.result-row { flex-direction: column; align-items: stretch; }
+.result-rows { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.result-row {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+/* The row itself carries the answer, so a list of PANs can be read down the
+   left edge without stopping to parse each one. */
+.result-row[data-outcome="allotted"] { border-color: var(--up); background: var(--up-soft); }
+.result-row[data-outcome="none"] { border-color: var(--border-strong); opacity: 0.75; }
 .result-row-main {
   display: flex;
   flex-wrap: wrap;
@@ -2874,29 +3116,132 @@ body.has-sheet .scroll-jump { display: none; }
   justify-content: space-between;
   gap: 10px;
 }
+.result-pan {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 4px 0;
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.result-copy {
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.result-marks { display: flex; flex-direction: column; gap: 4px; }
+.result-marks-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.result-select {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.result-select:focus-visible { outline: none; box-shadow: var(--ring); }
+.result-select[data-outcome="allotted"] { border-color: var(--up); color: var(--up); }
 
-/* The answer sits under the PAN it belongs to, and the row's own border
-   colour carries it — an allotted row is green before it is read. */
-.lookup-result { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
-.lookup-line { margin: 0; font-size: 0.82rem; line-height: 1.55; }
-.lookup-result[data-state="allotted"] .lookup-line strong { color: var(--up); }
-.lookup-result[data-state="applied"] .lookup-line strong { color: var(--text-muted); }
-.lookup-result[data-state="limited"] .lookup-line strong,
-.lookup-result[data-state="error"] .lookup-line strong { color: var(--warn); }
-.lookup-when { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
-.lookup-apps {
+/* ---- the verdict, which is the whole point ------------------------------ */
+.verdict {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-strong);
+}
+.verdict-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.verdict-word {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+/* The figure is the answer. Set as a number, not inside a sentence: on
+   allotment day a reader is scanning several PANs for one word and one
+   quantity, and prose makes both of them slower to find. */
+.verdict-figure {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.verdict-unit { font-size: 0.78rem; color: var(--text-muted); font-weight: 700; }
+.verdict-sub { font-size: 0.8rem; color: var(--text-muted); }
+.verdict-note { margin: 6px 0 0; font-size: 0.78rem; line-height: 1.55; color: var(--text-muted); }
+.verdict-when { margin: 6px 0 0; font-size: 0.7rem; color: var(--text-muted); }
+.verdict[data-state="allotted"] .verdict-word,
+.verdict[data-state="allotted"] .verdict-figure { color: var(--up); }
+.verdict[data-state="applied"] .verdict-word { color: var(--text-2); }
+.verdict[data-state="none"] .verdict-word { color: var(--text-2); }
+.verdict[data-state="limited"] .verdict-word,
+.verdict[data-state="error"] .verdict-word { color: var(--warn); }
+.verdict-apps {
   display: grid;
   gap: 4px;
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   padding: 0;
   list-style: none;
   font-size: 0.76rem;
   color: var(--text-muted);
 }
-.lookup-apps li { display: flex; flex-wrap: wrap; gap: 4px 12px; }
-.lookup-name { font-weight: 700; color: var(--text); }
+.verdict-apps li { display: flex; flex-wrap: wrap; gap: 3px 12px; }
+.verdict-apps strong { color: var(--up); font-weight: 800; }
+.verdict-name { font-weight: 700; color: var(--text); }
+.verdict-cat {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
 
-.allot-next { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
-.allot-next li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: 0.88rem; }
+/* ---- what is coming next ------------------------------------------------ */
+.allot-next { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.allot-next li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.allot-next li:last-child { border-bottom: none; padding-bottom: 0; }
 .allot-next a { font-weight: 700; }
 .allot-next-meta { font-size: 0.76rem; color: var(--text-muted); }
+
+@media (max-width: 560px) {
+  .allot-hero { padding: 20px 0 26px; }
+  .allot-issue-head { gap: 10px; }
+  .allot-mark { width: 36px; height: 36px; border-radius: 10px; font-size: 0.74rem; }
+  .allot-rail-label { font-size: 0.62rem; letter-spacing: 0.02em; }
+  .allot-rail-date { font-size: 0.7rem; }
+  /* Full-width on a phone: this is the button the whole page exists for. */
+  .allot-actions .lookup-btn-lg { width: 100%; }
+  .result-row-main { gap: 8px; }
+  .result-marks { width: 100%; }
+  .result-select { width: 100%; border-radius: var(--radius-sm); }
+}
