@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { organizationLd, SITE, webSiteLd } from "../../lib/config";
 import { getAllIpos } from "../../lib/data";
-import { fmtDate, safeJsonLd } from "../../lib/format";
+import { fmtDate, istToday, safeJsonLd } from "../../lib/format";
 import { registrarFor } from "../../lib/registrars";
 import { AllotmentProvider, IssuePicker, PanBox } from "../components/Allotment";
 
@@ -58,7 +58,12 @@ function issueOf(ipo) {
     short_name: ipo.short_name,
     status: ipo.status,
     board: ipo.board,
+    // The four dates the rail draws. They are the reader's next question
+    // after "did I get any" — when the money comes back, when the shares
+    // arrive, when it trades.
     allotment_date: ipo.allotment_date,
+    refund_date: ipo.refund_date,
+    demat_date: ipo.demat_date,
     listing_date: ipo.listing_date,
     registrar,
     direct,
@@ -80,6 +85,11 @@ export default async function AllotmentPage() {
       )
     )
     .slice(0, 6);
+
+  // Computed here, not in the browser: the rail marks which dates have
+  // passed, and a client that decided that for itself would disagree with
+  // the server's render for anyone loading the page across midnight IST.
+  const today = istToday();
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -118,38 +128,36 @@ export default async function AllotmentPage() {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
 
-      <div className="container page-pad">
-        <section className="allot-head">
-          <h1 className="news-h1">Check IPO allotment status by PAN</h1>
-          <p className="subtitle news-lede">
-            Add your PAN once. For issues handled by KFin Technologies the
-            answer comes straight from KFin&apos;s own server to your browser;
-            for the rest, the page opens the right registrar with the PAN a
-            tap from their form and keeps your note of what it said.
+      {/* The band the page opens on. It carries the H1 and the one promise
+          that decides whether a reader types a PAN at all — so it is stated
+          here, in the brand, rather than in a warning box further down where
+          the first version buried it. */}
+      <section className="allot-hero">
+        <div className="container">
+          <h1 className="allot-hero-title">Check IPO allotment status by PAN</h1>
+          <p className="allot-hero-lede">
+            Add your PAN once, pick the issue, and get the answer — checked
+            live with KFin where they allow it, and handed straight to the
+            right registrar where they do not.
           </p>
+          <ul className="allot-hero-points">
+            <li>
+              <strong>Your PAN stays in your browser.</strong> It never reaches
+              this site — no request here goes to our server.
+            </li>
+            <li>
+              <strong>KFin issues are checked live.</strong> Your browser asks
+              KFin directly, the same request their own page makes.
+            </li>
+            <li>
+              <strong>Everyone else keeps a CAPTCHA.</strong> Bigshare, MUFG
+              Intime and Skyline are opened for you with the PAN ready.
+            </li>
+          </ul>
+        </div>
+      </section>
 
-          {/* A callout, not a sentence in a paragraph: the first version of
-              this page said the same thing in the lede and it did not land.
-              Not a heading either — the last version made it the page's only
-              H2, and a heading that says what the page cannot do is the
-              wrong thing for a crawler to find first. */}
-          <aside className="allot-notice">
-            <p>
-              <strong>Your PAN never reaches this site.</strong> It lives in
-              your browser. A KFin check goes from your browser directly to
-              KFin — the same request their page makes when you use it — and
-              the answer comes back the same way; we are not on the path.
-            </p>
-            <p>
-              Every other registrar — Bigshare, MUFG Intime, Skyline — puts
-              the answer behind a CAPTCHA, which exists to stop a site asking
-              on your behalf, and this one does not try to get past it. There
-              the last step stays yours: open their page, paste the PAN,
-              answer the CAPTCHA, and set the row to what it said.
-            </p>
-          </aside>
-        </section>
-
+      <div className="container allot-body">
         <AllotmentProvider>
           <PanBox />
 
@@ -166,7 +174,7 @@ export default async function AllotmentPage() {
               {coming.length ? <Coming ipos={coming} /> : null}
             </section>
           ) : (
-            <IssuePicker issues={issues} />
+            <IssuePicker issues={issues} today={today} />
           )}
         </AllotmentProvider>
 
