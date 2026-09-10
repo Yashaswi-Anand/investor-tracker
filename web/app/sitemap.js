@@ -39,10 +39,10 @@ export default async function sitemap() {
       changeFrequency: "daily",
       priority: 0.9,
     },
-    // /allotment is here now: it is linked, indexable, and answers a query
-    // family — "<company> IPO allotment status" — that nothing else here
-    // does. It was excluded when nothing linked to it, which has changed.
-    ...["/news", "/allotment", "/about", "/editorial", "/contact"].map((path) => ({
+    // /allotment is deliberately absent — see the note in app/allotment/page.jsx.
+    // It is withdrawn rather than deleted, so this line and the two links named
+    // there are what brings it back.
+    ...["/news", "/about", "/editorial", "/contact"].map((path) => ({
       url: `${SITE.url}${path}`,
       lastModified: newest,
       changeFrequency: "daily",

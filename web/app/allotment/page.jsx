@@ -10,12 +10,33 @@ import { AllotmentProvider, IssuePicker, PanBox } from "../components/Allotment"
 // here, so this is not a build-time snapshot.
 export const dynamic = "force-dynamic";
 
+/**
+ * WITHDRAWN FOR NOW, NOT DELETED.
+ *
+ * The owner asked for this page to be hidden on 10 September 2026. It still
+ * works for anyone holding the link — the KFin live check, the registrar
+ * names, the timetable rail, all of it — but nothing on the site offers it
+ * and search engines are told not to index it.
+ *
+ * Three things hide it, and the same three bring it back:
+ *   1. robots: index false, below.
+ *   2. the /allotment entry in app/sitemap.js.
+ *   3. two links: the footer in app/layout.jsx and the back row in
+ *      app/ipo/page.jsx.
+ *
+ * What is deliberately LEFT ALONE: the references in /privacy, /terms,
+ * /about, /contact and /editorial. Those documents describe what this page
+ * does with a PAN, and the page can still be reached and still stores one in
+ * the reader's browser — a privacy policy that stopped describing a live
+ * feature because it had been unlinked would be the wrong kind of tidy.
+ */
+
 export const metadata = {
   title: "IPO Allotment Status by PAN — Every Issue at Allotment or Listed",
   description:
     "Check IPO allotment status by PAN number for every issue whose allotment is out. KFin issues are checked directly from your browser; for the rest, the right registrar with your PAN ready. Nothing is sent to us.",
   alternates: { canonical: "/allotment" },
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
 };
 
 /**

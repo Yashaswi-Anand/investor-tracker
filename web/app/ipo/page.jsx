@@ -166,7 +166,6 @@ export default async function IpoIndexPage() {
 
           <p className="back-row">
             <Link href="/">← Live dashboard</Link> ·{" "}
-            <Link href="/allotment">Check allotment</Link> ·{" "}
             <Link href="/about">How this is sourced</Link>
           </p>
         </article>
