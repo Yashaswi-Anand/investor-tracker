@@ -65,12 +65,11 @@ const ITEMS = [
   },
 ]
 
-// Check allotment is deliberately absent. The page still works for anyone
-// holding its link, but it is not offered: it cannot answer the question its
-// name asks — every registrar puts that behind a CAPTCHA — and a menu item
-// promising an answer the page then refuses is the wrong first impression,
-// especially on a site about to be reviewed by an ad network. Put it back by
-// restoring the entry here and the /allotment line in sitemap.js.;
+// Check allotment is deliberately absent, and now so is every other route to
+// it. The old reason written here — that no registrar could be checked — is
+// out of date: KFin is checked live from the reader's own browser. It is
+// withdrawn for a different reason now, recorded in app/allotment/page.jsx,
+// which also lists everything that has to change to offer it again.;
 
 export default function SiteMenu() {
   const [open, setOpen] = useState(false);
