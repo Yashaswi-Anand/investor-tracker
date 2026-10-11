@@ -3258,3 +3258,44 @@ body.has-sheet .scroll-jump { display: none; }
   font-weight: 800;
   color: var(--text);
 }
+
+/* Multi-issue batch picker. Checkboxes rather than a second dropdown: the
+   point of this section is choosing several, and a checkbox list shows the
+   whole choice at once instead of hiding it behind one control. */
+.multi-group { margin-top: 14px; }
+.multi-group-title {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.multi-pick-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.multi-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 10px);
+  cursor: pointer;
+}
+.multi-pick[data-on] { border-color: var(--primary); background: var(--surface-2); }
+.multi-check { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--primary); }
+.multi-pick-main { display: grid; gap: 4px; min-width: 0; }
+.multi-pick-name { font-weight: 700; font-size: 0.86rem; }
+.multi-pick-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.multi-pick-registrar { font-size: 0.76rem; color: var(--text-muted); }
+
+/* One card per chosen issue under the picker. Separated from the picker by
+   a rule so a long batch reads as results, not as more controls. */
+.multi-results { display: grid; gap: 18px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.multi-card .allot-issue-head { margin-bottom: 4px; }
+.multi-card .allot-issue-title { font-size: 0.95rem; }
