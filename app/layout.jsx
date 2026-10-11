@@ -158,9 +158,7 @@ export default function RootLayout({ children }) {
             <div className="footer-row">
               <div className="footer-links">
                 <Link href="/">Live dashboard</Link>
-                {/* Site-wide, so every IPO page is two clicks from every
-                    other one. Allotment status is withdrawn for now — see the
-                    note in app/allotment/page.jsx. */}
+                <Link href="/allotment">Check allotment</Link>
                 <Link href="/ipo">All IPOs</Link>
                 <Link href="/about">About</Link>
                 <Link href="/editorial">Editorial Standards</Link>
