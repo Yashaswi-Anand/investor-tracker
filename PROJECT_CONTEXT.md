@@ -342,6 +342,45 @@ Semantic tokens are separate from brand: `--up` green, `--down` red, `--warn`,
 
 ---
 
+### 7.5 Authentication
+
+Google sign-in only, via Firebase Auth. Added 23 Oct 2026.
+
+| | |
+|---|---|
+| Firebase project | `investor-ipo-tracker` (project number `41460225694`) |
+| Web app | `investor-web` |
+| Providers enabled | **Google only.** No email/password, no phone, no anonymous |
+| Authorized domains | `localhost`, `investor.socialriser.com`, plus the two Firebase defaults |
+| Analytics / Gemini | both declined at project creation |
+
+Files: `lib/firebase.js` (lazy, browser-only init; returns null when
+unconfigured) · `components/AuthProvider.jsx` (one `onAuthStateChanged`
+listener for the app) · `AuthButton.jsx` (header chip) · `LoginPanel.jsx` ·
+`AccountPanel.jsx` · `GoogleMark.jsx` · routes `/login` and `/account`, both
+`noindex` and both absent from the sitemap.
+
+Three things worth knowing before changing it:
+
+- **`loading` must be respected.** Auth resolves in the browser after the SDK
+  restores a session, so anything that decides "signed out" before `loading`
+  is false will flash the wrong UI at a signed-in reader and bounce them off
+  protected pages.
+- **Pop-up, with a redirect fallback.** `signInWithPopup` fails in webviews
+  and the Android TWA; `auth/popup-blocked` and
+  `auth/operation-not-supported-in-this-environment` fall through to
+  `signInWithRedirect`, whose result is picked up by `getRedirectResult` on
+  the way back.
+- **The six `NEXT_PUBLIC_FIREBASE_*` vars are baked in at build.** Setting
+  them in hPanel needs a redeploy, not a restart. Leave them empty and
+  sign-in simply does not render — the rest of the site is unaffected.
+
+The Firebase web `apiKey` is not a secret; it identifies the project to
+Google and is designed to ship in client code. The authorized-domain list is
+what actually guards it.
+
+---
+
 ## 8. The allotment feature
 
 ### 8.1 Current state: **hidden**
@@ -500,8 +539,14 @@ npm run dev
   (`88aa9c3`) and removed two commits later on "no need" (`48f8f37`).
 - **No named individual anywhere.** Organisational accountability (Socialriser)
   only — no Person node, no founder, no byline.
-- **No sign-in.** Phone OTP ruled out earlier (SMS provider, per-message cost,
-  TRAI DLT registration).
+- **Google sign-in, and only Google** (added 23 Oct 2026, reversing the
+  earlier no-sign-in decision at the owner's request). Phone OTP stays ruled
+  out (SMS provider, per-message cost, TRAI DLT registration), and no
+  email/password provider is enabled in the Firebase project — so the UI
+  cannot offer one. **It gates nothing:** every IPO page is public signed in
+  or not, and `/account` is the only protected route. Do not put existing
+  content behind it — the site's traffic is search traffic.
+  Firebase project `investor-ipo-tracker`; see §7.5.
 - **Listed issues stay on the allotment page** (`471ce2a`, reversing `2731e94`).
 - **One issue at a time from a dropdown**, not all stacked (`0bce1bd`).
 - **Cron stays on GitHub Actions.** Do not wire Hostinger scheduling.

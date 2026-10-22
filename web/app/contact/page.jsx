@@ -105,8 +105,9 @@ export default function ContactPage() {
         </p>
         <p>
           <strong>Your application, refund or demat account.</strong> Those sit
-          with your bank, your broker and the registrar. We hold no account of
-          yours — there is nothing to sign in to here.
+          with your bank, your broker and the registrar — we hold none of it.
+          The optional Google sign-in on this site is unrelated to any of them
+          and gives us nothing but your name, email and avatar.
         </p>
 
         <h2>Please do not send</h2>

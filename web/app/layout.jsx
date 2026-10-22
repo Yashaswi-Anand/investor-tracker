@@ -6,6 +6,8 @@ import ServiceWorker from "./components/ServiceWorker";
 import ThemeToggle from "./components/ThemeToggle";
 import ScrollJump from "./components/ScrollJump";
 import SiteMenu from "./components/SiteMenu";
+import AuthProvider from "./components/AuthProvider";
+import AuthButton from "./components/AuthButton";
 import "./globals.css";
 
 export const metadata = {
@@ -126,6 +128,9 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: CHUNK_RECOVERY }} />
       </head>
       <body>
+        {/* Wraps everything: one auth listener for the whole app, and the
+            header control and any protected page read the same state. */}
+        <AuthProvider>
         <header className="site-header">
           <div className="container">
             <Link href="/" className="brand" aria-label={`${SITE.name} — home`}>
@@ -139,6 +144,7 @@ export default function RootLayout({ children }) {
                   News
                 </Link>
               </nav>
+              <AuthButton />
               <ThemeToggle />
               <SiteMenu />
             </div>
@@ -181,6 +187,7 @@ export default function RootLayout({ children }) {
             </div>
           </div>
         </footer>
+        </AuthProvider>
 
         {/* Last in the document on purpose: a shortcut past the page belongs
             after the page, both for reading order and for tab order. */}

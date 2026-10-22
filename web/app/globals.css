@@ -3258,3 +3258,142 @@ body.has-sheet .scroll-jump { display: none; }
   font-weight: 800;
   color: var(--text);
 }
+
+/* ==========================================================================
+   Sign-in. One provider, two pages, and a header chip — built from the same
+   tokens as everything else so an account never looks bolted on.
+   ========================================================================== */
+
+/* ---- the header chip --------------------------------------------------- */
+.auth-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(242, 246, 247, 0.28);
+  background: rgba(242, 246, 247, 0.12);
+  color: var(--on-brand);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.auth-chip:hover { background: rgba(242, 246, 247, 0.2); text-decoration: none; }
+.auth-chip:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(242, 246, 247, 0.4); }
+/* Holds the row's height while onAuthStateChanged decides, so the header
+   does not jump and nobody is shown "Sign in" before the SDK has looked. */
+.auth-chip-idle {
+  width: 84px;
+  border-color: transparent;
+  background: rgba(242, 246, 247, 0.08);
+  pointer-events: none;
+}
+.auth-chip-user { padding-left: 5px; }
+.auth-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(242, 246, 247, 0.25);
+}
+.auth-avatar-letter {
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--on-brand);
+}
+.auth-chip-name { max-width: 10ch; overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 560px) {
+  /* The name goes, the avatar stays — on a phone the header is already full. */
+  .auth-chip-name { display: none; }
+  .auth-chip-user { padding: 0 5px; }
+  .auth-chip-idle { width: 40px; }
+  .auth-chip-in { padding: 0 11px; }
+}
+
+/* ---- the two auth pages ------------------------------------------------ */
+.auth-wrap { max-width: 560px; margin: 0 auto; }
+.auth-h1 { font-size: 1.5rem; margin-bottom: 6px; letter-spacing: -0.02em; }
+.auth-lede { margin-bottom: 18px; }
+.auth-card { padding: 22px; }
+.auth-status { margin: 0; font-size: 0.88rem; color: var(--text-muted); }
+
+/* Google's button, to Google's spec: their mark, their wordmark colours left
+   alone, on a neutral surface that works in both themes. */
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 16px;
+  padding: 12px 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.google-btn:hover { background: var(--surface-2); }
+.google-btn:focus-visible { outline: none; box-shadow: var(--ring); }
+.google-btn:disabled { opacity: 0.6; cursor: default; }
+
+.auth-error {
+  margin: 14px 0 0;
+  padding: 11px 14px;
+  border: 1px solid var(--down);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--down-soft);
+  color: var(--down);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.auth-facts {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.auth-facts strong { color: var(--text); font-weight: 700; }
+
+/* ---- the account page -------------------------------------------------- */
+.account-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.account-avatar {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--primary-soft);
+}
+.account-avatar-letter {
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+.account-name { margin: 0; font-size: 1.1rem; font-weight: 800; }
+.account-name::before { content: none; }
+.account-email { margin: 2px 0 0; font-size: 0.84rem; color: var(--text-muted); }
+.account-grid { margin: 18px 0 0; }

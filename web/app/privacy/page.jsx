@@ -10,6 +10,13 @@ import { SITE, adsLive } from "../../lib/config";
 // SDK, no ad SDK, no cookies, no account system. The one third party a
 // visitor's browser actually contacts is Google Fonts.
 //
+// SIGN-IN SHIPPED ON 23 OCT 2026, and this page changed in the same commit —
+// which is the whole point of the rule above. Google sign-in is OPTIONAL and
+// gates nothing: every IPO page is public and stays public. But an account
+// now exists, Firebase holds a name, email and avatar for whoever makes one,
+// and a reader's browser now talks to Google's identity servers. All three
+// are disclosed below. If sign-in is ever removed, this section goes with it.
+//
 // THE ALLOTMENT PAGE ASKS FOR A PAN. That is personal data under the DPDP
 // Act, and this page said in as many words that there was nowhere on the site
 // to enter one — written before that page existed and left standing after it
@@ -58,19 +65,76 @@ export default function PrivacyPage() {
 
         <h2>The short version</h2>
         <p>
-          We do not ask who you are and we have no way of finding out. There is
-          no account, no sign-in, no contact form, no analytics and no
-          advertising on this site or in the Android app. Nothing you do here
-          is recorded against you.
+          You can read every page on this site without telling us anything.
+          There is no contact form, no analytics and no advertising on this
+          site or in the Android app, and nothing you read here is recorded
+          against you.
+        </p>
+        <p>
+          There is <strong>one optional account</strong>, signed in with
+          Google. It unlocks nothing — every IPO page is public with or
+          without it — and if you never use it we never learn who you are.
         </p>
 
         <h2>What we do not collect</h2>
         <p>
-          No name, email address, phone number, demat or bank details, and no
-          financial information of any kind. We never ask for them and there is
-          nowhere on the site to enter them. The search box on the dashboard
-          filters the list inside your own browser — what you type is never
-          sent anywhere.
+          No phone number, no demat or bank details, and no financial
+          information of any kind. We never ask for them and there is nowhere
+          on the site to enter them. The search box on the dashboard filters
+          the list inside your own browser — what you type is never sent
+          anywhere.
+        </p>
+        <p>
+          Your name, email address and profile picture are collected{" "}
+          <strong>only if you choose to sign in</strong> — see the next
+          section. Browse without signing in and none of it exists.
+        </p>
+
+        <h2>If you sign in with Google</h2>
+        <p>
+          Sign-in is entirely optional. Nothing on this site is hidden behind
+          it: the dashboard, every IPO page, the news and the documents are
+          public and stay public whether you sign in or not. The account page
+          is the only page that requires one, and the only thing on it is you.
+        </p>
+        <p>
+          Signing in uses <strong>Google and nothing else</strong> — there is
+          no password to choose, and we never see one. When you sign in,
+          Google tells us three things and we keep them:
+        </p>
+        <ul className="policy-list">
+          <li>your name, as it appears on your Google account</li>
+          <li>your email address</li>
+          <li>your Google profile picture</li>
+        </ul>
+        <p>
+          They are held by <strong>Google Firebase Authentication</strong>, in
+          a project controlled by {SITE.owner}, under{" "}
+          <a
+            href="https://firebase.google.com/support/privacy"
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
+            Google&apos;s privacy terms for Firebase
+          </a>
+          . We do not copy them into our own database, we do not build a
+          profile from them, and we do not use them to track what you read —
+          the pages you visit are not linked to your account anywhere.
+        </p>
+        <p>
+          <strong>Deleting it.</strong> Sign out any time from your account
+          page; that ends the session on your device. To remove the account
+          and everything Firebase holds for it,{" "}
+          <Link href="/contact">ask us</Link> and it will be deleted. You can
+          also revoke this site&apos;s access from your{" "}
+          <a
+            href="https://myaccount.google.com/permissions"
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
+            Google account permissions
+          </a>
+          .
         </p>
 
         <h2>The one exception: your PAN</h2>
@@ -112,12 +176,17 @@ export default function PrivacyPage() {
 
         <h2>What is stored in your browser</h2>
         <p>
-          Four things, all in local storage on your own device, none of them
-          cookies, and none of them ever sent anywhere:
+          The following sit in local storage on your own device, none of them
+          cookies. Nothing in this list is ever sent to us:
         </p>
         <ul className="policy-list">
           <li>
             <code>theme</code> — whether you chose light or dark.
+          </li>
+          <li>
+            <code>firebase:authUser:…</code> — written by Google&apos;s sign-in
+            library, and only if you sign in. It is what keeps you signed in
+            between visits. Signing out removes it.
           </li>
           <li>
             <code>ipo-pans</code> — the PAN numbers you added on the allotment

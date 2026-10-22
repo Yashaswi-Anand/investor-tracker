@@ -148,9 +148,11 @@ export default function AboutPage() {
             otherwise.
           </li>
           <li>
-            <strong>No accounts, no tracking.</strong> There is no sign-in and
-            no analytics. What little is stored sits in your own browser, and
-            the <Link href="/privacy">privacy policy</Link> lists every key.
+            <strong>No tracking, and no account you need.</strong> There is no
+            analytics here. Google sign-in exists and is entirely optional —
+            it unlocks nothing, because every page is public either way. What
+            little is stored sits in your own browser, and the{" "}
+            <Link href="/privacy">privacy policy</Link> lists every key.
           </li>
         </ul>
 
