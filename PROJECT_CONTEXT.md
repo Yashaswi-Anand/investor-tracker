@@ -22,8 +22,10 @@ This file supersedes both where they disagree.
 
 ## 1. Read this first — the ten things that matter
 
-1. **`/allotment` is hidden at the owner's explicit request** (10 Sep 2026).
-   The page works; nothing links to it and it is `noindex`. Do not re-link it.
+1. **`/allotment` is live again** — restored 11 Oct 2026 by PR #1 with
+   multi-issue batch checking, reversing the 10 Sep hide. It has now been
+   hidden twice and restored twice, so neither state is self-evidently right:
+   check with the owner before changing it either way.
    See [§8](#8-the-allotment-feature).
 2. **The house defect is "a missing value read as a measurement."** Five
    instances in the history, four on one day. When reading a number from a
@@ -383,22 +385,32 @@ what actually guards it.
 
 ## 8. The allotment feature
 
-### 8.1 Current state: **hidden**
+### 8.1 Current state: **live**, and twice reversed
 
-Hidden at the owner's request on 10 Sep 2026 (`a648dd6`). The page works for
-anyone holding the link. Three things hide it, and the same three restore it:
+Restored 11 Oct 2026 by PR #1 (`74c9a1d`, author Pintu Kumar), which also
+added multi-issue batch checking — pick several issues with checkboxes and
+check every saved PAN against all of them. KFin issues still check live from
+the reader's browser; the other registrars are still hand-offs, and the PR
+explicitly keeps it that way ("no CAPTCHA bypass").
 
-1. `robots: { index: false, follow: false }` in `app/allotment/page.jsx`
-2. the `/allotment` entry in `app/sitemap.js`
-3. two links — the footer in `app/layout.jsx`, the back row in `app/ipo/page.jsx`
+The history matters more than the current state: hidden 3 Sep, restored
+7 Sep, hidden again 10 Sep at the owner's request, restored 11 Oct. Four
+reversals. **Ask before changing it in either direction** — both "nothing
+links to it so it should be hidden" and "it looks like it should be indexed"
+have been wrong here before.
 
-> **Missed by the withdrawal:** `web/public/llms.txt` still lists `/allotment`
-> as a key page and still says the site does no allotment lookup. Fix that when
-> restoring — or now, since it is wrong either way.
+The three switches, whichever way you are going:
 
-References in `/privacy`, `/terms`, `/about`, `/contact`, `/editorial` were left
-deliberately: the page is still reachable and still stores a PAN in the reader's
-browser, so the policy documents describing that remain correct.
+1. `robots` in `app/allotment/page.jsx` (currently `index: true`)
+2. the `/allotment` entry in `app/sitemap.js` (currently present)
+3. the footer link in `app/layout.jsx` and the menu entry in `SiteMenu.jsx`
+
+> `web/public/llms.txt` still says the site does no allotment lookup on your
+> behalf. That was wrong while the page was hidden and it is wrong now —
+> KFin issues are checked for the reader. Still unfixed.
+
+References in `/privacy`, `/terms`, `/about`, `/contact` and `/editorial`
+describe what the page does with a PAN and remain correct.
 
 ### 8.2 How it works
 
@@ -532,9 +544,8 @@ npm run dev
 
 **Owner's explicit calls**
 
-- `/allotment` is hidden (10 Sep 2026). It was hidden before, un-hidden when the
-  premise expired, and hidden again on request — "it looks like it should be
-  indexed" is not evidence.
+- `/allotment` has been hidden and restored four times (3 Sep, 7 Sep, 10 Sep,
+  11 Oct). It is live now. Neither state is obvious from the code — ask.
 - **No homepage prose paragraph.** Three generated paragraphs were added for SEO
   (`88aa9c3`) and removed two commits later on "no need" (`48f8f37`).
 - **No named individual anywhere.** Organisational accountability (Socialriser)
