@@ -63,13 +63,27 @@ const ITEMS = [
       />
     ),
   },
+  {
+    href: "/allotment",
+    label: "Check allotment",
+    note: "Allotment status by PAN",
+    icon: (
+      <path
+        d="M9 11l2 2 4-4M7 4h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3-3h4v4H10z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
 ]
 
-// Check allotment is deliberately absent, and now so is every other route to
-// it. The old reason written here — that no registrar could be checked — is
-// out of date: KFin is checked live from the reader's own browser. It is
-// withdrawn for a different reason now, recorded in app/allotment/page.jsx,
-// which also lists everything that has to change to offer it again.;
+// Check allotment is now offered again: the page supports checking several
+// issues at once, and the menu is how a reader finds it. See
+// app/allotment/page.jsx for the three things that hid it and what restores
+// each of them.;
 
 export default function SiteMenu() {
   const [open, setOpen] = useState(false);

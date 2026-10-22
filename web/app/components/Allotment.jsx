@@ -871,3 +871,396 @@ export function IssuePicker({ issues, today }) {
     </section>
   );
 }
+
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Check several issues at once, for every saved PAN.
+ *
+ * The single-issue picker above is the right shape when you know which issue
+ * you applied for. On allotment day, people who apply to everything that is
+ * open want one pass over all of it instead: tick the issues, press check,
+ * read the verdicts. The batch reuses the same per-issue machinery — the
+ * KFin request is identical, the PANs never leave this browser — and the
+ * same courtesy gap, stretched across the whole batch rather than restarted
+ * per issue, because KFin's limit does not reset when we move to the next
+ * company.
+ *
+ * Issues their registrar keeps behind a CAPTCHA cannot be asked from here
+ * (see the table in PROJECT_CONTEXT §8.3 for why each one is out). They are
+ * still in the list — a batch that silently dropped them would read as a
+ * batch that checked them — but their card is the hand-off: the registrar
+ * link, the steps, and the same manual record control as the single view.
+ */
+export function MultiIssueChecker({ issues }) {
+  const { ready, pans, marks, setMarks, results, setResults } = useAllotment();
+  const [selected, setSelected] = useState([]);
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState(null);
+  // Set by the Stop button; separate from the unmount guard so stopping one
+  // batch does not poison the next.
+  const stopRef = useRef(false);
+  const alive = useRef(true);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  const atAllotment = issues.filter((i) => i.status === "allotment");
+  const listed = issues.filter((i) => i.status === "listed");
+  const chosen = issues.filter((i) => selected.includes(i.slug));
+
+  const toggle = (slug) =>
+    setSelected((current) =>
+      current.includes(slug)
+        ? current.filter((s) => s !== slug)
+        : [...current, slug]
+    );
+
+  const mark = (slug, pan, outcome) =>
+    setMarks((current) => {
+      const key = `${slug}|${pan}`;
+      const next = { ...current };
+      if (!outcome) delete next[key];
+      else next[key] = outcome;
+      return next;
+    });
+
+  const runBatch = async () => {
+    // Only KFin-direct issues go over the wire; the hand-off cards need no
+    // request and are already on screen for the reader to work through.
+    const queue = [];
+    for (const issue of chosen) {
+      if (!issue.direct || !issue.lookup) continue;
+      for (const pan of pans) queue.push({ issue, pan });
+    }
+    if (!queue.length) return;
+
+    stopRef.current = false;
+    setRunning(true);
+    setProgress({ done: 0, total: queue.length });
+
+    for (let i = 0; i < queue.length; i += 1) {
+      if (!alive.current || stopRef.current) break;
+      const { issue, pan } = queue[i];
+      // eslint-disable-next-line no-await-in-loop
+      const result = await lookupKfin({
+        endpoint: issue.lookup.endpoint,
+        clientId: issue.lookup.client_id,
+        pan,
+      });
+      if (!alive.current) break;
+      const key = `${issue.slug}|${pan}`;
+      setResults((current) => ({
+        ...current,
+        [key]: { ...result, at: Date.now() },
+      }));
+      // Their limit, respected across the batch: the rest waits for the
+      // reader rather than hammering through a 429.
+      if (result.state === "limited") break;
+      if (alive.current && !stopRef.current)
+        setProgress({ done: i + 1, total: queue.length });
+      if (i < queue.length - 1 && !stopRef.current) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, BATCH_GAP_MS));
+      }
+    }
+    if (alive.current) {
+      setRunning(false);
+      setProgress(null);
+    }
+  };
+
+  // Across the batch, for the summary line: an issue counts once, on any
+  // PAN allotted. Manual hand-off records are the reader's own notes, not
+  // checked answers, so they stay out of this count.
+  const summary = useMemo(() => {
+    let checked = 0;
+    let won = 0;
+    let shares = 0;
+    for (const issue of chosen) {
+      if (!issue.direct) continue;
+      let issueChecked = false;
+      let issueWon = false;
+      for (const pan of pans) {
+        const r = results[`${issue.slug}|${pan}`];
+        if (!r) continue;
+        issueChecked = true;
+        if (r.state === "allotted") {
+          issueWon = true;
+          shares += r.rows.reduce((s, x) => s + (x.allotted || 0), 0);
+        }
+      }
+      if (issueChecked) checked += 1;
+      if (issueWon) won += 1;
+    }
+    return { checked, won, shares };
+  }, [chosen, pans, results]);
+
+  if (!ready) {
+    return (
+      <section className="card card-wide" aria-busy="true">
+        <h2>Check several at once</h2>
+        <p className="subtitle subtitle-flush">Loading your PANs…</p>
+      </section>
+    );
+  }
+
+  const canRun =
+    !running && selected.length > 0 && pans.length > 0;
+
+  const groupLabel = (list, label) =>
+    list.length ? (
+      <div className="multi-group">
+        <h3 className="multi-group-title">
+          {label} ({list.length})
+        </h3>
+        <ul className="multi-pick-list">
+          {list.map((issue) => {
+            const on = selected.includes(issue.slug);
+            return (
+              <li key={issue.slug}>
+                <label className="multi-pick" data-on={on || undefined}>
+                  <input
+                    type="checkbox"
+                    className="multi-check"
+                    checked={on}
+                    onChange={() => toggle(issue.slug)}
+                    aria-label={`Select ${issue.short_name || issue.name}`}
+                  />
+                  <span className="multi-pick-main">
+                    <span className="multi-pick-name">
+                      {issue.short_name || issue.name}
+                    </span>
+                    <span className="multi-pick-meta">
+                      {issue.board ? (
+                        <span className="allot-pill">{issue.board}</span>
+                      ) : null}
+                      <span className="multi-pick-registrar">
+                        {issue.registrar?.short || "Registrar not published"}
+                      </span>
+                      {issue.direct ? (
+                        <span className="allot-live-pill">Live check</span>
+                      ) : null}
+                    </span>
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    ) : null;
+
+  return (
+    <section className="card card-wide" id="multi-check">
+      <div className="allot-card-head">
+        <h2>Check several at once</h2>
+        {selected.length ? (
+          <span className="allot-count">{selected.length} selected</span>
+        ) : null}
+      </div>
+      <p className="subtitle subtitle-flush">
+        Tick the issues you applied for, then check them all in one pass.
+        KFin issues are asked live from your browser; the rest open at their
+        registrar for you to check by hand.
+      </p>
+
+      {!pans.length ? (
+        <p className="allot-rows-empty">
+          <a href="#pans">Add a PAN above</a> before checking — there is
+          nothing to ask KFin about yet.
+        </p>
+      ) : null}
+
+      {groupLabel(atAllotment, "At allotment")}
+      {groupLabel(listed, "Listed")}
+
+      <div className="allot-actions">
+        <button
+          type="button"
+          className="lookup-btn lookup-btn-lg"
+          disabled={!canRun}
+          onClick={runBatch}
+        >
+          {running
+            ? "Checking…"
+            : selected.length
+              ? `Check ${selected.length} issue${selected.length === 1 ? "" : "s"}`
+              : "Check selected"}
+        </button>
+        {running ? (
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={() => {
+              stopRef.current = true;
+            }}
+          >
+            Stop
+          </button>
+        ) : null}
+        {progress ? (
+          <p className="allot-summary" role="status">
+            Checking {progress.done} of {progress.total}…
+          </p>
+        ) : null}
+        {summary.checked > 0 && !running ? (
+          <p className="allot-summary" role="status">
+            <strong>{summary.checked}</strong> checked
+            {summary.won > 0 ? (
+              <>
+                {" · "}
+                <span className="allot-summary-won">
+                  {summary.won} allotted, {n(summary.shares)} shares
+                </span>
+              </>
+            ) : (
+              <> · none allotted</>
+            )}
+          </p>
+        ) : null}
+      </div>
+
+      {chosen.length > 0 ? (
+        <div className="multi-results">
+          {chosen.map((issue) => (
+            <MultiIssueCard
+              key={issue.slug}
+              issue={issue}
+              pans={pans}
+              results={results}
+              marks={marks}
+              onMark={mark}
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * One issue's worth of batch results.
+ *
+ * Direct issues show the KFin verdict per PAN, reusing the same Verdict as
+ * the single-issue view so an answer reads identically in both places.
+ * Hand-off issues show the registrar steps and the manual record control —
+ * the batch cannot answer those, but it can keep the question and the
+ * answer in one place.
+ */
+function MultiIssueCard({ issue, pans, results, marks, onMark }) {
+  return (
+    <article className="multi-card" id={`multi-${issue.slug}`}>
+      <div className="allot-issue-head">
+        <span
+          className="allot-mark"
+          data-direct={issue.direct || undefined}
+          aria-hidden="true"
+        >
+          {issue.registrar?.mark || "?"}
+        </span>
+        <div className="allot-issue-id">
+          <h3 className="allot-issue-title">
+            {issue.short_name || issue.name}
+          </h3>
+          <p className="allot-issue-meta">
+            <span
+              className="allot-pill"
+              data-tone={issue.status === "allotment" ? "live" : undefined}
+            >
+              {issue.status === "allotment" ? "At allotment" : "Listed"}
+            </span>
+            <span className="allot-registrar">
+              {issue.registrar?.name || "Registrar not published"}
+            </span>
+            {issue.direct ? (
+              <span className="allot-live-pill">Live check</span>
+            ) : null}
+          </p>
+        </div>
+        {issue.registrar?.portal ? (
+          <a
+            className="result-open"
+            href={issue.registrar.portal}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
+            Open {issue.registrar.short}
+            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+              <path
+                d="M6 3h7v7M13 3 4 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </a>
+        ) : null}
+      </div>
+
+      {!issue.direct && issue.registrar ? (
+        <div className="allot-handoff">
+          <p className="allot-handoff-title">
+            {issue.registrar.short} keeps this behind a CAPTCHA — the last
+            step is yours
+          </p>
+          {issue.handoff ? (
+            <p className="allot-handoff-name">
+              On their page it is listed as{" "}
+              <strong>{issue.handoff.name}</strong>
+            </p>
+          ) : null}
+          <ol className="result-steps">
+            {issue.registrar.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+            <li>Come back and set the row below to what it said</li>
+          </ol>
+        </div>
+      ) : null}
+
+      <ul className="result-rows">
+        {pans.map((pan) => {
+          const key = `${issue.slug}|${pan}`;
+          return (
+            <li key={pan} className="result-row">
+              <div className="result-row-main">
+                <span className="result-pan">
+                  <span className="pan-value">{pan}</span>
+                </span>
+                {!issue.direct ? (
+                  <label className="result-marks">
+                    <span className="result-marks-label">
+                      What {issue.registrar?.short || "the registrar"} showed
+                    </span>
+                    <select
+                      className="result-select"
+                      value={marks[key] || ""}
+                      data-outcome={marks[key]}
+                      onChange={(event) =>
+                        onMark(issue.slug, pan, event.target.value)
+                      }
+                    >
+                      {OUTCOMES.map((o) => (
+                        <option key={o.key || "unset"} value={o.key}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+              {issue.direct ? <Verdict result={results[key]} /> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </article>
+  );
+}
