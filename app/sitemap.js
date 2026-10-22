@@ -39,9 +39,13 @@ export default async function sitemap() {
       changeFrequency: "daily",
       priority: 0.9,
     },
-    // /allotment is deliberately absent — see the note in app/allotment/page.jsx.
-    // It is withdrawn rather than deleted, so this line and the two links named
-    // there are what brings it back.
+    // /allotment is back — restored October 2026 with multi-issue batch checking.
+    {
+      url: `${SITE.url}/allotment`,
+      lastModified: newest,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
     ...["/news", "/about", "/editorial", "/contact"].map((path) => ({
       url: `${SITE.url}${path}`,
       lastModified: newest,
