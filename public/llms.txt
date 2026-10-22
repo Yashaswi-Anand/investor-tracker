@@ -35,8 +35,8 @@ the market trades.
 - No allotment lookup on your behalf. Only the registrar knows, and each of
   them puts that behind a CAPTCHA meant to stop sites asking for you.
   /allotment routes you to the right registrar instead of pretending.
-- No accounts and no analytics. What little is stored sits in the reader's
-  own browser.
+- No analytics. Google sign-in is optional and gates nothing: every page
+  is public signed in or not. What little is stored sits in the reader's
 
 ## Key pages
 
