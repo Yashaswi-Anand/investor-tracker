@@ -70,6 +70,9 @@ export default function AuthProvider({ children }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
+  // Which step the gate opens on. "choose" everywhere except the sign-in
+  // page, which shows Google itself and wants the phone form directly.
+  const [gateMode, setGateMode] = useState("choose");
   const alive = useRef(true);
   // Callers waiting on requireAuth(). A list, because two buttons pressed in
   // quick succession must both be answered by the one dialog.
@@ -224,8 +227,15 @@ export default function AuthProvider({ children }) {
           return null;
         }
         const phone = String(rawPhone || "").replace(/\s+/g, "");
-        if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
-          setError("Enter the number with its country code, like +919876543210.");
+        // India only, and deliberately so: the project's SMS region policy
+        // allows India and nothing else, so no other country code can
+        // receive a code at all. Saying that here is kinder than letting
+        // Google answer with a region error the reader cannot act on.
+        // The 6-9 opening is the whole of the Indian mobile series.
+        if (!/^\+91[6-9]\d{9}$/.test(phone)) {
+          setError(
+            "Enter a 10-digit Indian mobile number, starting with 6, 7, 8 or 9."
+          );
           return null;
         }
         const { signInWithPhoneNumber } = await import("firebase/auth");
@@ -289,15 +299,19 @@ export default function AuthProvider({ children }) {
     }
   }, []);
 
-  const requireAuth = useCallback(() => {
-    if (user) return Promise.resolve(user);
-    if (!isFirebaseConfigured()) return Promise.resolve(null);
-    return new Promise((resolve) => {
-      waiting.current.push(resolve);
-      setError(null);
-      setGateOpen(true);
-    });
-  }, [user]);
+  const requireAuth = useCallback(
+    (mode = "choose") => {
+      if (user) return Promise.resolve(user);
+      if (!isFirebaseConfigured()) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        waiting.current.push(resolve);
+        setError(null);
+        setGateMode(mode === "phone" ? "phone" : "choose");
+        setGateOpen(true);
+      });
+    },
+    [user]
+  );
 
   /** Closing the dialog answers every waiting caller with null. Nothing else. */
   const closeGate = useCallback(() => {
@@ -341,7 +355,9 @@ export default function AuthProvider({ children }) {
       {/* The verifier needs a node that outlives any one dialog, so it lives
           here rather than inside the dialog that triggers it. */}
       <div id="recaptcha-host" />
-      {gateOpen ? <SignInDialog onClose={closeGate} /> : null}
+      {gateOpen ? (
+        <SignInDialog initialMode={gateMode} onClose={closeGate} />
+      ) : null}
     </AuthContext.Provider>
   );
 }

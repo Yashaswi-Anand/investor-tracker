@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Sign in",
-  description: "Sign in to Investor with your Google account.",
+  description: "Sign in to Investor with Google or a phone number.",
   alternates: { canonical: "/login" },
   robots: { index: false, follow: false },
 };
@@ -25,8 +25,8 @@ export default function LoginPage() {
       <div className="auth-wrap">
         <h1 className="auth-h1">Sign in</h1>
         <p className="subtitle auth-lede">
-          Investor uses Google sign-in, and only Google sign-in. No password to
-          remember, nothing new to verify.
+          Sign in with Google or a phone number. No password to remember
+          either way, and nothing new to verify.
         </p>
         {/* useSearchParams reads the `next` parameter, which Next requires be
             wrapped so the surrounding page can still be streamed. */}

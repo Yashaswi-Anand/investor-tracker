@@ -16,20 +16,47 @@
 
 import { useState } from "react";
 
+/**
+ * The ten national digits, from whatever the reader actually typed or pasted.
+ *
+ * A number is shared as often with its prefix as without it — "+91 98765
+ * 43210", "0091...", or a trunk "098765...". Simply dropping non-digits and
+ * taking the first ten would turn the first of those into 9198765432: a
+ * different number, wrong in silence, and sent a code that never arrives.
+ * So the prefixes are peeled before the cut, and only ever when there are
+ * more than ten digits — 9123456789 is itself a valid mobile, and must
+ * survive untouched.
+ */
+function toNational(raw) {
+  let digits = String(raw || "").replace(/\D/g, "");
+  for (let i = 0; i < 3 && digits.length > 10; i += 1) {
+    if (digits.startsWith("91")) digits = digits.slice(2);
+    else if (digits.startsWith("0")) digits = digits.slice(1);
+    else break;
+  }
+  return digits.slice(0, 10);
+}
+
 import { useAuth } from "./AuthProvider";
 import GoogleMark from "./GoogleMark";
 import Modal from "./Modal";
 
-export default function SignInDialog({ onClose }) {
+export default function SignInDialog({ onClose, initialMode = "choose" }) {
   const { busy, error, signInWithGoogle, startPhoneSignIn, confirmPhoneCode } =
     useAuth();
-  const [mode, setMode] = useState("choose"); // choose | phone | code
-  const [phone, setPhone] = useState("+91");
+  const [mode, setMode] = useState(initialMode); // choose | phone | code
+  // Ten national digits only. The +91 is fixed and lives outside the input,
+  // so there is nothing in here for a reader to delete by accident and no
+  // length to get wrong.
+  const [national, setNational] = useState("");
+  const phone = "+91" + national;
+  const complete = national.length === 10;
   const [code, setCode] = useState("");
   const [confirmation, setConfirmation] = useState(null);
 
   const sendCode = async (event) => {
     event.preventDefault();
+    if (!complete) return;
     const result = await startPhoneSignIn(phone);
     if (result) {
       setConfirmation(result);
@@ -80,20 +107,32 @@ export default function SignInDialog({ onClose }) {
           </p>
           <label className="modal-field">
             <span className="modal-label">Phone number</span>
-            <input
-              className="pan-input modal-input"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="+919876543210"
-              aria-describedby="phone-hint"
-            />
+            <span className="phone-combo">
+              <span className="phone-cc" aria-hidden="true">
+                +91
+              </span>
+              <input
+                className="phone-national"
+                value={national}
+                onChange={(e) => setNational(toNational(e.target.value))}
+                inputMode="numeric"
+                autoComplete="tel-national"
+                maxLength={10}
+                placeholder="9876543210"
+                aria-describedby="phone-hint"
+              />
+            </span>
           </label>
           <p className="modal-hint" id="phone-hint">
-            Include the country code — <strong>+91</strong> for India.
+            <strong>+91</strong> is added for you — enter the{" "}
+            <strong>10 digits</strong> of your mobile number. Indian mobiles
+            start with 6, 7, 8 or 9.
           </p>
-          <button type="submit" className="lookup-btn lookup-btn-lg modal-go" disabled={busy}>
+          <button
+            type="submit"
+            className="lookup-btn lookup-btn-lg modal-go"
+            disabled={busy || !complete}
+          >
             {busy ? "Sending…" : "Send code"}
           </button>
           <button
@@ -110,7 +149,11 @@ export default function SignInDialog({ onClose }) {
       {mode === "code" ? (
         <form onSubmit={verify}>
           <p className="modal-lede">
-            Enter the code sent to <strong>{phone}</strong>.
+            Enter the code sent to{" "}
+            <strong>
+              +91 {national.slice(0, 5)} {national.slice(5)}
+            </strong>
+            .
           </p>
           <label className="modal-field">
             <span className="modal-label">Six-digit code</span>
