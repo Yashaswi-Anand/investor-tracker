@@ -3301,7 +3301,7 @@ body.has-sheet .scroll-jump { display: none; }
 .multi-card .allot-issue-title { font-size: 0.95rem; }
 
 /* ==========================================================================
-   Sign-in. One provider, two pages, and a header chip — built from the same
+   Sign-in. Two providers, two pages, and a header chip — built from the same
    tokens as everything else so an account never looks bolted on.
    ========================================================================== */
 
@@ -3532,6 +3532,53 @@ body.has-sheet .scroll-jump { display: none; }
   letter-spacing: 0.14em;
 }
 .modal-code { text-align: center; font-size: 1.15rem; }
+
+/* A fixed +91 and a ten-digit box, drawn as one field.
+   The country code is not editable on purpose: the Firebase project's SMS
+   region policy allows India and nothing else, so any other code would be
+   accepted by this form and then refused by Google with an error the reader
+   could do nothing about. Ten digits is the whole of an Indian mobile
+   number, and the input cannot hold more than ten. */
+.phone-combo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+.phone-combo:focus-within { border-color: var(--primary); }
+.phone-cc {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  /* Not selectable, so a drag across the field cannot carry it into the
+     value the reader thinks they are editing. */
+  user-select: none;
+}
+.phone-national {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.14em;
+}
+.phone-national:focus { outline: none; }
+.phone-national::placeholder {
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
 
 .modal-hint { margin: 7px 2px 0; font-size: 0.74rem; line-height: 1.5; color: var(--text-muted); }
 .modal-hint strong { color: var(--text); font-weight: 700; }

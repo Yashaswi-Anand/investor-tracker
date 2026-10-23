@@ -3,10 +3,15 @@
 /**
  * The sign-in card.
  *
- * One button, because there is one provider. The page says plainly what
- * signing in does and does not do — on a site whose privacy policy is one of
- * its selling points, an account that appears without explanation is worse
- * than no account.
+ * Two ways in, and both have to be here. This page is where a signed-out
+ * reader lands, so a provider missing from it is a reader who cannot get back
+ * into their own account — which is exactly what happened when phone sign-in
+ * shipped into the popup alone. The phone route opens the same dialog the
+ * rest of the site uses rather than a second copy of the form.
+ *
+ * The page says plainly what signing in does and does not do — on a site
+ * whose privacy policy is one of its selling points, an account that appears
+ * without explanation is worse than no account.
  *
  * Already signed in? It does not show the button again; it says so and offers
  * the way on. And when the reader arrived from a protected page, `next`
@@ -28,7 +33,8 @@ function safeNext(raw) {
 }
 
 export default function LoginPanel() {
-  const { user, loading, busy, error, signIn, configured } = useAuth();
+  const { user, loading, busy, error, signInWithGoogle, requireAuth, configured } =
+    useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
@@ -68,7 +74,8 @@ export default function LoginPanel() {
       <div className="card card-wide auth-card">
         <h2>You are signed in</h2>
         <p className="subtitle subtitle-flush">
-          Signed in as <strong>{user.email || user.name}</strong>. Taking you
+          Signed in as{" "}
+          <strong>{user.name || user.email || user.phone}</strong>. Taking you
           back…
         </p>
         <p className="back-row">
@@ -81,20 +88,29 @@ export default function LoginPanel() {
 
   return (
     <div className="card card-wide auth-card">
-      <h2>Sign in with Google</h2>
+      <h2>Sign in</h2>
       <p className="subtitle">
-        One button, one account. There is no password to choose and no email to
-        verify — Google tells us who you are, and that is the whole of it.
+        Two ways in and no password either way — nothing to choose, nothing to
+        verify by email, and we never see a password at all.
       </p>
 
       <button
         type="button"
         className="google-btn"
-        onClick={signIn}
+        onClick={signInWithGoogle}
         disabled={busy}
       >
         <GoogleMark />
         <span>{busy ? "Opening Google…" : "Continue with Google"}</span>
+      </button>
+
+      <button
+        type="button"
+        className="ghost-btn modal-alt"
+        onClick={() => requireAuth("phone")}
+        disabled={busy}
+      >
+        Use a phone number instead
       </button>
 
       {error ? (
@@ -105,8 +121,9 @@ export default function LoginPanel() {
 
       <ul className="auth-facts">
         <li>
-          <strong>What we receive.</strong> Your name, email address and
-          profile picture, from Google. Nothing else, and never your password.
+          <strong>What we receive.</strong> From Google, your name, email
+          address and profile picture. From a phone sign-in, just the number.
+          Nothing else either way, and never a password.
         </li>
         <li>
           <strong>What it changes.</strong> Nothing about the IPO data. Every
