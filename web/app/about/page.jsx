@@ -152,10 +152,11 @@ export default function AboutPage() {
           </li>
           <li>
             <strong>No tracking, and no account you need.</strong> There is no
-            analytics here. Google sign-in exists and is entirely optional —
-            it unlocks nothing, because every page is public either way. What
-            little is stored sits in your own browser, and the{" "}
-            <Link href="/privacy">privacy policy</Link> lists every key.
+            analytics here. Sign-in exists and is entirely optional — it
+            unlocks no IPO data, because every page is public either way. The
+            only thing it adds is a saved PAN, and the{" "}
+            <Link href="/privacy">privacy policy</Link> says where that sits
+            and what else your browser keeps.
           </li>
         </ul>
 

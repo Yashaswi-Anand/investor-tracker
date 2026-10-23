@@ -24,7 +24,7 @@ export const metadata = {
   robots: { index: true, follow: true },
 };
 
-const EFFECTIVE_DATE = "3 September 2026";
+const EFFECTIVE_DATE = "23 October 2026";
 
 export default function TermsPage() {
   const host = SITE.url.replace("https://", "");
