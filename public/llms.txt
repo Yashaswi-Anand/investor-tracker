@@ -32,11 +32,15 @@ the market trades.
 
 - No buy/avoid recommendations, ratings or target prices. Not a
   SEBI-registered adviser, analyst or broker.
-- No allotment lookup on your behalf. Only the registrar knows, and each of
-  them puts that behind a CAPTCHA meant to stop sites asking for you.
-  /allotment routes you to the right registrar instead of pretending.
-- No analytics. Google sign-in is optional and gates nothing: every page
-  is public signed in or not. What little is stored sits in the reader's
+- No allotment lookup except where the registrar permits one. KFin answers a
+  browser directly, so /allotment asks them from the reader's own browser.
+  Bigshare, MUFG Intime and Skyline put the answer behind a CAPTCHA meant to
+  stop sites asking on a reader's behalf; there /allotment hands over to the
+  registrar instead of pretending.
+- No analytics. Sign-in, by Google or by phone, is optional and gates no IPO
+  data: every page is public signed in or not. A reader who signs in may save
+  a PAN; it is stored against their account, readable only by them, and
+  deleted when they remove it. Signed out, nothing is stored at all.
 
 ## Key pages
 
