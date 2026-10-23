@@ -108,14 +108,17 @@ export default function ContactPage() {
           <strong>Your application, refund or demat account.</strong> Those sit
           with your bank, your broker and the registrar — we hold none of it.
           The optional Google sign-in on this site is unrelated to any of them
-          and gives us nothing but your name, email and avatar.
+          and gives us only what you signed in with — a name, email and
+          avatar from Google, or just the number from a phone sign-in.
         </p>
 
         <h2>Please do not send</h2>
         <p>
           PAN numbers, application numbers, bank or demat details, or any
-          document containing them. We have no use for them, no system that
-          expects them, and no wish to hold them. A message that arrives with
+          document containing them. A PAN belongs in the box on the{" "}
+          <Link href="/allotment">allotment page</Link>, where it is saved to
+          your own account and used for the check — not in an email, which we
+          cannot secure and do not want to hold. A message that arrives with
           one gets deleted rather than answered.
         </p>
 

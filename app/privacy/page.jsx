@@ -57,7 +57,7 @@ export const metadata = {
   robots: { index: true, follow: true },
 };
 
-const EFFECTIVE_DATE = "3 September 2026";
+const EFFECTIVE_DATE = "23 October 2026";
 
 // Ads are disclosed here BEFORE they serve, which is both Google's
 // requirement and the only way this page stays true across the switch.
@@ -91,19 +91,21 @@ export default function PrivacyPage() {
 
         <h2>What we do not collect</h2>
         <p>
-          No phone number, no demat or bank details, and no financial
-          information of any kind. We never ask for them and there is nowhere
-          on the site to enter them. The search box on the dashboard filters
-          the list inside your own browser — what you type is never sent
-          anywhere.
+          No demat or bank details, and no financial information of any kind.
+          We never ask for them and there is nowhere on the site to enter them.
+          A phone number only if you choose to sign in with one, and a PAN only
+          if you choose to save one — the two sections below say exactly what
+          happens to each. The search box on the dashboard filters the list
+          inside your own browser — what you type is never sent anywhere.
         </p>
         <p>
-          Your name, email address and profile picture are collected{" "}
-          <strong>only if you choose to sign in</strong> — see the next
-          section. Browse without signing in and none of it exists.
+          Your name, email address and profile picture — or, with a phone
+          sign-in, just the number — are collected{" "}
+          <strong>only if you choose to sign in</strong>. Browse without
+          signing in and none of it exists.
         </p>
 
-        <h2>If you sign in with Google</h2>
+        <h2>If you sign in</h2>
         <p>
           Sign-in is entirely optional. Nothing on this site is hidden behind
           it: the dashboard, every IPO page, the news and the documents are
@@ -154,22 +156,22 @@ export default function PrivacyPage() {
           .
         </p>
 
-        <h2>The one exception: your PAN</h2>
+        <h2>Your PAN, and the KFin check</h2>
         <p>
           The <Link href="/allotment">allotment page</Link> has a box for PAN
           numbers, so that it can check your allotment for you where the
           registrar allows it, and hand you the right registrar with your PAN
-          ready where it does not. That is the only place on this site that
-          asks for anything personal, and it is worth being precise about what
-          happens to it.
+          ready where it does not. Along with the sign-in box, that is the
+          only place on this site that asks for anything personal, and it is
+          the one worth being most precise about.
         </p>
         <p>
-          <strong>A PAN you type there never reaches us.</strong> No request on
-          that page goes to our server or our database. It is saved in your
-          own browser&apos;s local storage and read back by the page on your
-          own device. It is never put in a web address either, which would
-          have placed it in your browser history and in the logs of every
-          machine the request passed through.
+          <strong>Saving one needs an account, and the next section is the one
+          to read for that.</strong> A PAN you save is held in our database
+          against your account — it is not kept in your browser, and it is
+          never put in a web address, which would have placed it in your
+          browser history and in the logs of every machine the request passed
+          through.
         </p>
         <p>
           <strong>One request does carry it, and it does not come to us.</strong>{" "}
@@ -241,7 +243,8 @@ export default function PrivacyPage() {
         <h2>What is stored in your browser</h2>
         <p>
           The following sit in local storage on your own device, none of them
-          cookies. Nothing in this list is ever sent to us:
+          cookies. Nothing in this list is ever sent to us. Your PAN is not
+          among them — it is in the database, as the section above says:
         </p>
         <ul className="policy-list">
           <li>
@@ -251,10 +254,6 @@ export default function PrivacyPage() {
             <code>firebase:authUser:…</code> — written by Google&apos;s sign-in
             library, and only if you sign in. It is what keeps you signed in
             between visits. Signing out removes it.
-          </li>
-          <li>
-            <code>ipo-pans</code> — the PAN numbers you added on the allotment
-            page.
           </li>
           <li>
             <code>ipo-allotment-marks:&lt;your account id&gt;</code> — what you
@@ -387,9 +386,13 @@ export default function PrivacyPage() {
 
         <h2>Children</h2>
         <p>
-          This is a financial market information service and is not directed at
-          children under 13. Since we collect no personal data from anyone, we
-          collect none from children either.
+          This is a financial market information service and is not directed
+          at children under 13, and we do not knowingly let one hold an
+          account. Signing in and saving a PAN are both optional and both for
+          the person applying for shares, which a child under 13 cannot do. If
+          you believe a child has signed in here,{" "}
+          <Link href="/contact">tell us</Link> and the account and everything
+          under it will be deleted.
         </p>
 
         <h2>Your rights, and the DPDP Act</h2>
@@ -405,42 +408,44 @@ export default function PrivacyPage() {
           request, as it is when you use their own site.
         </p>
         <p>
-          What that means in practice: the rights of access, correction,
-          erasure and grievance redressal exist against whoever holds your
-          data, and for the PAN on that page, that is you. Deleting it is the
-          Erase everything button, or clearing this site&apos;s browser data.
-        </p>
-        <p>
           Advertising is the one thing that does not run through us at all.
           Whatever Google sets and reads for ads is held by Google, and the
           rights over it are exercised with them — the links in the
           Advertising section above are where that is done.
         </p>
         <p>
-          If we ever start receiving PANs — which would mean fetching allotment
-          results ourselves rather than sending you to the registrar — we would
-          become a Data Fiduciary under the Act, with duties of notice,
-          consent, purpose limitation, retention limits and breach reporting.
-          We are not doing that, and this page will be rewritten in full before
-          we ever do.
+          Until 23 October 2026 this page said we would become a Data Fiduciary
+          only if we ever started receiving PANs, and that we were not doing
+          that. We now hold a PAN for anyone who saves one, so {SITE.owner}{" "}
+          <strong>is</strong> a Data Fiduciary for it, with the duties of
+          notice, consent, purpose limitation, retention limits and breach
+          reporting that the Act attaches. The test is holding the data and
+          deciding its purpose — not whether we query the registrar ourselves,
+          which we still do not.
         </p>
 
         <h2>Changes to this policy</h2>
         <p>
-          If we ever begin collecting anything — analytics, accounts, alerts
-          that need an email address, or a PAN that reaches our server — this
-          page will be updated with a new effective date <em>before</em> that
-          change goes live, not after. That promise was broken once: the
+          If we ever begin collecting anything we do not collect today —
+          analytics, alerts that need an email address, or anything at all
+          from a reader who has not signed in — this page will be updated
+          with a new effective date <em>before</em> that change goes live, not
+          after. That promise was broken once: the
           allotment page shipped on 2 September 2026 with a PAN box while this
           policy still said there was nowhere on the site to enter one. It was
           corrected the next day, and the correction is recorded here rather
-          than quietly patched.
+          than quietly patched. It was broken a second time on 23 October
+          2026: PAN storage went live while several paragraphs here still
+          promised a PAN never left your browser. The effective date above is
+          the day that was corrected, and the paragraphs that said otherwise
+          were rewritten rather than quietly deleted.
         </p>
 
         <h2>Contact</h2>
         <p>
-          Questions about this policy, or a request about data held on your
-          device, go to our <Link href="/contact">contact page</Link>.
+          Questions about this policy, or a request about anything we hold —
+          your account, a saved PAN, or data on your own device — go to our{" "}
+          <Link href="/contact">contact page</Link>.
         </p>
 
         <p className="back-row">
