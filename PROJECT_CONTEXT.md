@@ -556,6 +556,16 @@ Optional: `GMP_SOURCE`, `GMP_FALLBACKS`, `TIMETABLE_SOURCE`,
 **Web** (set in hPanel, all `NEXT_PUBLIC_` → baked in at build):
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_CONTACT_EMAIL` (= `contact@socialriser.com`).
+
+**Firebase** (also hPanel, also baked in — sign-in and PAN storage are dead
+without them, and because they are baked in at build time, adding them needs a
+**redeploy, not a restart**): `NEXT_PUBLIC_FIREBASE_API_KEY`,
+`NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`,
+`NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`,
+`NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`.
+`lib/firebase.js` returns null rather than throwing when the first three are
+missing, so a build without them ships a working site with sign-in switched
+off instead of a 500 on every page.
 Unset: `NEXT_PUBLIC_ADSENSE_ID`, `NEXT_PUBLIC_ADS_ENABLED`,
 `NEXT_PUBLIC_GOOGLE_VERIFICATION` (the HTML-file method is used instead).
 Undocumented server-only: `NEWS_FEED_URL`.
