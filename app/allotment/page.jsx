@@ -166,8 +166,9 @@ export default async function AllotmentPage() {
           </p>
           <ul className="allot-hero-points">
             <li>
-              <strong>Your PAN stays in your browser.</strong> It never reaches
-              this site — no request here goes to our server.
+              <strong>A PAN is saved only to your account.</strong> Signed out,
+              nothing is stored anywhere. Yours is readable by you alone and
+              deleted when you remove it.
             </li>
             <li>
               <strong>KFin issues are checked live.</strong> Your browser asks
@@ -221,7 +222,8 @@ export default async function AllotmentPage() {
           The registrar is the only authority on allotment. A KFin answer here
           is KFin&apos;s, relayed by your browser; anything you record for
           another registrar is your own note of what you saw on their site.
-          Either way it lives in this browser — {SITE.name} never receives it.
+          A PAN you save is held against your account and nowhere else; the{" "}
+          <Link href="/privacy">privacy policy</Link> sets out what that means.
         </p>
       </div>
     </>

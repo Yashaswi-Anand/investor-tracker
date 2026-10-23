@@ -3438,3 +3438,127 @@ body.has-sheet .scroll-jump { display: none; }
 .account-name::before { content: none; }
 .account-email { margin: 2px 0 0; font-size: 0.84rem; color: var(--text-muted); }
 .account-grid { margin: 18px 0 0; }
+
+/* ==========================================================================
+   Modals — the sign-in gate and the add-PAN prompt. Both are asks, not
+   announcements, so they are small, centred, and trivially dismissable.
+   ========================================================================== */
+
+.modal-root {
+  position: fixed;
+  inset: 0;
+  /* Above the sticky header (40) and the jump button (35). */
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+.modal-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 18, 22, 0.58);
+  animation: modal-fade 0.18s ease;
+}
+.modal-panel {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: modal-rise 0.2s ease;
+}
+.modal-panel:focus { outline: none; }
+
+@keyframes modal-fade { from { opacity: 0; } }
+@keyframes modal-rise {
+  from { opacity: 0; transform: translateY(10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-scrim, .modal-panel { animation: none; }
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.modal-title { margin: 0; font-size: 1.05rem; font-weight: 800; line-height: 1.3; }
+.modal-title::before { content: none; }
+/* 32px, because this is the control someone reaches for when they want out. */
+.modal-close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.modal-close:hover { background: var(--surface-3); color: var(--text); }
+.modal-close:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.modal-lede {
+  margin: 0 0 4px;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.modal-lede strong { color: var(--text); font-weight: 700; }
+
+.modal-field { display: grid; gap: 6px; margin-top: 16px; }
+.modal-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.modal-input { width: 100%; }
+/* A PAN and a one-time code are both read back character by character. */
+.modal-pan, .modal-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.14em;
+}
+.modal-code { text-align: center; font-size: 1.15rem; }
+
+.modal-hint { margin: 7px 2px 0; font-size: 0.74rem; line-height: 1.5; color: var(--text-muted); }
+.modal-hint strong { color: var(--text); font-weight: 700; }
+
+.modal-go { width: 100%; margin-top: 16px; }
+.modal-alt { width: 100%; margin-top: 10px; }
+.modal-back { display: inline-block; margin-top: 12px; font-size: 0.78rem; }
+/* Set apart and quiet: leaving must be obvious without competing with the
+   action the reader came for. */
+.modal-dismiss {
+  display: block;
+  margin: 16px auto 0;
+  padding: 6px 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.modal-dismiss:hover { color: var(--text); text-decoration: underline; }
+
+/* The invisible reCAPTCHA host. It must stay in the layout — display:none
+   breaks the challenge when Google decides to show one. */
+#recaptcha-host { position: fixed; bottom: 0; left: 0; width: 0; height: 0; overflow: hidden; }
+
+.pan-signin { margin-top: 16px; }
+.pan-add-btn { margin-top: 14px; }
+
+@media (max-width: 560px) {
+  .modal-root { padding: 12px; align-items: end; }
+  .modal-panel { max-width: none; padding: 18px; }
+}

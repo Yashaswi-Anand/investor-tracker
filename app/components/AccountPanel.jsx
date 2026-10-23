@@ -38,6 +38,15 @@ function fmt(stamp) {
   }
 }
 
+/** What they actually signed in with, rather than an assumption. */
+function providerLabel(user) {
+  const ids = user?.providers || [];
+  const names = [];
+  if (ids.includes("google.com")) names.push("Google");
+  if (ids.includes("phone")) names.push("Phone");
+  return names.length ? names.join(" and ") : "—";
+}
+
 export default function AccountPanel() {
   const { user, loading, busy, error, signOut, configured } = useAuth();
   const router = useRouter();
@@ -95,15 +104,24 @@ export default function AccountPanel() {
           </span>
         )}
         <div>
-          <h2 className="account-name">{user.name || "Signed in"}</h2>
-          {user.email ? <p className="account-email">{user.email}</p> : null}
+          {/* A phone account has no display name, so the number IS the
+              identity and leading with "Signed in" would say nothing. */}
+          <h2 className="account-name">
+            {user.name || user.phone || user.email || "Your account"}
+          </h2>
+          {user.email && user.name ? (
+            <p className="account-email">{user.email}</p>
+          ) : null}
+          {user.phone && (user.name || user.email) ? (
+            <p className="account-email">{user.phone}</p>
+          ) : null}
         </div>
       </div>
 
       <dl className="detail-grid account-grid">
         <div>
           <dt>Signed in with</dt>
-          <dd>Google</dd>
+          <dd>{providerLabel(user)}</dd>
         </div>
         {created ? (
           <div>
@@ -121,8 +139,10 @@ export default function AccountPanel() {
 
       <p className="subtitle">
         Signing in changes nothing about the IPO data — every page on this site
-        is public and stays public. We hold your name, email and profile
-        picture as Google gave them to us, and nothing else.
+        is public and stays public. We hold what your sign-in method gave us —
+        a name, email and picture from Google, or just the number from a phone
+        sign-in — plus any PAN you chose to save. Nothing else, and none of it
+        is linked to what you read.
       </p>
 
       <button type="button" className="ghost-btn" onClick={signOut} disabled={busy}>

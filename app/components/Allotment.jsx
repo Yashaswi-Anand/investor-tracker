@@ -25,6 +25,7 @@
 import Link from "next/link";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -33,17 +34,36 @@ import {
 } from "react";
 import { fmtDate } from "../../lib/format";
 import { lookupKfin } from "../../lib/kfin";
+import {
+  clearLocalPanTraces,
+  MAX_PANS,
+  removeAllPans,
+  removePan,
+  watchPans,
+} from "../../lib/pans";
+import { useAuth } from "./AuthProvider";
+import PanModal from "./PanModal";
 
-const PAN_KEY = "ipo-pans";
+// PANs are NO LONGER kept in this browser. They live in Firestore under the
+// signed-in reader's own uid, so a signed-out visitor leaves nothing
+// PAN-shaped behind on the device — which is the requirement, and is
+// stricter than what this page did before.
+//
+// What still lives locally is the reader's own notes: which rows they have
+// marked, and what KFin answered. Both are keyed by `slug|PAN`, so the key
+// itself carries a PAN — which is why they are namespaced per uid and wiped
+// the moment the session ends. See clearLocalPanTraces().
 const MARK_KEY = "ipo-allotment-marks";
 const RESULT_KEY = "ipo-allotment-results";
-// Written by the version of this page that had an issue picker. Removed on
-// load rather than left behind: the privacy policy lists what is stored, and
-// a key it no longer names should not exist.
-const LEGACY_KEYS = ["ipo-allotment-picks"];
+// Written by older versions of this page. Removed on load rather than left
+// behind: the privacy policy lists what is stored, and a key it no longer
+// names should not exist. "ipo-pans" is on this list now — the PANs it held
+// have moved to the account.
+const LEGACY_KEYS = ["ipo-allotment-picks", "ipo-pans"];
 
-/** Five letters, four digits, one letter — the format the registrars want. */
-const PAN_SHAPE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+/** Per-user, because the notes are about that user's PANs. */
+const scoped = (key, uid) => (uid ? `${key}:${uid}` : null);
+
 
 /** Between two direct lookups in a batch. KFin rate-limits; this is courtesy. */
 const BATCH_GAP_MS = 1500;
@@ -106,41 +126,144 @@ function useAllotment() {
 }
 
 export function AllotmentProvider({ children }) {
+  const { user, loading: authLoading, requireAuth } = useAuth();
+  const uid = user?.uid || null;
+
   const [pans, setPans] = useState([]);
   const [marks, setMarks] = useState({});
   const [results, setResults] = useState({});
-  // Nothing is read from storage during render: the server has no
-  // localStorage, and a first client render that disagreed with the server's
-  // would be a hydration mismatch.
+  const [panError, setPanError] = useState(null);
+  // True once we KNOW the PAN list — either Firestore has answered, or there
+  // is no session and the answer is "none". Distinct from authLoading, and
+  // the thing every consumer must wait for before concluding "no PANs".
   const [ready, setReady] = useState(false);
 
+  /* ---- PANs: Firestore, and only while signed in --------------------- */
   useEffect(() => {
-    setPans(read(PAN_KEY, []));
-    setMarks(read(MARK_KEY, {}));
-    setResults(read(RESULT_KEY, {}));
-    for (const key of LEGACY_KEYS) remove(key);
-    setReady(true);
-  }, []);
+    // Still working out who this is. Conclude nothing yet.
+    if (authLoading) return undefined;
 
-  // Persisted by watching the state rather than by writing alongside every
-  // setter: two taps in the same tick both read the state as React last
-  // rendered it, and a setter that wrote from `pans` rather than from the
-  // value React hands it dropped one of them. The `ready` guard keeps the
-  // empty initial state from being written over what is stored before the
-  // load runs.
+    if (!uid) {
+      // Signed out: no PANs, and nothing PAN-shaped left on the device.
+      setPans([]);
+      setMarks({});
+      setResults({});
+      clearLocalPanTraces();
+      setPanError(null);
+      setReady(true);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let unsubscribe = () => {};
+    setReady(false);
+
+    (async () => {
+      try {
+        unsubscribe = await watchPans(
+          uid,
+          (list) => {
+            if (cancelled) return;
+            setPans(list);
+            setReady(true);
+          },
+          () => {
+            if (cancelled) return;
+            setPanError("Could not load your saved PANs.");
+            setReady(true);
+          }
+        );
+      } catch {
+        if (!cancelled) {
+          setPanError("Could not load your saved PANs.");
+          setReady(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [uid, authLoading]);
+
+  /* ---- notes: local, per-uid, and never for a signed-out reader ------ */
   useEffect(() => {
-    if (ready) write(PAN_KEY, pans);
-  }, [ready, pans]);
+    for (const key of LEGACY_KEYS) remove(key);
+    if (!uid) return;
+    setMarks(read(scoped(MARK_KEY, uid), {}));
+    setResults(read(scoped(RESULT_KEY, uid), {}));
+  }, [uid]);
+
   useEffect(() => {
-    if (ready) write(MARK_KEY, marks);
-  }, [ready, marks]);
+    if (uid && ready) write(scoped(MARK_KEY, uid), marks);
+  }, [uid, ready, marks]);
   useEffect(() => {
-    if (ready) write(RESULT_KEY, results);
-  }, [ready, results]);
+    if (uid && ready) write(scoped(RESULT_KEY, uid), results);
+  }, [uid, ready, results]);
+
+  const forgetPan = useCallback(
+    async (pan) => {
+      if (!uid) return;
+      const result = await removePan(uid, pan);
+      if (!result.ok) setPanError(result.reason);
+      // The snapshot listener updates `pans`; the notes for that PAN go too,
+      // because a note about a PAN nobody holds is just a stored PAN.
+      setMarks((current) => {
+        const next = {};
+        for (const [key, value] of Object.entries(current)) {
+          if (!key.endsWith(`|${pan}`)) next[key] = value;
+        }
+        return next;
+      });
+      setResults((current) => {
+        const next = {};
+        for (const [key, value] of Object.entries(current)) {
+          if (!key.endsWith(`|${pan}`)) next[key] = value;
+        }
+        return next;
+      });
+    },
+    [uid]
+  );
+
+  const forgetEverything = useCallback(async () => {
+    if (!uid) return;
+    const result = await removeAllPans(uid, pans);
+    if (!result.ok) setPanError(result.reason);
+    setMarks({});
+    setResults({});
+    clearLocalPanTraces();
+  }, [uid, pans]);
 
   const value = useMemo(
-    () => ({ ready, pans, setPans, marks, setMarks, results, setResults }),
-    [ready, pans, marks, results]
+    () => ({
+      ready,
+      uid,
+      authLoading,
+      requireAuth,
+      pans,
+      panError,
+      clearPanError: () => setPanError(null),
+      forgetPan,
+      forgetEverything,
+      marks,
+      setMarks,
+      results,
+      setResults,
+    }),
+    [
+      ready,
+      uid,
+      authLoading,
+      requireAuth,
+      pans,
+      panError,
+      forgetPan,
+      forgetEverything,
+      marks,
+      results,
+    ]
   );
 
   return <Allotment.Provider value={value}>{children}</Allotment.Provider>;
@@ -149,120 +272,179 @@ export function AllotmentProvider({ children }) {
 /* ------------------------------------------------------------------------ */
 
 export function PanBox() {
-  const { ready, pans, setPans, marks, setMarks, results, setResults } =
-    useAllotment();
+  const {
+    ready,
+    uid,
+    authLoading,
+    requireAuth,
+    pans,
+    panError,
+    clearPanError,
+    forgetPan,
+    forgetEverything,
+  } = useAllotment();
   const [draft, setDraft] = useState("");
   const [error, setError] = useState(null);
-
-  const addPan = (event) => {
-    event.preventDefault();
-    const value = draft.trim().toUpperCase();
-    if (!value) return;
-    if (!PAN_SHAPE.test(value)) {
-      setError("That is not a PAN. The shape is five letters, four digits, one letter.");
-      return;
-    }
-    if (pans.includes(value)) {
-      setError("That PAN is already on the list.");
-      return;
-    }
-    setPans((current) => (current.includes(value) ? current : [...current, value]));
-    setDraft("");
-    setError(null);
-  };
-
-  const removePan = (pan) => setPans((current) => current.filter((p) => p !== pan));
+  const [busy, setBusy] = useState(false);
+  const [modal, setModal] = useState(false);
+  // Dismissing the add-PAN prompt is remembered for the session. Someone who
+  // came to read the timetable should not be asked on every render.
+  const [prompted, setPrompted] = useState(false);
 
   /**
-   * Everything this page holds, gone in one tap.
+   * The prompt, and the one condition it waits for.
    *
-   * A PAN is a government identifier. Telling someone it lives in their
-   * browser is only half an answer if getting it out again means finding
-   * their way into site settings — so the promise in the privacy policy is
-   * a button here, not an instruction there.
+   * `ready` means Firestore has actually answered. Opening on `!pans.length`
+   * before that would flash the modal at someone who has three PANs saved —
+   * the same class of bug as concluding "signed out" while auth is loading.
    */
-  const eraseAll = () => {
-    setPans([]);
-    setMarks({});
-    setResults({});
-    for (const key of [PAN_KEY, MARK_KEY, RESULT_KEY, ...LEGACY_KEYS]) remove(key);
+  useEffect(() => {
+    if (!uid || !ready || prompted) return;
+    if (pans.length === 0) {
+      setModal(true);
+      setPrompted(true);
+    }
+  }, [uid, ready, pans.length, prompted]);
+
+  const onAdd = async (event) => {
+    event.preventDefault();
+    setError(null);
+    clearPanError();
+    // No PAN is accepted, held or sent anywhere until there is an account to
+    // attach it to. The gate opens the dialog and resolves null if closed.
+    const who = await requireAuth();
+    if (!who) return;
+    setModal(true);
   };
 
-  const anything =
-    pans.length || Object.keys(marks).length || Object.keys(results).length;
+  const onForget = async (pan) => {
+    setBusy(true);
+    await forgetPan(pan);
+    setBusy(false);
+  };
+
+  const onEraseAll = async () => {
+    setBusy(true);
+    await forgetEverything();
+    setBusy(false);
+  };
+
+  const shown = panError || error;
 
   return (
     <section className="card card-wide" id="pans">
       <div className="allot-card-head">
         <h2>Your PANs</h2>
-        {ready && pans.length ? (
+        {uid && ready && pans.length ? (
           <span className="allot-count">
-            {pans.length} saved
+            {pans.length} of {MAX_PANS} saved
           </span>
         ) : null}
       </div>
-      <p className="subtitle subtitle-flush">
-        Saved in this browser only, and used for every issue below.
-      </p>
 
-      <form className="pan-form" onSubmit={addPan}>
-        <input
-          className="pan-input"
-          value={draft}
-          onChange={(e) => {
-            setDraft(e.target.value.toUpperCase());
-            setError(null);
-          }}
-          placeholder="ABCDE1234F"
-          maxLength={10}
-          autoComplete="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-          aria-label="PAN to add"
-          aria-invalid={error ? "true" : undefined}
-        />
-        <button type="submit" className="pan-add" disabled={!draft.trim()}>
-          Add PAN
-        </button>
-      </form>
-      {error ? <p className="pan-error">{error}</p> : null}
+      {!uid ? (
+        <>
+          <p className="subtitle subtitle-flush">
+            Saved to your account, so they are there on every device — and
+            reachable by nobody else. Signing in is the only way a PAN is
+            stored at all; signed out, this site keeps none.
+          </p>
+          <button
+            type="button"
+            className="lookup-btn lookup-btn-lg pan-signin"
+            onClick={onAdd}
+            disabled={authLoading}
+          >
+            {authLoading ? "Checking…" : "Sign in to add a PAN"}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="subtitle subtitle-flush">
+            Saved to your account and visible only to you. Remove one and it is
+            deleted, here and from our database.
+          </p>
 
-      {ready && pans.length ? (
-        <ul className="pan-list">
-          {pans.map((pan) => (
-            <li key={pan} className="pan-chip">
-              <span className="pan-value">{pan}</span>
+          {!ready ? (
+            <p className="auth-status" role="status">
+              Loading your PANs…
+            </p>
+          ) : (
+            <>
+              {pans.length ? (
+                <ul className="pan-list">
+                  {pans.map((pan) => (
+                    <li key={pan} className="pan-chip">
+                      <span className="pan-value">{pan}</span>
+                      <button
+                        type="button"
+                        className="pan-remove"
+                        onClick={() => onForget(pan)}
+                        disabled={busy}
+                        aria-label={`Remove ${pan}`}
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="pan-empty">
+                  No PANs yet — add one to check an allotment.
+                </p>
+              )}
+
               <button
                 type="button"
-                className="pan-remove"
-                onClick={() => removePan(pan)}
-                aria-label={`Remove ${pan}`}
+                className="ghost-btn pan-add-btn"
+                onClick={() => setModal(true)}
+                disabled={busy || pans.length >= MAX_PANS}
               >
-                ×
+                {pans.length >= MAX_PANS ? `Limit is ${MAX_PANS}` : "Add a PAN"}
               </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="pan-empty">
-          No PANs yet — add one above, or several if you apply for the family.
-        </p>
+            </>
+          )}
+        </>
       )}
 
+      {shown ? (
+        <p className="auth-error" role="alert">
+          {shown}
+        </p>
+      ) : null}
+
       <p className="pan-privacy">
-        Stored on this device only — <Link href="/privacy">how that works</Link>.
-        {ready && anything ? (
+        {uid
+          ? "Stored in your account, never shared, deleted when you remove it"
+          : "Nothing is stored until you sign in"}{" "}
+        — <Link href="/privacy">how that works</Link>.
+        {uid && pans.length ? (
           <>
             {" "}
-            <button type="button" className="link-btn pan-erase" onClick={eraseAll}>
+            <button
+              type="button"
+              className="link-btn pan-erase"
+              onClick={onEraseAll}
+              disabled={busy}
+            >
               Erase everything
             </button>
           </>
         ) : null}
       </p>
+
+      {modal && uid ? (
+        <PanModal
+          uid={uid}
+          existing={pans}
+          onClose={() => setModal(false)}
+          onAdded={() => setError(null)}
+        />
+      ) : null}
     </section>
   );
 }
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -401,7 +583,8 @@ export function IssueRows({
   registrarShort,
   handoff,
 }) {
-  const { ready, pans, marks, setMarks, results, setResults } = useAllotment();
+  const { ready, uid, requireAuth, pans, marks, setMarks, results, setResults } =
+    useAllotment();
   const [busy, setBusy] = useState({});
   const [copied, setCopied] = useState(null);
   const [batch, setBatch] = useState(false);
@@ -438,6 +621,9 @@ export function IssueRows({
     });
 
   const check = async (pan) => {
+    // The gate, before anything goes over the wire. Closing the dialog
+    // resolves null and we simply do not check — the page does not move.
+    if (!(await requireAuth())) return { state: "cancelled", rows: [] };
     const key = `${slug}|${pan}`;
     setBusy((b) => ({ ...b, [pan]: true }));
     const result = await lookupKfin({
@@ -456,6 +642,7 @@ export function IssueRows({
   };
 
   const checkAll = async () => {
+    if (!(await requireAuth())) return;
     setBatch(true);
     for (let i = 0; i < pans.length; i += 1) {
       if (!alive.current) break;
@@ -893,7 +1080,8 @@ export function IssuePicker({ issues, today }) {
  * link, the steps, and the same manual record control as the single view.
  */
 export function MultiIssueChecker({ issues }) {
-  const { ready, pans, marks, setMarks, results, setResults } = useAllotment();
+  const { ready, uid, requireAuth, pans, marks, setMarks, results, setResults } =
+    useAllotment();
   const [selected, setSelected] = useState([]);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(null);
@@ -930,6 +1118,7 @@ export function MultiIssueChecker({ issues }) {
     });
 
   const runBatch = async () => {
+    if (!(await requireAuth())) return;
     // Only KFin-direct issues go over the wire; the hand-off cards need no
     // request and are already on screen for the reader to work through.
     const queue = [];

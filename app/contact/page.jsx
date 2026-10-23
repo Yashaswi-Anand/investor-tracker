@@ -98,10 +98,11 @@ export default function ContactPage() {
         </p>
         <p>
           <strong>Your allotment.</strong> Only the registrar for that issue
-          knows, and we cannot look it up for you by email — we never hold a
-          PAN. The <Link href="/allotment">allotment page</Link> checks KFin
-          issues from your own browser and lists the right registrar for the
-          rest.
+          knows, and we cannot look it up for you by email. The{" "}
+          <Link href="/allotment">allotment page</Link> checks KFin issues
+          from your own browser and lists the right registrar for the rest.
+          Write to us here if you want your account, and every PAN saved under
+          it, deleted.
         </p>
         <p>
           <strong>Your application, refund or demat account.</strong> Those sit
