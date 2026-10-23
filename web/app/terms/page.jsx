@@ -148,9 +148,10 @@ export default function TermsPage() {
           disagree, the registrar is right.
         </p>
         <p>
-          PAN numbers entered there stay in your browser and are never sent to
-          us. Enter only PANs you are entitled to use — your own, or those you
-          are authorised to act for.
+          A PAN you save is stored against your account, readable only by you,
+          and deleted when you remove it. Saving one requires signing in;
+          signed out, nothing is kept. Enter only PANs you are entitled to use
+          — your own, or those you are authorised to act for.
         </p>
 
         <h2>Third-party names and links</h2>
@@ -165,11 +166,12 @@ export default function TermsPage() {
 
         <h2>Privacy</h2>
         <p>
-          We receive no personal data. The allotment page asks for a PAN, but
-          it never leaves your browser — what is stored on your device, and why
-          that keeps us outside the duties the DPDP Act places on whoever holds
-          personal data, is set out in our{" "}
-          <Link href="/privacy">Privacy Policy</Link>.
+          If you sign in and save a PAN, we hold it — which makes us a data
+          fiduciary for it under the DPDP Act, with the duties that carries.
+          What exactly is held, where, who can reach it and how to have it
+          deleted is set out in our{" "}
+          <Link href="/privacy">Privacy Policy</Link>. Browse without signing
+          in and we receive nothing.
         </p>
 
         <h2>Advertising</h2>

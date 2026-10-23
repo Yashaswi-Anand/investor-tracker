@@ -17,17 +17,28 @@ import { SITE, adsLive } from "../../lib/config";
 // and a reader's browser now talks to Google's identity servers. All three
 // are disclosed below. If sign-in is ever removed, this section goes with it.
 //
+// PAN STORAGE REVERSED THE SITE'S OLDEST PROMISE, on the owner's explicit
+// instruction. Until now this page said a PAN never reached our server and
+// that was true: it lived in the reader's own browser, and the KFin lookup
+// was built browser-direct precisely so it stayed there. PANs now live in
+// Firestore under the signed-in reader's uid. That makes this project a data
+// fiduciary for a government identifier under the DPDP Act — so the section
+// below states exactly what is held, where, who can reach it, and how to
+// have it deleted. Phone sign-in shipped at the same time, which means a
+// phone number is also held for anyone who uses it. If PAN storage is ever
+// withdrawn, this section and the Play Console Data safety form go with it.
+//
 // THE ALLOTMENT PAGE ASKS FOR A PAN. That is personal data under the DPDP
-// Act, and this page said in as many words that there was nowhere on the site
-// to enter one — written before that page existed and left standing after it
-// shipped, which made this document untrue for four days. It is corrected
-// below. The reason it stays a short section rather than a long one is that
-// the PAN never reaches OUR server: it is typed and stored inside the
-// reader's own browser, and the one request that carries it goes from that
-// browser straight to KFin's allotment API (lib/kfin.js) — KFin receives it
-// under their policy, we never do, so there is no collection to disclose.
-// If that ever changes, this page and the Play Console Data safety form have
-// to change in the SAME commit, before the feature ships.
+// Act, and this page once said there was nowhere on the site to enter one —
+// written before that page existed and left standing after it shipped, which
+// made this document untrue for four days.
+//
+// The sentence that replaced it — "the PAN never reaches OUR server" — was
+// true until 23 Oct 2026 and is not any more. PANs are stored in Firestore
+// under the signed-in reader's uid. The KFin lookup is still browser-direct,
+// so that specific claim survives for the LOOKUP; it no longer survives for
+// storage. Both are stated separately below, because conflating them is how
+// this page went wrong the first time.
 
 // Static content, but not for a year.
 //
@@ -72,8 +83,10 @@ export default function PrivacyPage() {
         </p>
         <p>
           There is <strong>one optional account</strong>, signed in with
-          Google. It unlocks nothing — every IPO page is public with or
-          without it — and if you never use it we never learn who you are.
+          Google or a phone number. Every IPO page is public with or without
+          it. What the account adds is the allotment check: that needs your
+          PAN, and a PAN is only ever stored against an account. Browse
+          without signing in and we never learn who you are.
         </p>
 
         <h2>What we do not collect</h2>
@@ -98,14 +111,18 @@ export default function PrivacyPage() {
           is the only page that requires one, and the only thing on it is you.
         </p>
         <p>
-          Signing in uses <strong>Google and nothing else</strong> — there is
-          no password to choose, and we never see one. When you sign in,
-          Google tells us three things and we keep them:
+          There are two ways in and <strong>no password either way</strong> —
+          we never see one.
         </p>
         <ul className="policy-list">
-          <li>your name, as it appears on your Google account</li>
-          <li>your email address</li>
-          <li>your Google profile picture</li>
+          <li>
+            <strong>Google.</strong> Google tells us your name, your email
+            address and your profile picture, and we keep those three.
+          </li>
+          <li>
+            <strong>Phone.</strong> You give a number, Google texts a
+            six-digit code, and we keep the number. No name, no email.
+          </li>
         </ul>
         <p>
           They are held by <strong>Google Firebase Authentication</strong>, in
@@ -174,6 +191,53 @@ export default function PrivacyPage() {
           storage.
         </p>
 
+        <h2>Your PAN, if you save one</h2>
+        <p>
+          <strong>This changed on 23 October 2026, and in your favour only
+          partly — so it is worth reading.</strong> Until that date a PAN you
+          typed here never left your browser, and this page said so. It now
+          leaves: a PAN you save is stored in Google Firestore, in a document
+          under your own account id, in Google&apos;s Mumbai region.
+        </p>
+        <p>
+          We made that change so your PAN follows you between your phone and
+          your computer instead of being stranded on one device. The cost is
+          that {SITE.owner} now holds a government identifier, and under
+          India&apos;s DPDP Act that carries real duties. Here is the whole of
+          what we do:
+        </p>
+        <ul className="policy-list">
+          <li>
+            <strong>Only yours.</strong> Security rules on the database allow
+            a signed-in reader to read and write documents under their own
+            account id and nothing else. Not other readers&apos; — and that is
+            enforced by the database, not by our code being careful.
+          </li>
+          <li>
+            <strong>Only if you are signed in.</strong> There is no path that
+            stores a PAN for a signed-out visitor — not in the database, not
+            in your browser&apos;s storage, not anywhere. Sign out and
+            anything PAN-shaped on the device is erased.
+          </li>
+          <li>
+            <strong>Deleted means deleted.</strong> Remove a PAN and the
+            document is deleted. There is no archive, no tombstone and no
+            backup copy we keep — the project is on Firebase&apos;s free tier,
+            which has no scheduled backups at all.
+          </li>
+          <li>
+            <strong>Not used for anything else.</strong> We do not look at it,
+            do not analyse it, do not link it to what you read, and never send
+            it to a registrar ourselves. A KFin check still goes from your own
+            browser straight to KFin, exactly as before.
+          </li>
+        </ul>
+        <p>
+          You can remove every PAN with the <strong>Erase everything</strong>{" "}
+          button on the allotment page, or have the whole account and
+          everything under it deleted by <Link href="/contact">asking us</Link>.
+        </p>
+
         <h2>What is stored in your browser</h2>
         <p>
           The following sit in local storage on your own device, none of them
@@ -193,13 +257,19 @@ export default function PrivacyPage() {
             page.
           </li>
           <li>
-            <code>ipo-allotment-marks</code> — what you recorded after checking
-            an issue on its registrar&apos;s site.
+            <code>ipo-allotment-marks:&lt;your account id&gt;</code> — what you
+            recorded after checking an issue on its registrar&apos;s site.
           </li>
           <li>
-            <code>ipo-allotment-results</code> — what KFin answered for a PAN,
-            kept so you do not have to ask again. Includes the applicant name
-            as KFin holds it.
+            <code>ipo-allotment-results:&lt;your account id&gt;</code> — what
+            KFin answered for a PAN, kept so you do not have to ask again.
+            Includes the applicant name as KFin holds it.
+          </li>
+          <li>
+            Both of the above are written <strong>only while you are signed
+            in</strong>, are named after your account id, and are erased the
+            moment you sign out — their keys contain a PAN, and a signed-out
+            browser should not hold one.
           </li>
         </ul>
         <p>
@@ -326,13 +396,13 @@ export default function PrivacyPage() {
         <p>
           India&apos;s Digital Personal Data Protection Act, 2023 places its
           duties on whoever determines how personal data is processed and
-          actually holds it. We hold none. A PAN entered on the allotment page
-          is processed on your own device, by code running in your own browser,
-          and is never transmitted to or stored by us — so there is no copy of
-          it for us to disclose, correct, export or erase, and no consent
-          notice we could meaningfully serve for data we never receive. Where
-          your browser sends it to KFin at your request, KFin is the data
-          fiduciary for that request, as it is when you use their site.
+          actually holds it. For a PAN you save to your account, that is{" "}
+          <strong>us</strong> — so the rights of access, correction, erasure
+          and grievance redressal apply against {SITE.owner}, and the way to
+          exercise them is the <Link href="/contact">contact page</Link> or
+          the delete controls on the allotment page itself. Where your browser
+          sends a PAN to KFin at your request, KFin is the fiduciary for that
+          request, as it is when you use their own site.
         </p>
         <p>
           What that means in practice: the rights of access, correction,

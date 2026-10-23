@@ -141,11 +141,14 @@ export default function AboutPage() {
           <li>
             <strong>Allotment lookup only where the registrar allows it.</strong>{" "}
             KFin&apos;s allotment API answers a browser directly, so the{" "}
-            <Link href="/allotment">allotment page</Link> asks it from yours,
-            with the PAN never touching this site. Every other registrar puts
-            the answer behind a CAPTCHA meant to stop sites asking on your
-            behalf, and there the page takes you to them instead of pretending
-            otherwise.
+            <Link href="/allotment">allotment page</Link> asks it from yours —
+            the lookup itself never passes through this site. Every other
+            registrar puts the answer behind a CAPTCHA meant to stop sites
+            asking on your behalf, and there the page takes you to them
+            instead of pretending otherwise. A PAN you save is stored against
+            your account so it is there on every device; the{" "}
+            <Link href="/privacy">privacy policy</Link> says exactly what that
+            means.
           </li>
           <li>
             <strong>No tracking, and no account you need.</strong> There is no

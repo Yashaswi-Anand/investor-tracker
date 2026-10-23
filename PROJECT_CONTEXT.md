@@ -352,8 +352,12 @@ Google sign-in only, via Firebase Auth. Added 23 Oct 2026.
 |---|---|
 | Firebase project | `investor-ipo-tracker` (project number `41460225694`) |
 | Web app | `investor-web` |
-| Providers enabled | **Google only.** No email/password, no phone, no anonymous |
+| Providers enabled | **Google and Phone (OTP).** No email/password, no anonymous |
 | Authorized domains | `localhost`, `investor.socialriser.com`, plus the two Firebase defaults |
+| SMS region policy | **Allow → India (IN) only.** New projects deny every region by default; without this, phone sign-in fails with `OPERATION_NOT_ALLOWED : SMS unable to be sent until this region enabled` |
+| SMS quota | **10/day on the free plan.** Needs a billing account to raise — the single biggest limit on phone sign-in |
+| Firestore | `asia-south1` (Mumbai), production mode. **Region cannot be changed** |
+| Test phone | `+91 99999 99999` → code `123456`. Sends no SMS; use it rather than burning quota |
 | Analytics / Gemini | both declined at project creation |
 
 Files: `lib/firebase.js` (lazy, browser-only init; returns null when
@@ -380,6 +384,42 @@ Three things worth knowing before changing it:
 The Firebase web `apiKey` is not a secret; it identifies the project to
 Google and is designed to ship in client code. The authorized-domain list is
 what actually guards it.
+
+### 7.6 PAN storage — the site's oldest promise, reversed
+
+Added 23 Oct 2026 at the owner's instruction. Until then a PAN lived only in
+the reader's browser and five pages said so. PANs now live in Firestore:
+
+```
+users/{uid}/pans/{PAN}  ->  { value, createdAt }
+```
+
+**The document id IS the PAN.** That makes duplicates structurally impossible
+and — the real reason — lets the security rule check the format on every
+write. Rules cannot iterate a list, so an array of PANs could only ever be
+validated by its length.
+
+The rule is the guarantee, not the client: `isOwner(uid)` on every read and
+write, `hasOnly(['value','createdAt'])`, a regex on the value, and
+`value == pan`. `lib/pans.js` re-checks the same things so a bad write never
+leaves the browser, but that is courtesy.
+
+Three invariants a change must not break:
+
+- **No PAN for a signed-out reader**, anywhere — not Firestore, not
+  localStorage, not sessionStorage. `clearLocalPanTraces()` runs on sign-out
+  (in `AuthProvider`, so it fires wherever sign-out happens) and on any
+  signed-out load of `/allotment`.
+- **The notes are keyed by `slug|PAN`**, so their keys carry a PAN. They are
+  namespaced per uid and wiped with everything else.
+- **`/allotment` stays public and `index, follow`.** Only the PAN and check
+  actions are gated; the issues, registrars and timetable are the SEO value
+  and must stay crawlable.
+
+`requireAuth()` in `AuthProvider` is the gate: it resolves the user, or opens
+the sign-in dialog and resolves whoever signs in, or resolves **null** if the
+reader closes it. A null answer means do nothing — no navigation, no reload,
+no half-started check.
 
 ---
 

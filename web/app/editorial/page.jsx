@@ -164,10 +164,12 @@ export default function EditorialPage() {
           <li>
             <strong>No allotment lookup through us.</strong> Only the registrar
             knows. Where one answers a browser directly — KFin does — the{" "}
-            <Link href="/allotment">allotment page</Link> asks it from yours
-            and the PAN never touches this site; where the answer sits behind
-            a CAPTCHA, the page routes you to the registrar rather than working
-            around it.
+            <Link href="/allotment">allotment page</Link> asks it from yours,
+            so the lookup itself never passes through this site; where the
+            answer sits behind a CAPTCHA, the page routes you to the registrar
+            rather than working around it. A PAN you save is a separate
+            matter, and the <Link href="/privacy">privacy policy</Link> covers
+            it.
           </li>
         </ul>
 
