@@ -1197,6 +1197,55 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .gmp-axis { fill: var(--text-muted); font-size: 11px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
 .gmp-last-label { fill: var(--text); font-size: 12.5px; font-weight: 800; font-family: var(--font-sans); }
 
+/* Axis text on a narrow screen.
+   ---------------------------------------------------------------------------
+   The SVG is a 640-unit viewBox scaled to fit its card, so every length in it
+   shrinks with the container: at 375px the card gives the chart 309px, a
+   scale of 0.48, and 11-unit axis text lands at 5.3 real pixels. Nothing in
+   the chart is wrong -- it is the scaling.
+
+   Two things follow. First, the only way to hold a constant REAL size is to
+   raise the user-unit size as the container narrows, which is what the steps
+   below do: each band is chosen so the text lands between 10 and 13 real
+   pixels across its whole width, rather than one size that is right at one
+   edge and wrong at the other.
+
+   Second, the value labels cannot simply grow. They are right-anchored into a
+   44-unit gutter, and "Rs 1,786" at a readable size is wider than that -- the
+   candle chart could go to 14 units only because its gutter is 46. So on a
+   phone they stop being gutter labels and become inline ones: anchored at the
+   start, nudged above their gridline, with a halo in the card colour so they
+   stay legible where the line passes under them. The gutter stops being the
+   constraint, which is what made the size possible.
+
+   Scoped to .chart-line so none of it reaches .price-chart, which shares
+   .chart and solved the same problem its own way. */
+@media (max-width: 420px) {
+  .chart-line .gmp-axis { font-size: 22px; }
+  .chart-line .gmp-last-label { font-size: 25px; }
+}
+@media (min-width: 421px) and (max-width: 520px) {
+  .chart-line .gmp-axis { font-size: 18px; }
+  .chart-line .gmp-last-label { font-size: 20px; }
+}
+@media (min-width: 521px) and (max-width: 660px) {
+  .chart-line .gmp-axis { font-size: 14px; }
+  .chart-line .gmp-last-label { font-size: 16px; }
+}
+@media (max-width: 660px) {
+  .chart-line .gmp-axis-y {
+    text-anchor: start;
+    /* 8 right, to start level with the plot rather than inside the gutter;
+       7 up, so the label sits above its gridline instead of on it. */
+    transform: translate(8px, -7px);
+    /* Drawn behind the glyphs, so a label crossing the line keeps its edges. */
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+}
+
 .spark { display: block; overflow: visible; }
 
 /* iOS Safari zooms the page when a focused input's text is under 16px, which

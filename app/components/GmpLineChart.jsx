@@ -111,7 +111,7 @@ export default function GmpLineChart({
   return (
     <div className="chart-wrap">
       <svg
-        className="chart"
+        className="chart chart-line"
         viewBox={`0 0 ${W} ${H}`}
         role="img"
         aria-label={`${ariaLabel}: from ${format(first.v)} on ${first.short} to ${format(last.v)} on ${last.short}`}
@@ -128,7 +128,15 @@ export default function GmpLineChart({
         {ticks.map((tv) => (
           <g key={tv}>
             <line className="gmp-grid" x1={PAD.left} x2={W - PAD.right} y1={y(tv)} y2={y(tv)} />
-            <text className="gmp-axis" x={PAD.left - 8} y={y(tv) + 4} textAnchor="end">
+            {/* .gmp-axis-y, separately from the date ticks below, because
+                only these sit in the 44-unit left gutter and only these get
+                re-anchored into the plot on a phone. */}
+            <text
+              className="gmp-axis gmp-axis-y"
+              x={PAD.left - 8}
+              y={y(tv) + 4}
+              textAnchor="end"
+            >
               {format(tv)}
             </text>
           </g>
