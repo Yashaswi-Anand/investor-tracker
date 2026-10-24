@@ -1197,48 +1197,56 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .gmp-axis { fill: var(--text-muted); font-size: 11px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
 .gmp-last-label { fill: var(--text); font-size: 12.5px; font-weight: 800; font-family: var(--font-sans); }
 
-/* Axis text on a narrow screen.
+/* Axis text, sized by the chart's own width.
    ---------------------------------------------------------------------------
-   The SVG is a 640-unit viewBox scaled to fit its card, so every length in it
-   shrinks with the container: at 375px the card gives the chart 309px, a
-   scale of 0.48, and 11-unit axis text lands at 5.3 real pixels. Nothing in
-   the chart is wrong -- it is the scaling.
+   The SVG is a 640-unit viewBox scaled to fit its container, so everything in
+   it shrinks with that container: 11-unit text at 309px wide is 5.3 real
+   pixels. Holding a constant REAL size means raising the user-unit size as the
+   container narrows.
 
-   Two things follow. First, the only way to hold a constant REAL size is to
-   raise the user-unit size as the container narrows, which is what the steps
-   below do: each band is chosen so the text lands between 10 and 13 real
-   pixels across its whole width, rather than one size that is right at one
-   edge and wrong at the other.
+   Keyed on the CONTAINER, not the viewport, because the two are not related
+   here. The detail page puts this chart in a two-column layout, so at a
+   1280px viewport the chart is 520px wide -- narrower than a tablet gives it,
+   and a viewport-keyed rule read that as "desktop, leave it alone" and left
+   the axis at 8.9 pixels. Container width is the thing that actually decides
+   the scale, so it is the thing to measure. Where @container is unsupported
+   none of this applies and the chart keeps its 11-unit default, which is what
+   it had before.
 
-   Second, the value labels cannot simply grow. They are right-anchored into a
-   44-unit gutter, and "Rs 1,786" at a readable size is wider than that -- the
-   candle chart could go to 14 units only because its gutter is 46. So on a
-   phone they stop being gutter labels and become inline ones: anchored at the
-   start, nudged above their gridline, with a halo in the card colour so they
-   stay legible where the line passes under them. The gutter stops being the
-   constraint, which is what made the size possible.
+   Below 700px the value labels also stop being gutter labels. They are
+   right-anchored into 44 units, and at the sizes those widths need, "₹1,786"
+   no longer fits -- the candle chart could reach 14 units only because its
+   gutter is 46. So they anchor at the start instead, 8 right to sit level
+   with the plot and 7 up to clear their gridline, with a halo in --surface
+   for where the line passes under them. Above 700 the font is back to its
+   default and the original gutter layout returns. */
+.chart-wrap { container-type: inline-size; }
 
-   Scoped to .chart-line so none of it reaches .price-chart, which shares
-   .chart and solved the same problem its own way. */
-@media (max-width: 420px) {
-  .chart-line .gmp-axis { font-size: 22px; }
-  .chart-line .gmp-last-label { font-size: 25px; }
+@container (max-width: 340px) {
+  .chart-line .gmp-axis { font-size: 24px; }
+  .chart-line .gmp-last-label { font-size: 27px; }
 }
-@media (min-width: 421px) and (max-width: 520px) {
-  .chart-line .gmp-axis { font-size: 18px; }
-  .chart-line .gmp-last-label { font-size: 20px; }
+@container (min-width: 341px) and (max-width: 430px) {
+  .chart-line .gmp-axis { font-size: 19px; }
+  .chart-line .gmp-last-label { font-size: 21px; }
 }
-@media (min-width: 521px) and (max-width: 660px) {
-  .chart-line .gmp-axis { font-size: 14px; }
-  .chart-line .gmp-last-label { font-size: 16px; }
+@container (min-width: 431px) and (max-width: 540px) {
+  .chart-line .gmp-axis { font-size: 15px; }
+  .chart-line .gmp-last-label { font-size: 17px; }
 }
-@media (max-width: 660px) {
+@container (min-width: 541px) and (max-width: 700px) {
+  .chart-line .gmp-axis { font-size: 12px; }
+  .chart-line .gmp-last-label { font-size: 14px; }
+}
+/* Every container that gets a raised font also gets the inline layout. Tying
+   the two together removes a marginal case: at 12 units a short label like
+   "₹220" is 30 units and fits the 44-unit gutter, but "₹1,786" is about 45
+   and would have spilled over the plot edge. Above 700 the font is back to
+   its 11-unit default, which is what the gutter was measured for. */
+@container (max-width: 700px) {
   .chart-line .gmp-axis-y {
     text-anchor: start;
-    /* 8 right, to start level with the plot rather than inside the gutter;
-       7 up, so the label sits above its gridline instead of on it. */
     transform: translate(8px, -7px);
-    /* Drawn behind the glyphs, so a label crossing the line keeps its edges. */
     paint-order: stroke;
     stroke: var(--surface);
     stroke-width: 4px;
