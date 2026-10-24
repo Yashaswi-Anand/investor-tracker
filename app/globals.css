@@ -29,6 +29,17 @@
   --primary-strong: #0f465a;
   --primary-soft: #e7eff2;
   --on-brand: #f2f6f7;
+  /* Text on a --primary FILL, which is a different job from --on-brand.
+     --on-brand sits on --brand-grad, and that gradient is dark in both
+     themes, so it stays light. --primary flips to a pale blue in dark, so
+     what is printed ON it has to flip the other way: before this token
+     existed every primary-filled badge sat at 2.22:1 and the one button
+     with a hard-coded #fff at 2.42:1. */
+  --on-primary: #f2f6f7;
+  /* The GMP line and its fill. Deliberately not --brand-1: that one is the
+     text on .board-chip[data-active] over the never-flipping --on-brand,
+     so it is already correct in both themes and must not move. */
+  --chart-1: #0f5d7a;
   /* The colour the browser/Android chrome paints around the page. Kept
      here rather than in JS so the palette has exactly one home; the
      theme toggle reads it back out of the computed styles. */
@@ -85,6 +96,8 @@
     --primary: #52b2d5;
     --primary-strong: #82c8e1;
     --primary-soft: #0f3240;
+    --on-primary: #06232e;
+    --chart-1: #52b2d5;
     --theme-bar: #0f1c22;
     --bg: #0f1c22;
     --surface: #1e2b31;
@@ -115,6 +128,8 @@
   --primary: #52b2d5;
   --primary-strong: #82c8e1;
   --primary-soft: #0f3240;
+  --on-primary: #06232e;
+  --chart-1: #52b2d5;
   --theme-bar: #0f1c22;
   --bg: #0f1c22;
   --surface: #1e2b31;
@@ -991,7 +1006,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
 .badge-open { background: var(--up-soft); color: var(--up); }
 .badge-upcoming { background: var(--info-soft); color: var(--info); }
 .badge-closed { background: var(--warn-soft); color: var(--warn); }
-.badge-listed { background: var(--surface-3); color: var(--text-muted); }
+.badge-listed { background: var(--surface-3); color: var(--text-2); }
 .badge-board { background: var(--surface-3); color: var(--text-2); text-transform: none; letter-spacing: 0; }
 .badge-board::before { display: none; }
 
@@ -1167,22 +1182,32 @@ td a:hover { color: var(--primary); text-decoration: none; }
 /* GMP line chart (detail) + sparkline (dashboard) */
 .chart-wrap { margin-top: 6px; }
 .chart { width: 100%; height: auto; display: block; overflow: visible; }
-.gmp-line { fill: none; stroke: var(--brand-1); stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
+.gmp-line { fill: none; stroke: var(--chart-1); stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
 .gmp-line[data-down="true"] { stroke: var(--down); }
 .gmp-area { fill: url(#gmpFill); }
-.gmp-stop-a { stop-color: var(--brand-1); stop-opacity: 0.32; }
-.gmp-stop-b { stop-color: var(--brand-1); stop-opacity: 0.02; }
+.gmp-stop-a { stop-color: var(--chart-1); stop-opacity: 0.32; }
+.gmp-stop-b { stop-color: var(--chart-1); stop-opacity: 0.02; }
 .gmp-stop-down-a { stop-color: var(--down); stop-opacity: 0.28; }
 .gmp-stop-down-b { stop-color: var(--down); stop-opacity: 0.02; }
-.gmp-dot { fill: var(--surface); stroke: var(--brand-1); stroke-width: 2; }
+.gmp-dot { fill: var(--surface); stroke: var(--chart-1); stroke-width: 2; }
 .gmp-dot[data-down="true"] { stroke: var(--down); }
-.gmp-dot-last { fill: var(--brand-1); stroke: var(--surface); stroke-width: 2.5; }
+.gmp-dot-last { fill: var(--chart-1); stroke: var(--surface); stroke-width: 2.5; }
 .gmp-dot-last[data-down="true"] { fill: var(--down); }
 .gmp-grid { stroke: var(--border); stroke-dasharray: 3 5; }
 .gmp-axis { fill: var(--text-muted); font-size: 11px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
 .gmp-last-label { fill: var(--text); font-size: 12.5px; font-weight: 800; font-family: var(--font-sans); }
 
 .spark { display: block; overflow: visible; }
+
+/* iOS Safari zooms the page when a focused input's text is under 16px, which
+   on a phone drags a centred modal off to one side. Raising them only at
+   touch widths leaves the desktop sizes, which were picked to fit these
+   controls, exactly as they were. */
+@media (max-width: 767px) {
+  .search-input,
+  .news-filter-input,
+  .pan-input { font-size: 16px; }
+}
 .spark-line { fill: none; stroke: var(--up); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .spark-dot { fill: var(--up); }
 .spark[data-down="true"] .spark-line { stroke: var(--down); }
@@ -1429,7 +1454,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
    ========================================================================== */
 .about-card h2 { margin-bottom: 8px; }
 .about-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
-.chip {
+.about-tag {
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -1438,7 +1463,7 @@ td a:hover { color: var(--primary); text-decoration: none; }
   color: var(--primary);
   background: var(--primary-soft);
 }
-.chip-quiet { color: var(--text-muted); background: var(--surface-2); font-weight: 600; }
+.about-tag-quiet { color: var(--text-muted); background: var(--surface-2); font-weight: 600; }
 /* ~68 characters, the width prose stops being tiring to read at. The card
    itself stays full width; only the paragraph inside it is capped. */
 .about-prose { max-width: 68ch; line-height: 1.72; font-size: 0.92rem; }
@@ -1614,7 +1639,7 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 .news-chip[data-on] {
   border-color: transparent;
   background: var(--primary);
-  color: var(--on-brand);
+  color: var(--on-primary);
 }
 .news-chip-count {
   font-size: 0.68rem;
@@ -1624,7 +1649,7 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
   color: var(--primary);
   background: var(--primary-soft);
 }
-.news-chip[data-on] .news-chip-count { color: var(--primary); background: var(--on-brand); }
+.news-chip[data-on] .news-chip-count { color: var(--primary); background: var(--on-primary); }
 
 .news-result { margin: 0 0 12px; font-size: 0.82rem; color: var(--text-muted); }
 .news-result strong { color: var(--text); }
@@ -2008,7 +2033,7 @@ body.has-sheet .scroll-jump { display: none; }
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--primary);
-  color: var(--on-brand);
+  color: var(--on-primary);
   font-size: 0.7rem;
   font-weight: 800;
   text-align: center;
@@ -2419,7 +2444,7 @@ body.has-sheet .scroll-jump { display: none; }
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--primary);
-  color: var(--on-brand);
+  color: var(--on-primary);
   font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -3073,7 +3098,7 @@ body.has-sheet .scroll-jump { display: none; }
   border-radius: 999px;
   border: 1px solid var(--primary);
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
@@ -3438,6 +3463,10 @@ body.has-sheet .scroll-jump { display: none; }
 .account-name::before { content: none; }
 .account-email { margin: 2px 0 0; font-size: 0.84rem; color: var(--text-muted); }
 .account-grid { margin: 18px 0 0; }
+/* The avatar is a fixed 56px; without this the text column beside it refuses
+   to shrink and a long address pushes the whole card sideways. */
+.account-head > div { min-width: 0; }
+.account-email { overflow-wrap: anywhere; }
 
 /* ==========================================================================
    Modals — the sign-in gate and the add-PAN prompt. Both are asks, not
@@ -3568,7 +3597,9 @@ body.has-sheet .scroll-jump { display: none; }
   background: none;
   color: var(--text);
   font: inherit;
-  font-size: 0.95rem;
+  /* 16px exactly. Below this iOS Safari zooms the page on focus, and a
+     zoomed page drags the centred modal off to one side. */
+  font-size: 16px;
   font-weight: 700;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   letter-spacing: 0.14em;
