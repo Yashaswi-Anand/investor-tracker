@@ -71,12 +71,11 @@ export default function SignInDialog({ onClose, initialMode = "choose" }) {
   };
 
   return (
-    <Modal title="Sign in to continue" onClose={onClose} labelledBy="signin-title">
+    <Modal title="Sign in" onClose={onClose} labelledBy="signin-title">
       {mode === "choose" ? (
         <>
           <p className="modal-lede">
-            Checking an allotment needs your PAN, and a PAN needs an account —
-            so it is yours on every device and nobody else can reach it.
+            Your PAN is saved to your account, visible only to you.
           </p>
 
           <button
@@ -102,15 +101,13 @@ export default function SignInDialog({ onClose, initialMode = "choose" }) {
 
       {mode === "phone" ? (
         <form onSubmit={sendCode}>
-          <p className="modal-lede">
-            We will text you a six-digit code. Standard carrier charges apply.
-          </p>
-          <label className="modal-field">
-            <span className="modal-label">Phone number</span>
+          <p className="modal-lede">We&apos;ll text you a six-digit code.</p>
+          <div className="modal-field">
+            {/* +91 is no longer hidden from screen readers: it used to be,
+                with a hint sentence to compensate. Dropping the hint means
+                the prefix has to speak for itself. */}
             <span className="phone-combo">
-              <span className="phone-cc" aria-hidden="true">
-                +91
-              </span>
+              <span className="phone-cc">+91</span>
               <input
                 className="phone-national"
                 value={national}
@@ -119,15 +116,10 @@ export default function SignInDialog({ onClose, initialMode = "choose" }) {
                 autoComplete="tel-national"
                 maxLength={10}
                 placeholder="9876543210"
-                aria-describedby="phone-hint"
+                aria-label="Mobile number"
               />
             </span>
-          </label>
-          <p className="modal-hint" id="phone-hint">
-            <strong>+91</strong> is added for you — enter the{" "}
-            <strong>10 digits</strong> of your mobile number. Indian mobiles
-            start with 6, 7, 8 or 9.
-          </p>
+          </div>
           <button
             type="submit"
             className="lookup-btn lookup-btn-lg modal-go"
@@ -141,7 +133,7 @@ export default function SignInDialog({ onClose, initialMode = "choose" }) {
             onClick={() => setMode("choose")}
             disabled={busy}
           >
-            ← Other ways to sign in
+            ← Back
           </button>
         </form>
       ) : null}
@@ -155,8 +147,7 @@ export default function SignInDialog({ onClose, initialMode = "choose" }) {
             </strong>
             .
           </p>
-          <label className="modal-field">
-            <span className="modal-label">Six-digit code</span>
+          <div className="modal-field">
             <input
               className="pan-input modal-input modal-code"
               value={code}
@@ -165,8 +156,9 @@ export default function SignInDialog({ onClose, initialMode = "choose" }) {
               autoComplete="one-time-code"
               maxLength={6}
               placeholder="000000"
+              aria-label="Six-digit code"
             />
-          </label>
+          </div>
           <button type="submit" className="lookup-btn lookup-btn-lg modal-go" disabled={busy}>
             {busy ? "Checking…" : "Verify and continue"}
           </button>
@@ -179,7 +171,7 @@ export default function SignInDialog({ onClose, initialMode = "choose" }) {
             }}
             disabled={busy}
           >
-            ← Use a different number
+            ← Change number
           </button>
         </form>
       ) : null}

@@ -14,7 +14,7 @@
 
 import { useState } from "react";
 
-import { addPan, MAX_PANS } from "../../lib/pans";
+import { addPan } from "../../lib/pans";
 import Modal from "./Modal";
 
 export default function PanModal({ uid, existing, onClose, onAdded }) {
@@ -39,15 +39,10 @@ export default function PanModal({ uid, existing, onClose, onAdded }) {
 
   return (
     <Modal title="Add your PAN" onClose={onClose} labelledBy="pan-modal-title">
-      <p className="modal-lede">
-        The registrar identifies an application by PAN, so checking an
-        allotment needs one. Saved to your account, visible only to you, and
-        removable in one tap.
-      </p>
+      <p className="modal-lede">Saved to your account, visible only to you.</p>
 
       <form onSubmit={submit}>
-        <label className="modal-field">
-          <span className="modal-label">PAN</span>
+        <div className="modal-field">
           <input
             className="pan-input modal-input modal-pan"
             value={draft}
@@ -60,13 +55,10 @@ export default function PanModal({ uid, existing, onClose, onAdded }) {
             autoComplete="off"
             autoCapitalize="characters"
             spellCheck={false}
+            aria-label="PAN"
             aria-invalid={error ? "true" : undefined}
           />
-        </label>
-        <p className="modal-hint">
-          Five letters, four digits, one letter. You can add up to {MAX_PANS} —
-          useful if you apply for the family.
-        </p>
+        </div>
 
         <button
           type="submit"
