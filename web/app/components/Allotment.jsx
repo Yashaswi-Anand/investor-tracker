@@ -344,11 +344,6 @@ export function PanBox() {
 
       {!uid ? (
         <>
-          <p className="subtitle subtitle-flush">
-            Saved to your account, so they are there on every device — and
-            reachable by nobody else. Signing in is the only way a PAN is
-            stored at all; signed out, this site keeps none.
-          </p>
           <button
             type="button"
             className="lookup-btn lookup-btn-lg pan-signin"
@@ -360,11 +355,6 @@ export function PanBox() {
         </>
       ) : (
         <>
-          <p className="subtitle subtitle-flush">
-            Saved to your account and visible only to you. Remove one and it is
-            deleted, here and from our database.
-          </p>
-
           {!ready ? (
             <p className="auth-status" role="status">
               Loading your PANs…

@@ -160,24 +160,16 @@ export default async function AllotmentPage() {
         <div className="container">
           <h1 className="allot-hero-title">Check IPO allotment status by PAN</h1>
           <p className="allot-hero-lede">
-            Add your PAN once, pick the issue, and get the answer — checked
-            live with KFin where they allow it, and handed straight to the
-            right registrar where they do not.
+            Add your PAN once, pick an issue, get the answer.
           </p>
           <ul className="allot-hero-points">
             <li>
-              <strong>A PAN is saved only to your account.</strong> Signed out,
-              nothing is stored anywhere. Yours is readable by you alone and
-              deleted when you remove it.
-            </li>
-            <li>
               <strong>KFin issues are checked live.</strong> Your browser asks
-              KFin directly, the same request their own page makes.
+              KFin directly.
             </li>
             <li>
-              <strong>Everyone else keeps a CAPTCHA.</strong> Bigshare, MUFG
-              Intime and Skyline are opened for you with the PAN ready and the
-              name they file the issue under.
+              <strong>Bigshare, MUFG Intime and Skyline keep a CAPTCHA.</strong>{" "}
+              We open them with your PAN ready.
             </li>
           </ul>
         </div>
