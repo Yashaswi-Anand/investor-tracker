@@ -2622,7 +2622,6 @@ body.has-sheet .scroll-jump { display: none; }
 }
 
 
-.pan-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; }
 .pan-input {
   flex: 1 1 180px;
   min-width: 0;
@@ -2643,21 +2642,6 @@ body.has-sheet .scroll-jump { display: none; }
 }
 .pan-input::placeholder { font-weight: 500; letter-spacing: 0.06em; color: var(--text-muted); }
 .pan-input:focus { outline: none; border-color: var(--primary); }
-.pan-add {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0 22px;
-  border: none;
-  border-radius: 999px;
-  background: var(--brand-grad);
-  color: var(--on-brand);
-  font: inherit;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.pan-add:disabled { opacity: 0.5; cursor: default; }
-.pan-error { margin: 8px 2px 0; font-size: 0.8rem; color: var(--down); }
 .pan-empty { margin: 12px 0 0; font-size: 0.84rem; color: var(--text-muted); }
 .pan-privacy { margin: 16px 0 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; }
 /* Inline, but still a real target: padding rather than a box, so it reads as
@@ -2700,47 +2684,6 @@ body.has-sheet .scroll-jump { display: none; }
 }
 .pan-remove:hover { background: var(--down-soft); color: var(--down); }
 
-/* One control, and obviously a control. Two buttons labelled Allotted and
-   Not allotted read as the site's own answer; a dropdown never does. */
-.result-marks { display: flex; flex-direction: column; gap: 4px; }
-.result-marks-label {
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.result-select {
-  min-height: 38px;
-  padding: 7px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-2);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.result-select:focus { outline: none; border-color: var(--primary); }
-.result-select[data-outcome="allotted"] {
-  border-color: var(--up);
-  background: var(--up-soft);
-  color: var(--up);
-}
-
-.result-block { padding-top: 16px; border-top: 1px solid var(--border); }
-.result-block:first-of-type { border-top: none; padding-top: 0; }
-.result-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.result-name { margin: 0; font-size: 1rem; font-weight: 700; }
-.result-name::before { content: none; }
-.result-registrar { margin: 2px 0 0; font-size: 0.76rem; color: var(--text-muted); }
 .result-open {
   display: inline-flex;
   align-items: center;
@@ -2755,47 +2698,6 @@ body.has-sheet .scroll-jump { display: none; }
   white-space: nowrap;
 }
 .result-open:hover { text-decoration: none; filter: brightness(1.05); }
-
-.result-rows { display: grid; gap: 8px; margin: 12px 0 18px; padding: 0; list-style: none; }
-.result-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-2);
-}
-/* The row itself carries the answer, so a long list can be read down the left
-   edge without stopping at every button. */
-.result-row[data-outcome="allotted"] { border-color: var(--up); background: var(--up-soft); }
-.result-row[data-outcome="none"] { border-color: var(--border-strong); opacity: 0.72; }
-
-.result-pan {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 9px;
-  border: none;
-  background: none;
-  color: inherit;
-  padding: 0;
-  font: inherit;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.88rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-}
-.result-copy {
-  font-family: inherit;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--primary);
-}
 
 /* ==========================================================================
    Allotment — the page someone opens on allotment morning to ask one
@@ -3164,6 +3066,8 @@ body.has-sheet .scroll-jump { display: none; }
   text-transform: uppercase;
   color: var(--primary);
 }
+/* One control, and obviously a control. Two buttons labelled Allotted and
+   Not allotted read as the site's own answer; a dropdown never does. */
 .result-marks { display: flex; flex-direction: column; gap: 4px; }
 .result-marks-label {
   font-size: 0.66rem;
@@ -3184,8 +3088,8 @@ body.has-sheet .scroll-jump { display: none; }
   font-weight: 700;
   cursor: pointer;
 }
-.result-select:focus-visible { outline: none; box-shadow: var(--ring); }
-.result-select[data-outcome="allotted"] { border-color: var(--up); color: var(--up); }
+.result-select:focus-visible { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
+.result-select[data-outcome="allotted"] { border-color: var(--up); background: var(--up-soft); color: var(--up); }
 
 /* ---- the verdict, which is the whole point ------------------------------ */
 .verdict {
@@ -3395,15 +3299,19 @@ body.has-sheet .scroll-jump { display: none; }
   justify-content: center;
   gap: 11px;
   width: 100%;
-  min-height: 48px;
+  /* Matches .modal-go and .modal-alt exactly: these three stack on each other
+     in the sign-in dialog and on /login, and a 48px rounded rectangle sitting
+     on a 40px pill reads as two different components. 44px is also the touch
+     target floor. */
+  min-height: 44px;
   margin-top: 16px;
-  padding: 12px 20px;
+  padding: 11px 20px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -3547,13 +3455,6 @@ body.has-sheet .scroll-jump { display: none; }
 .modal-lede strong { color: var(--text); font-weight: 700; }
 
 .modal-field { display: grid; gap: 6px; margin-top: 16px; }
-.modal-label {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
 .modal-input { width: 100%; }
 /* A PAN and a one-time code are both read back character by character. */
 .modal-pan, .modal-code {
@@ -3611,18 +3512,16 @@ body.has-sheet .scroll-jump { display: none; }
   color: var(--text-muted);
 }
 
-.modal-hint { margin: 7px 2px 0; font-size: 0.74rem; line-height: 1.5; color: var(--text-muted); }
-.modal-hint strong { color: var(--text); font-weight: 700; }
 
 .modal-go { width: 100%; margin-top: 16px; }
-.modal-alt { width: 100%; margin-top: 10px; }
-.modal-back { display: inline-block; margin-top: 12px; font-size: 0.78rem; }
+.modal-alt { width: 100%; min-height: 44px; margin-top: 10px; padding: 11px 20px; font-size: 0.85rem; }
+.modal-back { display: inline-block; margin-top: 12px; padding: 10px 6px; font-size: 0.78rem; }
 /* Set apart and quiet: leaving must be obvious without competing with the
    action the reader came for. */
 .modal-dismiss {
   display: block;
-  margin: 16px auto 0;
-  padding: 6px 4px;
+  margin: 10px auto 0;
+  padding: 12px 10px;
   font-size: 0.78rem;
   color: var(--text-muted);
   text-decoration: none;
