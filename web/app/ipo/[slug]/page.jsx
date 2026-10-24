@@ -1059,9 +1059,9 @@ export default async function IpoDetailPage({ params }) {
                 everything the paragraph then says. */}
             {details.sector && (
               <p className="about-tags">
-                <span className="chip">{details.sector}</span>
+                <span className="about-tag">{details.sector}</span>
                 {details.incorporated && (
-                  <span className="chip chip-quiet">
+                  <span className="about-tag about-tag-quiet">
                     Incorporated {details.incorporated}
                   </span>
                 )}

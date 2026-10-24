@@ -123,12 +123,13 @@ export default function GmpLineChart({
           </linearGradient>
         </defs>
 
-        {/* gridlines + ₹ labels */}
+        {/* gridlines + value labels, through format() so the subscription
+            chart says 2.50x where the GMP chart says ₹121 */}
         {ticks.map((tv) => (
           <g key={tv}>
             <line className="gmp-grid" x1={PAD.left} x2={W - PAD.right} y1={y(tv)} y2={y(tv)} />
             <text className="gmp-axis" x={PAD.left - 8} y={y(tv) + 4} textAnchor="end">
-              ₹{tv}
+              {format(tv)}
             </text>
           </g>
         ))}
@@ -155,12 +156,12 @@ export default function GmpLineChart({
                  line reaches it rather than all of them at once. */
               style={{ "--i": data.length > 1 ? i / (data.length - 1) : 0 }}
             >
-              <title>{`₹${d.v} — ${d.long}`}</title>
+              <title>{`${format(d.v)} — ${d.long}`}</title>
             </circle>
           ))}
         {!showDots && (
           <circle className="gmp-dot-last" data-down={down} cx={lastX} cy={lastY} r={5}>
-            <title>{`₹${last.v} — ${last.long}`}</title>
+            <title>{`${format(last.v)} — ${last.long}`}</title>
           </circle>
         )}
 
