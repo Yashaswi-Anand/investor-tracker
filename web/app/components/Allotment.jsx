@@ -770,6 +770,25 @@ export function IssueRows({
                   </button>
                 ) : (
                   <label className="result-marks">
+                    {/* As close to filling their form as a page on another
+                        origin can get: the PAN is on the clipboard before
+                        their tab opens, so the reader pastes instead of
+                        reading a PAN off one screen and typing it into
+                        another. A real href, so middle-click and ctrl-click
+                        still behave; the copy rides along on the click. */}
+                    {portal ? (
+                      <a
+                        className="result-go"
+                        href={portal}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        onClick={() => copyText(pan, `go:${pan}`)}
+                      >
+                        {copied === `go:${pan}`
+                          ? "PAN copied — paste it there"
+                          : `Copy PAN & open ${registrarShort}`}
+                      </a>
+                    ) : null}
                     <span className="result-marks-label">
                       What {registrarShort} showed
                     </span>
@@ -797,7 +816,8 @@ export function IssueRows({
 
       {!canDirect && portal ? (
         <p className="allot-rows-foot">
-          Open {registrarShort} above, then set each row to what their page said.
+          Each row opens {registrarShort} with its PAN already copied. Set the
+          row to what their page said when you come back.
         </p>
       ) : null}
     </>
