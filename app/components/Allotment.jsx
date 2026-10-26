@@ -34,6 +34,7 @@ import {
 } from "react";
 import { fmtDate } from "../../lib/format";
 import { lookupKfin } from "../../lib/kfin";
+import { NSE_BID_CHECK } from "../../lib/registrars";
 import {
   clearLocalPanTraces,
   MAX_PANS,
@@ -1027,6 +1028,19 @@ export function IssuePicker({ issues, today }) {
           names one; it will appear here when the next scrape finds it.
         </p>
       )}
+
+      <p className="allot-nse">
+        Applied through a bank or broker that routed to NSE? You can also{" "}
+        <a
+          href={NSE_BID_CHECK.portal}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+        >
+          verify the bid on NSE
+        </a>
+        {" — "}pick the issue and enter the PAN there. A bid routed to BSE
+        will not be found, which is not the same as not allotted.
+      </p>
 
       <IssueRows
         key={issue.slug}

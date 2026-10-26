@@ -2904,6 +2904,9 @@ body.has-sheet .scroll-jump { display: none; }
 .allot-pill[data-tone="live"] { background: var(--up-soft); color: var(--up); }
 .allot-registrar { font-weight: 600; }
 .allot-issue-foot { margin: 16px 0 0; font-size: 0.78rem; color: var(--text-muted); }
+/* Quieter than .allot-direct above it: that paragraph explains what this page
+   did, this one offers somewhere else to go. */
+.allot-nse { margin: 10px 0 0; font-size: 0.78rem; line-height: 1.6; color: var(--text-muted); }
 
 /* ---- the timetable rail ------------------------------------------------- */
 .allot-rail {
