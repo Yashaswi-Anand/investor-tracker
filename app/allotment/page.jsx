@@ -94,6 +94,10 @@ function issueOf(ipo) {
     // ones we hand off — the reader's first step there is finding it in a list
     // of forty, under a spelling that is not ours.
     handoff: direct ? null : (ipo.details || {}).handoff || null,
+    // Whether the exchange's own bid verification still holds this issue.
+    // Offering NSE for one it has dropped earns the reader a "not Bided /
+    // Processed from NSE", which reads like a verdict and is not one.
+    nseBid: Boolean((ipo.details || {}).nse_bid),
   };
 }
 
