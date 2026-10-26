@@ -2786,37 +2786,8 @@ body.has-sheet .scroll-jump { display: none; }
   line-height: 1.6;
   opacity: 0.92;
 }
-.allot-hero-points {
-  display: grid;
-  gap: 8px;
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.allot-hero-points li {
-  position: relative;
-  padding-left: 22px;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  opacity: 0.9;
-}
-/* A rule, not a bullet glyph: three claims of equal weight, and a dot would
-   read as a list of features rather than three separate assurances. */
-.allot-hero-points li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.62em;
-  width: 12px;
-  height: 2px;
-  border-radius: 2px;
-  background: currentColor;
-  opacity: 0.55;
-}
-.allot-hero-points strong { font-weight: 800; opacity: 1; }
 @media (min-width: 760px) {
   .allot-hero-title { font-size: 1.75rem; }
-  .allot-hero-points { grid-template-columns: repeat(3, 1fr); gap: 14px; }
 }
 
 /* The cards sit up into the band, the way the homepage list does. */

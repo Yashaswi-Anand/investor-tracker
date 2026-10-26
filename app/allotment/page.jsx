@@ -162,16 +162,6 @@ export default async function AllotmentPage() {
           <p className="allot-hero-lede">
             Add your PAN once, pick an issue, get the answer.
           </p>
-          <ul className="allot-hero-points">
-            <li>
-              <strong>KFin issues are checked live.</strong> Your browser asks
-              KFin directly.
-            </li>
-            <li>
-              <strong>Bigshare, MUFG Intime and Skyline keep a CAPTCHA.</strong>{" "}
-              We open them with your PAN ready.
-            </li>
-          </ul>
         </div>
       </section>
 
