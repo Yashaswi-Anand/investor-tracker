@@ -827,6 +827,22 @@ export function IssueRows({
 /* ------------------------------------------------------------------------ */
 
 /**
+ * What to say above the hand-off steps.
+ *
+ * The generic line blames a CAPTCHA, which is true of every registrar here
+ * except the one that matters: KFin has none. A KFin issue only lands in the
+ * hand-off when the scraper could not read this issue's id off KFin's list,
+ * and telling the reader KFin is gating them is both false and discouraging
+ * — their page takes a PAN and answers it.
+ */
+function handoffTitle(registrar) {
+  if (registrar?.direct) {
+    return `${registrar.short} has no CAPTCHA — we just could not read this issue's id from their list, so the last step is yours`;
+  }
+  return `${registrar.short} keeps this behind a CAPTCHA — the last step is yours`;
+}
+
+/**
  * The issue's own timetable, as a rail.
  *
  * It answers the question that comes straight after "did I get any": when the
@@ -1022,8 +1038,7 @@ export function IssuePicker({ issues, today }) {
       ) : issue.registrar ? (
         <div className="allot-handoff">
           <p className="allot-handoff-title">
-            {issue.registrar.short} keeps this behind a CAPTCHA — the last step
-            is yours
+            {handoffTitle(issue.registrar)}
           </p>
           {/* The step that actually goes wrong is the first one. Their
               dropdown lists this issue under their own spelling, in a list of
@@ -1420,8 +1435,7 @@ function MultiIssueCard({ issue, pans, results, marks, onMark }) {
       {!issue.direct && issue.registrar ? (
         <div className="allot-handoff">
           <p className="allot-handoff-title">
-            {issue.registrar.short} keeps this behind a CAPTCHA — the last
-            step is yours
+            {handoffTitle(issue.registrar)}
           </p>
           {issue.handoff ? (
             <p className="allot-handoff-name">
