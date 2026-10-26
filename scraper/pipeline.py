@@ -23,6 +23,7 @@ from sources import gmp as gmp_source
 from sources import handoff as handoff_source
 from sources import kfin as kfin_source
 from sources import nse
+from sources import nse_bid as nse_bid_source
 from sources import listing as listing_source
 from sources import prices as prices_source
 from sources import timetable as timetable_source
@@ -278,6 +279,25 @@ def run():
                 merged["handoff"] = named
                 row["details"] = merged
         print(f"      {len(handoff_by_slug)} issues carry the registrar's own name")
+
+        # Which issues the exchange's own bid verification still holds. The
+        # allotment page offers NSE beside the registrar, and that offer is
+        # only honest for an issue NSE can answer for -- anything else comes
+        # back "not Bided / Processed from NSE", which reads like a verdict.
+        # One list per run, read from the same endpoint their page uses to
+        # fill its dropdown. A run that cannot read it leaves the flag alone
+        # rather than withdrawing a link that worked.
+        try:
+            nse_bid_by_slug = nse_bid_source.fetch(rows)
+        except Exception as error:  # noqa: BLE001 - a link, not the run
+            print(f"      (nse bid list unavailable: {error})")
+            nse_bid_by_slug = {}
+        for row in rows:
+            if nse_bid_by_slug.get(row["slug"]):
+                merged = dict(row.get("details") or {})
+                merged["nse_bid"] = True
+                row["details"] = merged
+        print(f"      {len(nse_bid_by_slug)} issues are covered by NSE bid verification")
 
         # After the timetable, because it needs listing_date, and before the
         # derive step, because apply_listing_status reads the same column.
