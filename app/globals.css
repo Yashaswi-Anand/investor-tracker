@@ -3100,6 +3100,16 @@ body.has-sheet .scroll-jump { display: none; }
 /* One control, and obviously a control. Two buttons labelled Allotted and
    Not allotted read as the site's own answer; a dropdown never does. */
 .result-marks { display: flex; flex-direction: column; gap: 4px; }
+/* Quiet by design: the select beside it is the thing the reader comes back
+   to, this is the trip out. */
+.result-go {
+  align-self: flex-start;
+  margin-bottom: 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+.result-go:hover { text-decoration: underline; }
 .result-marks-label {
   font-size: 0.66rem;
   font-weight: 800;
