@@ -9,7 +9,7 @@
         "run",
         "dev"
       ],
-      "port": 3000,
+      "port": 3333,
       "autoPort": true
     },
     {

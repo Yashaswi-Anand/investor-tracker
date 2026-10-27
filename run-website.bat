@@ -14,7 +14,7 @@ if not exist .env.local (
     echo.
 )
 
-echo Starting website at http://localhost:3000
+echo Starting website at http://localhost:3333
 echo Press Ctrl+C to stop.
 echo.
 call npm run dev

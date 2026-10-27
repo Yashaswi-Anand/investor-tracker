@@ -191,7 +191,7 @@ from scrape_runs order by started_at desc limit 20;
 cd web
 npm install
 cp .env.example .env.local  # fill in Project URL + anon key
-npm run dev                 # http://localhost:3000
+npm run dev                 # http://localhost:3333
 ```
 
 Or double-click `run-website.bat`.
