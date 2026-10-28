@@ -98,6 +98,12 @@ def parse_lot_size(text):
 # genuinely still open on its closing date.
 CLOSE_HOUR_IST = 18
 
+# Trading in a new issue opens at 10am IST on its listing day. Before that the
+# shares may already be in the demat account, but they cannot be sold — so an
+# issue showing "Listed" at 9am tells a reader they can do something they
+# cannot, and on the one morning they are most likely to try.
+LIST_HOUR_IST = 10
+
 # ---------------------------------------------------------------------------
 # Minimum application
 # ---------------------------------------------------------------------------
@@ -152,13 +158,23 @@ def derive_status(
     Dates decide, not the source's own flag. NSE keeps an issue marked
     'active' past its close date, and believing that over the timetable is how
     those four got stuck.
+
+    Two of the rungs are times of day rather than dates, because the milestone
+    they stand for happens at a known hour: bidding ends at 5pm on the closing
+    day, and trading opens at 10am on the listing day. On those two dates the
+    hour decides, and before it the issue is still on the rung below.
     """
     now = datetime.datetime.now(IST)
     today = today or now.date().isoformat()
     hour = now.hour if hour is None else hour
 
-    if listing_date and today >= listing_date:
-        return "listed"
+    if listing_date:
+        if today > listing_date:
+            return "listed"
+        if today == listing_date and hour >= LIST_HOUR_IST:
+            return "listed"
+        # Before the bell on listing day the issue is still at its previous
+        # milestone, which the checks below work out — usually 'allotment'.
     if allotment_date and today >= allotment_date:
         return "allotment"
     if close_date:

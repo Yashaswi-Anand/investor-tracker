@@ -1487,7 +1487,33 @@ def test_status_reaches_allotment_then_listing():
     assert util.derive_status(*args, today="2026-08-27", hour=20) == "closed"
     assert util.derive_status(*args, today="2026-08-28", hour=9) == "allotment"
     assert util.derive_status(*args, today="2026-08-31", hour=9) == "allotment"
-    assert util.derive_status(*args, today="2026-09-01", hour=9) == "listed"
+    # Listing day, but before the 10am bell: still allotment.
+    assert util.derive_status(*args, today="2026-09-01", hour=9) == "allotment"
+    assert util.derive_status(*args, today="2026-09-01", hour=10) == "listed"
+
+
+def test_status_lists_at_ten_am_on_the_listing_day():
+    """Trading opens at 10am IST; before that the shares cannot be sold.
+
+    The old rule flipped at midnight, so for ten hours every listing day the
+    site said "Listed" to readers who could not yet sell — on the one morning
+    they are most likely to try.
+    """
+    args = ("2026-08-24", "2026-08-27", "2026-09-01", "2026-08-28")
+    for hour in (0, 6, 9):
+        assert util.derive_status(*args, today="2026-09-01", hour=hour) == "allotment"
+    for hour in (10, 11, 15, 23):
+        assert util.derive_status(*args, today="2026-09-01", hour=hour) == "listed"
+    # The day after, the hour stops mattering.
+    for hour in (0, 9, 23):
+        assert util.derive_status(*args, today="2026-09-02", hour=hour) == "listed"
+
+
+def test_listing_bell_does_not_need_an_allotment_date_to_fall_back_to():
+    """With no allotment date the rung below is 'closed', not 'listed'."""
+    args = ("2026-08-24", "2026-08-27", "2026-09-01")
+    assert util.derive_status(*args, today="2026-09-01", hour=9) == "closed"
+    assert util.derive_status(*args, today="2026-09-01", hour=10) == "listed"
 
 
 def test_status_never_leaves_a_closed_issue_showing_as_open():
