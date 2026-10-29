@@ -722,7 +722,7 @@ export default function IpoList({ ipos }) {
   if (!ipos.length) {
     return (
       <div className="empty">
-        No IPO data yet. The scraper fills this in on its next run.
+        No IPO data yet. Check back after the next update.
       </div>
     );
   }

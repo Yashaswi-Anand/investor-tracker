@@ -2790,8 +2790,11 @@ body.has-sheet .scroll-jump { display: none; }
   .allot-hero-title { font-size: 1.75rem; }
 }
 
-/* The cards sit up into the band, the way the homepage list does. */
-.allot-body { margin-top: -14px; position: relative; z-index: 1; padding-bottom: 8px; }
+/* Clear of the band, so the first card does not crowd the hero. */
+.allot-body { margin-top: 20px; position: relative; z-index: 1; padding-bottom: 8px; }
+/* The tab panels are plain divs, so .card + .card never spaces the card
+   that follows them. */
+.allot-body > * + .card { margin-top: 16px; }
 
 .allot-card-head {
   display: flex;
@@ -2906,7 +2909,45 @@ body.has-sheet .scroll-jump { display: none; }
 .allot-issue-foot { margin: 16px 0 0; font-size: 0.78rem; color: var(--text-muted); }
 /* Quieter than .allot-direct above it: that paragraph explains what this page
    did, this one offers somewhere else to go. */
-.allot-nse { margin: 10px 0 0; font-size: 0.78rem; line-height: 1.6; color: var(--text-muted); }
+/* NSE as a second opinion: one compact callout, the action on the right. */
+.allot-nse {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--info-soft);
+}
+.allot-nse-tag {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--info);
+  color: var(--surface);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.allot-nse-text { flex: 1 1 200px; margin: 0; font-size: 0.8rem; line-height: 1.45; }
+.allot-nse-text small { display: block; color: var(--text-muted); font-size: 0.72rem; }
+.allot-nse-go {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--info);
+  border-radius: 999px;
+  color: var(--info);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.allot-nse-go:hover { background: var(--info); color: var(--surface); }
 
 /* ==========================================================================
    The allotment page's two tabs.
@@ -2947,36 +2988,141 @@ body.has-sheet .scroll-jump { display: none; }
 /* The steps card's own way out, under the instructions it belongs to. */
 .allot-steps-go { margin-top: 14px; }
 
-/* Everything past the picker's ten. A wrapped list of names rather than a
-   second dropdown: this is for finding one issue you remember, not for
-   working through them. */
-.allot-rest { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
-.allot-rest-title {
-  margin: 0 0 10px;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.allot-rest-title::before { content: none; }
-.allot-rest-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
-  gap: 4px 18px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.allot-rest-list li { display: grid; gap: 1px; padding: 7px 0; min-width: 0; }
-.allot-rest-list a { font-size: 0.82rem; font-weight: 600; overflow-wrap: anywhere; }
-.allot-rest-meta { font-size: 0.7rem; color: var(--text-muted); }
 
 /* ---- tab two: a PAN, against the recent issues -------------------------- */
-.mypan-signin .mypan-login {
-  display: inline-block;
-  margin-top: 14px;
-  text-decoration: none;
+/* Signed out. One centred invitation rather than a form-shaped card: a soft
+   wash of the brand at the top, the promise, three reasons, one action. */
+.mypan-signin {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  justify-items: center;
+  padding: 36px 20px 28px;
+  text-align: center;
+  background:
+    radial-gradient(120% 70% at 50% 0%, var(--primary-soft) 0%, transparent 70%),
+    var(--surface);
+}
+.mypan-signin-badge {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 16px;
+  border-radius: 18px;
+  background: var(--brand-grad);
+  color: var(--on-brand);
+  box-shadow: var(--shadow-lg);
+}
+.mypan-signin-title {
+  margin: 0 0 8px;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.mypan-signin-title::before { content: none; }
+.mypan-signin-lede {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.mypan-signin-perks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 720px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.mypan-signin-perks li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.mypan-perk-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.mypan-signin-perks strong { display: block; font-size: 0.85rem; }
+.mypan-signin-perks small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.mypan-signin-actions {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 26px;
+}
+.mypan-signin-google {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 250px;
+  justify-content: center;
+  padding-left: 8px;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+/* Google's mark keeps its own colours, so it sits on white, not the brand. */
+.mypan-signin-google svg {
+  box-sizing: content-box;
+  padding: 6px;
+  border-radius: 999px;
+  background: #fff;
+}
+.mypan-signin-google:hover { transform: translateY(-1px); }
+.mypan-signin-google:focus-visible,
+.mypan-signin-phone:focus-visible { outline: none; box-shadow: var(--ring); }
+.mypan-signin-phone {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mypan-signin-phone:hover { text-decoration: underline; }
+.mypan-signin-foot {
+  margin: 18px 0 0;
+  max-width: 52ch;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mypan-signin-google { transition: none; }
+  .mypan-signin-google:hover { transform: none; }
+}
+@media (max-width: 560px) {
+  .mypan-signin { padding: 28px 16px 22px; }
+  .mypan-signin-title { font-size: 1.15rem; }
+  .mypan-signin-google { width: 100%; min-width: 0; }
+  .mypan-signin-actions { width: 100%; }
 }
 .mypan-blocks { display: grid; gap: 18px; margin-top: 4px; }
 .mypan-block {
@@ -3738,3 +3884,8 @@ body.has-sheet .scroll-jump { display: none; }
   .modal-root { padding: 12px; align-items: end; }
   .modal-panel { max-width: none; padding: 18px; }
 }
+
+/* "Source: …" under a figure. Quiet, but a real link to whoever it belongs to. */
+.credit { margin: 12px 0 0; font-size: 0.72rem; color: var(--text-muted); }
+.credit a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.credit a:hover { color: var(--primary); }
