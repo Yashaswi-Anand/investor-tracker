@@ -158,8 +158,9 @@ export default function RootLayout({ children }) {
             <p className="disclaimer-text">
               <strong>Disclaimer:</strong> GMP (grey market premium) is
               unofficial and indicative only. This is not investment advice.
-              Data is sourced from NSE and third parties — always verify on
-              NSE/BSE before applying to any IPO.
+              Issue data and prices: NSE India. GMP as reported by
+              InvestorGain, IPO Watch and IPO Central. Always verify on NSE/BSE
+              before applying to any IPO.
             </p>
             <div className="footer-row">
               <div className="footer-links">

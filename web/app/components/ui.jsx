@@ -154,3 +154,24 @@ export function KV({ label, children }) {
     </div>
   );
 }
+
+/**
+ * "Source: …" under a figure, naming who it belongs to. Takes one source or a
+ * list; a list reads "A, B and C".
+ */
+export function Credit({ label = "Source:", sources }) {
+  const list = Array.isArray(sources) ? sources : [sources];
+  return (
+    <p className="credit">
+      {label}{" "}
+      {list.map((s, i) => (
+        <span key={s.name}>
+          {i > 0 ? (i === list.length - 1 ? " and " : ", ") : ""}
+          <a href={s.url} target="_blank" rel="noopener noreferrer nofollow">
+            {s.name}
+          </a>
+        </span>
+      ))}
+    </p>
+  );
+}

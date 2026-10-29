@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NEWS, SITE } from "../../lib/config";
+import { CREDITS, NEWS, SITE } from "../../lib/config";
 
 // Who runs this and where the numbers come from. Written for two readers:
 // someone deciding whether to trust a GMP figure, and a reviewer deciding
@@ -71,8 +71,8 @@ export default function AboutPage() {
           <div>
             <dt>Subscription</dt>
             <dd>
-              NSE&apos;s category-wise figures, taken on every run so the page
-              can show how demand built day by day rather than only where it
+              NSE&apos;s category-wise figures, recorded through each bidding
+              day so the page can show how demand built day by day rather than only where it
               ended.
             </dd>
           </div>
@@ -86,8 +86,16 @@ export default function AboutPage() {
           <div>
             <dt>Grey market premium</dt>
             <dd>
-              Publicly available grey-market sources. Read the caution below
-              before relying on it.
+              As reported by{" "}
+              {CREDITS.gmp.map((s, i) => (
+                <span key={s.name}>
+                  {i > 0 ? (i === CREDITS.gmp.length - 1 ? " and " : ", ") : ""}
+                  <a href={s.url} target="_blank" rel="noopener noreferrer nofollow">
+                    {s.name}
+                  </a>
+                </span>
+              ))}
+              . Read the caution below before relying on it.
             </dd>
           </div>
           <div>
@@ -101,10 +109,9 @@ export default function AboutPage() {
 
         <h2>How often it updates</h2>
         <p>
-          A scraper runs every two hours and writes what it finds to our
-          database; pages are rendered on each request, so nothing you see is a
-          cached snapshot from a build. Every IPO page carries the timestamp of
-          the last run, in IST, so you can judge the freshness yourself instead
+          The data is refreshed every two hours, and pages are rendered on
+          each request, so nothing you see is a cached snapshot from a build.
+          Every IPO page carries the time of the last update, in IST, so you can judge the freshness yourself instead
           of taking our word for it.
         </p>
         <p>

@@ -106,7 +106,6 @@ web/                  Next.js 15 App Router, JavaScript (no TypeScript).
 
 database/
   schema.sql          Four tables, RLS, indexes, trigger. Re-runnable.
-  cleanup_zero_subscription_history.sql   One-off repair (already applied).
 
 .github/workflows/
   scrape.yml              The cron. Two secrets.

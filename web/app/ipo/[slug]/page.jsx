@@ -7,7 +7,7 @@ import {
   getSubscriptionHistory,
 } from "../../../lib/data";
 import { getNews, matchNews } from "../../../lib/news";
-import { NEWS } from "../../../lib/config";
+import { CREDITS, NEWS } from "../../../lib/config";
 import {
   dailyLatest,
   dailySeries,
@@ -44,6 +44,7 @@ import ShareButton from "../../components/ShareButton";
 import GmpLineChart from "../../components/GmpLineChart";
 import {
   BoardBadge,
+  Credit,
   GmpValue,
   KV,
   ListingResult,
@@ -909,6 +910,7 @@ export default async function IpoDetailPage({ params }) {
                 daily bars are computed here, on the server, so the client
                 component ships the numbers and not the derivation. */}
             <LiveChart symbol={ipo.symbol} name={ipo.name} daily={dailyBars(ipo)} />
+            <Credit label="Price data:" sources={CREDITS.nse} />
           </section>
         )}
 
@@ -963,6 +965,7 @@ export default async function IpoDetailPage({ params }) {
         <section className="card card-wide">
           <h2>GMP History</h2>
           <GmpHistory history={gmpHistory} ipo={ipo} />
+          <Credit label="GMP as reported by" sources={CREDITS.gmp} />
         </section>
 
         <section className="card card-wide">

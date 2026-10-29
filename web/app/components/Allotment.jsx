@@ -50,6 +50,7 @@ import {
   watchPans,
 } from "../../lib/pans";
 import { useAuth } from "./AuthProvider";
+import GoogleMark from "./GoogleMark";
 import PanModal from "./PanModal";
 
 // PANs are NO LONGER kept in this browser. They live in Firestore under the
@@ -587,7 +588,6 @@ function CheckAllotmentTab({ issues, today }) {
   }, [issues]);
 
   const issue = list.find((i) => i.slug === slug) || list[0];
-  const rest = (issues || []).slice(10);
   if (!issue) return null;
 
   const pick = (next) => {
@@ -690,24 +690,29 @@ function CheckAllotmentTab({ issues, today }) {
       ) : (
         <p className="allot-direct">
           NSE has not published a registrar for this issue yet. The prospectus
-          names one; it will appear here when the next scrape finds it.
+          names one; it will appear here with the next update.
         </p>
       )}
 
       {issue.nseBid ? (
-        <p className="allot-nse">
-          NSE can also answer for this issue:{" "}
+        <div className="allot-nse">
+          <span className="allot-nse-tag" aria-hidden="true">NSE</span>
+          <p className="allot-nse-text">
+            <strong>Also on NSE.</strong> Pick this issue and enter your PAN.
+            <small>
+              Only bids placed via NSE show up. Missing there doesn&apos;t
+              mean not allotted.
+            </small>
+          </p>
           <a
+            className="allot-nse-go"
             href={NSE_BID_CHECK.portal}
             target="_blank"
             rel="noopener noreferrer nofollow"
           >
-            verify the bid there
+            Verify on NSE<span aria-hidden="true"> ↗</span>
           </a>
-          {" — "}pick it from their list and enter the PAN. Only bids routed
-          through NSE are held, so a bid your broker sent to BSE will not be
-          found, which is not the same as not allotted.
-        </p>
+        </div>
       ) : null}
 
       <p className="allot-issue-foot">
@@ -716,27 +721,6 @@ function CheckAllotmentTab({ issues, today }) {
         </Link>{" "}
         — GMP, subscription by category, timetable and documents.
       </p>
-
-      {rest.length ? (
-        <div className="allot-rest">
-          {/* The picker holds the ten most recent, which is what someone
-              checking today wants to scroll. The rest are still at allotment
-              or recently listed and people still ask about them, so they stay
-              reachable by name rather than vanishing with the eleventh. */}
-          <h3 className="allot-rest-title">Earlier issues ({rest.length})</h3>
-          <ul className="allot-rest-list">
-            {rest.map((i) => (
-              <li key={i.slug}>
-                <Link href={`/ipo/${i.slug}`}>{i.short_name || i.name}</Link>
-                <span className="allot-rest-meta">
-                  {i.registrar?.short || "registrar not published"}
-                  {i.listing_date ? ` · listed ${fmtDate(i.listing_date)}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </section>
   );
 }
@@ -785,6 +769,7 @@ function MyPanTab({ issues }) {
     panError,
     clearPanError,
     forgetPan,
+    requireAuth,
   } = useAllotment();
   const [modal, setModal] = useState(false);
   const list = latestTen(issues);
@@ -804,19 +789,83 @@ function MyPanTab({ issues }) {
   // nothing to show and nothing to add until they have one.
   if (!uid) {
     return (
-      <section className="card card-wide mypan-signin">
-        <h2>Sign in to use your saved PANs</h2>
-        <p className="subtitle subtitle-flush">
-          A PAN is saved to your account and visible only to you. Signed out,
-          nothing is stored — so there is nothing here yet.
+      <section className="card card-wide mypan-signin" aria-labelledby="mypan-signin-title">
+        <div className="mypan-signin-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28">
+            <path
+              d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3Z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+            />
+            <path
+              d="m9 12 2 2 4-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+
+        <h2 id="mypan-signin-title" className="mypan-signin-title">
+          Your PANs, ready for every allotment
+        </h2>
+        <p className="mypan-signin-lede">
+          Sign in once and every issue is a tap away: your PANs, checked against
+          the latest allotments, without typing them again.
         </p>
-        <Link className="lookup-btn lookup-btn-lg mypan-login" href="/login?next=/allotment">
-          Sign in
-        </Link>
-        <p className="allot-issue-foot">
-          You can still <strong>check any allotment</strong> without an
-          account — the other tab has the steps and the registrar&apos;s own
-          page.
+
+        <ul className="mypan-signin-perks">
+          <li>
+            <span className="mypan-perk-icon" aria-hidden="true">1</span>
+            <span>
+              <strong>Save each PAN once</strong>
+              <small>Yours and your family&apos;s — up to {MAX_PANS}.</small>
+            </span>
+          </li>
+          <li>
+            <span className="mypan-perk-icon" aria-hidden="true">2</span>
+            <span>
+              <strong>Check them all together</strong>
+              <small>Every saved PAN against the ten most recent issues.</small>
+            </span>
+          </li>
+          <li>
+            <span className="mypan-perk-icon" aria-hidden="true">3</span>
+            <span>
+              <strong>Private to you</strong>
+              <small>Held against your account and shown to no one else.</small>
+            </span>
+          </li>
+        </ul>
+
+        {/* The same popup the rest of the page opens, in place: the reader
+            stays on this tab and lands on their (empty) PAN list the moment
+            the sign-in resolves. */}
+        <div className="mypan-signin-actions">
+          <button
+            type="button"
+            className="lookup-btn lookup-btn-lg mypan-signin-google"
+            onClick={() => requireAuth()}
+          >
+            <GoogleMark size={18} />
+            Continue with Google
+          </button>
+          <button
+            type="button"
+            className="mypan-signin-phone"
+            onClick={() => requireAuth("phone")}
+          >
+            Use phone number instead
+          </button>
+        </div>
+
+        <p className="mypan-signin-foot">
+          No account needed to <strong>check an allotment</strong> — the other
+          tab has the steps and the registrar&apos;s own page.
         </p>
       </section>
     );

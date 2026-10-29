@@ -61,11 +61,10 @@ export default function EditorialPage() {
 
         <h2>How the figures are produced</h2>
         <p>
-          Almost nothing on this site is written by hand. A scraper runs every
-          two hours, reads the sources named below, and writes what it finds to
-          a database; pages are rendered on each request, so what you see is
-          the last thing collected rather than a snapshot baked into a build.
-          Every IPO page carries the timestamp of that run, in IST, so the
+          The figures on this site come from the sources named below and are
+          refreshed every two hours. Pages are rendered on each request, so
+          what you see is the latest update rather than a snapshot baked into
+          a build. Every IPO page carries the time of that update, in IST, so the
           freshness is checkable rather than asserted.
         </p>
         <dl className="detail-grid">
@@ -80,7 +79,8 @@ export default function EditorialPage() {
           <div>
             <dt>Subscription</dt>
             <dd>
-              NSE&apos;s category-wise figures, captured on every run. Where
+              NSE&apos;s category-wise figures, recorded through each bidding
+              day. Where
               the exchange publishes a stale or empty table, the page says so
               and names the time it was written rather than presenting it as
               current.
@@ -96,7 +96,8 @@ export default function EditorialPage() {
           <div>
             <dt>Grey market premium</dt>
             <dd>
-              Third-party grey-market sources. See the limits below — this is
+              As reported by InvestorGain, IPO Watch and IPO Central. See the
+              limits below — this is
               the one number on the site that cannot be verified against a
               primary source.
             </dd>
@@ -135,8 +136,9 @@ export default function EditorialPage() {
         <h2>The grey market premium, specifically</h2>
         <p>
           GMP is <strong>unofficial and unregulated</strong>. No exchange, no
-          regulator and no issuer publishes one. Every figure here is collected
-          from third-party sites reporting what dealers are said to be quoting:
+          regulator and no issuer publishes one. Every figure here is as reported
+          by InvestorGain, IPO Watch and IPO Central — what dealers are said
+          to be quoting:
           it cannot be audited, it moves through the day, it is frequently
           wrong, and a strong premium has repeatedly preceded a weak listing.
         </p>
@@ -191,8 +193,8 @@ export default function EditorialPage() {
           <Link href="/contact">tell us</Link> and it will be fixed.
         </p>
         <p>
-          Most errors are fixed at the source of the parsing and reach the site
-          on the next scraper run, within two hours. Where an error was visible
+          Most errors are fixed at the source and reach the site with the next
+          update, within two hours. Where an error was visible
           long enough to have been acted on, the correction is noted on the
           page rather than made silently. Until a correction lands, the
           prospectus and the exchange are right and this site is not.

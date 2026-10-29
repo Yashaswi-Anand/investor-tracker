@@ -105,19 +105,22 @@ export default async function AllotmentPage() {
   const all = await getAllIpos();
   const issues = all.filter((ipo) => SHOWN.has(ipo.status)).sort(order).map(issueOf);
 
-  const coming = all
-    .filter((ipo) => COMING.has(ipo.status))
-    .sort((a, b) =>
-      String(a.allotment_date || a.close_date || "").localeCompare(
-        String(b.allotment_date || b.close_date || "")
-      )
-    )
-    .slice(0, 6);
-
   // Computed here, not in the browser: the rail marks which dates have
   // passed, and a client that decided that for itself would disagree with
   // the server's render for anyone loading the page across midnight IST.
   const today = istToday();
+
+  // Only allotments still ahead. A status can lag the calendar, so an issue
+  // whose allotment date has passed is not "next" whatever its status says.
+  const coming = all
+    .filter(
+      (ipo) =>
+        COMING.has(ipo.status) &&
+        ipo.allotment_date &&
+        String(ipo.allotment_date).slice(0, 10) >= today
+    )
+    .sort((a, b) => String(a.allotment_date).localeCompare(String(b.allotment_date)))
+    .slice(0, 6);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -179,7 +182,7 @@ export default async function AllotmentPage() {
                 finalised, and stays while it is listed.
                 {coming.length
                   ? " These are next:"
-                  : " Nothing is open or awaiting allotment at the moment."}
+                  : " No allotment is scheduled at the moment."}
               </p>
               {coming.length ? <Coming ipos={coming} /> : null}
             </section>
@@ -192,8 +195,7 @@ export default async function AllotmentPage() {
           <section className="card card-wide">
             <h2>Next allotments</h2>
             <p className="subtitle subtitle-flush">
-              Issues still bidding or just closed. Each joins the list above
-              on its allotment date.
+              Upcoming allotments, soonest first.
             </p>
             <Coming ipos={coming} />
           </section>
@@ -221,11 +223,7 @@ function Coming({ ipos }) {
           <li key={ipo.slug}>
             <Link href={`/ipo/${ipo.slug}`}>{ipo.short_name || ipo.name}</Link>
             <span className="allot-next-meta">
-              {ipo.allotment_date
-                ? `allotment ${fmtDate(ipo.allotment_date, true)}`
-                : ipo.close_date
-                  ? `closes ${fmtDate(ipo.close_date, true)}`
-                  : ""}
+              {`allotment ${fmtDate(ipo.allotment_date, true)}`}
               {registrar ? ` · ${registrar.short}` : ""}
             </span>
           </li>
