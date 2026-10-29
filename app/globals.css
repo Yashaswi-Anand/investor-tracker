@@ -2908,6 +2908,164 @@ body.has-sheet .scroll-jump { display: none; }
    did, this one offers somewhere else to go. */
 .allot-nse { margin: 10px 0 0; font-size: 0.78rem; line-height: 1.6; color: var(--text-muted); }
 
+/* ==========================================================================
+   The allotment page's two tabs.
+   ========================================================================== */
+/* A rail rather than a segmented control: two labels of unequal length look
+   wrong forced to equal widths, and the underline says "this one" without
+   needing a filled background that competes with the cards below. */
+.allot-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.allot-tabs::-webkit-scrollbar { display: none; }
+.allot-tab {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.allot-tab:hover { color: var(--text); }
+.allot-tab[data-active] {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* The steps card's own way out, under the instructions it belongs to. */
+.allot-steps-go { margin-top: 14px; }
+
+/* Everything past the picker's ten. A wrapped list of names rather than a
+   second dropdown: this is for finding one issue you remember, not for
+   working through them. */
+.allot-rest { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.allot-rest-title {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.allot-rest-title::before { content: none; }
+.allot-rest-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 4px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.allot-rest-list li { display: grid; gap: 1px; padding: 7px 0; min-width: 0; }
+.allot-rest-list a { font-size: 0.82rem; font-weight: 600; overflow-wrap: anywhere; }
+.allot-rest-meta { font-size: 0.7rem; color: var(--text-muted); }
+
+/* ---- tab two: a PAN, against the recent issues -------------------------- */
+.mypan-signin .mypan-login {
+  display: inline-block;
+  margin-top: 14px;
+  text-decoration: none;
+}
+.mypan-blocks { display: grid; gap: 18px; margin-top: 4px; }
+.mypan-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.mypan-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.mypan-head-actions { display: flex; align-items: center; gap: 8px; }
+.mypan-checkall { min-height: 36px; padding: 7px 14px; font-size: 0.76rem; }
+
+.mypan-list { margin: 0; padding: 0; list-style: none; }
+/* Three columns on a wide screen: what it is, where it stands, what to do.
+   The status column is fixed so the words line up down the list instead of
+   drifting with the length of each company name. */
+.mypan-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px auto;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--border);
+}
+.mypan-row:first-child { border-top: 0; }
+.mypan-issue { display: grid; gap: 2px; min-width: 0; }
+.mypan-name {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.mypan-name:hover { color: var(--primary); }
+.mypan-reg { font-size: 0.72rem; color: var(--text-muted); }
+
+.mypan-status { display: grid; gap: 1px; }
+.mypan-word { font-size: 0.82rem; font-weight: 700; }
+.mypan-unknown { color: var(--text-muted); font-weight: 600; }
+.mypan-via { font-size: 0.68rem; color: var(--text-muted); }
+/* The verdict colours the row carries elsewhere on this page, so an answer
+   reads the same wherever the reader meets it. */
+.mypan-row[data-tone="allotted"] .mypan-word { color: var(--up); }
+.mypan-row[data-tone="none"] .mypan-word { color: var(--text-2); }
+.mypan-row[data-tone="absent"] .mypan-word { color: var(--text-muted); }
+.mypan-row .mypan-select {
+  width: 100%;
+  min-height: 40px;
+  padding: 7px 10px;
+  font-size: 0.76rem;
+}
+.mypan-verdict { grid-column: 1 / -1; }
+.mypan-action { justify-self: end; }
+.mypan-action .lookup-btn { min-height: 40px; padding: 9px 14px; font-size: 0.76rem; }
+/* .result-go is an inline link elsewhere on this page, which left it 14px
+   tall here — and here it is the row's primary action, not a footnote. */
+.mypan-action .result-go {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 9px 12px;
+  margin: 0;
+  text-align: right;
+}
+
+/* On a phone the three columns become two rows: the issue above, its answer
+   and the action side by side beneath. A 160px status column next to a
+   company name has nowhere to go at 375px. */
+@media (max-width: 560px) {
+  .mypan-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 8px;
+  }
+  .mypan-issue { grid-column: 1 / -1; }
+  /* The 44px floor this project holds elsewhere, on the two controls a
+     thumb actually lands on. */
+  .mypan-row .mypan-select,
+  .mypan-action .lookup-btn,
+  .mypan-action .result-go { min-height: 44px; }
+}
+
 /* ---- the timetable rail ------------------------------------------------- */
 .allot-rail {
   display: grid;
