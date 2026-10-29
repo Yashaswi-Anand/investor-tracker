@@ -121,7 +121,7 @@ function GmpHistory({ history, ipo }) {
   if (!days.length) {
     return (
       <p className="subtitle subtitle-flush">
-        No GMP recorded yet. History builds up from the first snapshot.
+        No GMP recorded yet.
       </p>
     );
   }
@@ -385,9 +385,8 @@ function LotLadder({ ipo }) {
         </table>
       </div>
       <p className="subtitle table-foot">
-        Priced at the top of the band, which is what a cut-off bid pays.
-        Retail ends at {inr(RETAIL_CAP)} and S-HNI at {inr(SHNI_CAP)}; these
-        are SEBI&apos;s limits, not the issuer&apos;s.
+        Priced at the top of the band. Retail up to {inr(RETAIL_CAP)}, S-HNI
+        up to {inr(SHNI_CAP)}.
       </p>
     </>
   );
@@ -1208,9 +1207,7 @@ export default async function IpoDetailPage({ params }) {
                 reason anyone came, and the News tab has the rest. */}
             <NewsList articles={news} limit={2} />
             <p className="subtitle sub-hist-caption">
-              Headlines from {NEWS.publisher}, matched to this company by
-              name. Reproduced as published — not our reporting, and not
-              investment advice.{" "}
+              Headlines from {NEWS.publisher}. Not investment advice.{" "}
               <Link href="/news">More IPO news</Link>
             </p>
           </section>

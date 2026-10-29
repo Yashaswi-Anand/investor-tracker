@@ -41,9 +41,7 @@ export default function NewsCompanies({ companies }) {
     <section className="card card-wide news-companies">
       <h2>Companies in the news</h2>
       <p className="subtitle subtitle-flush">
-        Open and upcoming issues mentioned in today&apos;s headlines. Each links
-        to that issue&apos;s own page — GMP history, subscription by category,
-        timetable and offer documents.
+        Open and upcoming issues in today&apos;s headlines.
       </p>
 
       <div className="live-tabs news-company-boards" role="tablist" aria-label="Board">

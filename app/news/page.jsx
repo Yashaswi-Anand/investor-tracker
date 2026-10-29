@@ -58,12 +58,11 @@ export default async function NewsPage() {
         </p>
         <h1 className="news-h1">IPO News</h1>
         <p className="subtitle news-lede">
-          Every Indian IPO story worth reading, in one place — new issues,
-          listings, subscription and grey market coverage. Headlines from{" "}
+          Indian IPO headlines from{" "}
           <a href={NEWS.publisherUrl} target="_blank" rel="noopener noreferrer nofollow">
             {NEWS.publisher}
           </a>
-          ; each one opens the full story on their site.
+          , in one place.
         </p>
       </section>
 
@@ -72,8 +71,7 @@ export default async function NewsPage() {
       {articles.length === 0 ? (
         <section className="card card-wide">
           <p className="subtitle subtitle-flush">
-            Headlines are unavailable right now. The IPO data on the rest of
-            the site is unaffected.
+            Headlines are unavailable right now.
           </p>
         </section>
       ) : (

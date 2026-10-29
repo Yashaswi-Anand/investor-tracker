@@ -138,11 +138,7 @@ export default function AccountPanel() {
       </dl>
 
       <p className="subtitle">
-        Signing in changes nothing about the IPO data — every page on this site
-        is public and stays public. We hold what your sign-in method gave us —
-        a name, email and picture from Google, or just the number from a phone
-        sign-in — plus any PAN you chose to save. Nothing else, and none of it
-        is linked to what you read.
+        We hold only what you signed in with and any PAN you save.
       </p>
 
       <button type="button" className="ghost-btn" onClick={signOut} disabled={busy}>

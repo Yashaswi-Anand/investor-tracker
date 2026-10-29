@@ -25,8 +25,7 @@ export default function LoginPage() {
       <div className="auth-wrap">
         <h1 className="auth-h1">Sign in</h1>
         <p className="subtitle auth-lede">
-          Sign in with Google or a phone number. No password to remember
-          either way, and nothing new to verify.
+          Sign in with Google or a phone number. No password needed.
         </p>
         {/* useSearchParams reads the `next` parameter, which Next requires be
             wrapped so the surrounding page can still be streamed. */}

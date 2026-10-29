@@ -156,11 +156,10 @@ export default function RootLayout({ children }) {
         <footer className="disclaimer">
           <div className="container">
             <p className="disclaimer-text">
-              <strong>Disclaimer:</strong> GMP (grey market premium) is
-              unofficial and indicative only. This is not investment advice.
-              Issue data and prices: NSE India. GMP as reported by
-              InvestorGain, IPO Watch and IPO Central. Always verify on NSE/BSE
-              before applying to any IPO.
+              <strong>Disclaimer:</strong> GMP is unofficial and indicative
+              only. Not investment advice. Data: NSE India; GMP from
+              InvestorGain, IPO Watch and IPO Central. Verify on NSE/BSE before
+              applying.
             </p>
             <div className="footer-row">
               <div className="footer-links">
