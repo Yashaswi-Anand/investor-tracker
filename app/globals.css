@@ -1823,7 +1823,15 @@ td[data-col="name"] { white-space: normal; min-width: 150px; max-width: 220px; }
 .news-item[data-lead] .news-summary { font-size: 0.9rem; max-width: 68ch; }
 .news-item[data-lead] .news-go { opacity: 1; }
 
-.news-disclaimer { margin-top: 22px; }
+/* An in-page note borrowing .disclaimer's type, not the footer's box: no
+   band, no rule, and none of the footer's room for the jump button. */
+.news-disclaimer {
+  margin-top: 22px;
+  padding: 0;
+  border-top: 0;
+  background: none;
+  line-height: 1.6;
+}
 
 /* Inside a card the list is already framed, so the items lose their own. */
 .news-card .news-link {
@@ -2996,6 +3004,9 @@ body.has-sheet .scroll-jump { display: none; }
   position: relative;
   overflow: hidden;
   display: grid;
+  /* One column no wider than the card: an implicit auto column grows to
+     its widest child, which on a phone pushed everything past the edge. */
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   padding: 36px 20px 28px;
   text-align: center;
