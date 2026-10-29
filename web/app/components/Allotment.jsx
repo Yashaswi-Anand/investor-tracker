@@ -367,8 +367,7 @@ function Verdict({ result }) {
           </span>
         </div>
         <p className="verdict-note">
-          Their own page says the same until the data is loaded, usually on the
-          allotment date. Try again later.
+          Data usually loads on the allotment date. Try again later.
         </p>
         {when ? <p className="verdict-when">Checked {when} IST</p> : null}
       </div>
@@ -382,7 +381,7 @@ function Verdict({ result }) {
           <span className="verdict-word">KFin is limiting requests</span>
         </div>
         <p className="verdict-note">
-          Wait a minute and try again — this page will not retry on its own.
+          Wait a minute and try again.
         </p>
       </div>
     );
@@ -689,8 +688,7 @@ function CheckAllotmentTab({ issues, today }) {
         </div>
       ) : (
         <p className="allot-direct">
-          NSE has not published a registrar for this issue yet. The prospectus
-          names one; it will appear here with the next update.
+          Registrar not published yet.
         </p>
       )}
 
@@ -718,8 +716,7 @@ function CheckAllotmentTab({ issues, today }) {
       <p className="allot-issue-foot">
         <Link href={`/ipo/${issue.slug}`}>
           {issue.short_name || issue.name} IPO page
-        </Link>{" "}
-        — GMP, subscription by category, timetable and documents.
+        </Link>
       </p>
     </section>
   );
@@ -771,6 +768,9 @@ function MyPanTab({ issues }) {
     forgetPan,
     requireAuth,
   } = useAllotment();
+  // The card's Google button goes straight to Google: routing it through the
+  // popup asked the reader the same question twice.
+  const { busy: authBusy, error: authError, signInWithGoogle } = useAuth();
   const [modal, setModal] = useState(false);
   const list = latestTen(issues);
 
@@ -814,8 +814,7 @@ function MyPanTab({ issues }) {
           Your PANs, ready for every allotment
         </h2>
         <p className="mypan-signin-lede">
-          Sign in once and every issue is a tap away: your PANs, checked against
-          the latest allotments, without typing them again.
+          Save your PANs once and check them against every new allotment.
         </p>
 
         <ul className="mypan-signin-perks">
@@ -842,30 +841,38 @@ function MyPanTab({ issues }) {
           </li>
         </ul>
 
-        {/* The same popup the rest of the page opens, in place: the reader
-            stays on this tab and lands on their (empty) PAN list the moment
-            the sign-in resolves. */}
+        {/* Google opens Google's own window directly; phone opens the popup
+            already on its number step. Either way the reader stays on this
+            tab and lands on their (empty) PAN list once sign-in resolves. */}
         <div className="mypan-signin-actions">
           <button
             type="button"
             className="lookup-btn lookup-btn-lg mypan-signin-google"
-            onClick={() => requireAuth()}
+            onClick={signInWithGoogle}
+            disabled={authBusy}
           >
             <GoogleMark size={18} />
-            Continue with Google
+            {authBusy ? "Opening Google…" : "Continue with Google"}
           </button>
           <button
             type="button"
             className="mypan-signin-phone"
             onClick={() => requireAuth("phone")}
+            disabled={authBusy}
           >
             Use phone number instead
           </button>
         </div>
 
+        {authError ? (
+          <p className="auth-error" role="alert">
+            {authError}
+          </p>
+        ) : null}
+
         <p className="mypan-signin-foot">
-          No account needed to <strong>check an allotment</strong> — the other
-          tab has the steps and the registrar&apos;s own page.
+          No account needed to <strong>check an allotment</strong> — use the
+          other tab.
         </p>
       </section>
     );
@@ -901,7 +908,7 @@ function MyPanTab({ issues }) {
             </div>
           ) : (
             <p className="pan-empty">
-              No PANs yet — add one and this becomes a list of where it stands.
+              No PANs yet.
             </p>
           )}
 

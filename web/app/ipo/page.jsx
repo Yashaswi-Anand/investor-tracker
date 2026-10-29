@@ -144,9 +144,7 @@ export default async function IpoIndexPage() {
         <article className="card page-card">
           <h1>All IPOs we track</h1>
           <p className="subtitle">
-            {ipos.length} Mainboard and SME issues, grouped by where each one
-            has reached. Every entry links to its own page with GMP history,
-            subscription by category, the timetable and the offer documents.
+            {ipos.length} Mainboard and SME issues, grouped by stage.
           </p>
 
           {groups.map((group) => (

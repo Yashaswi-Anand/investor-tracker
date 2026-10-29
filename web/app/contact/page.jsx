@@ -91,35 +91,23 @@ export default function ContactPage() {
         <h2>What we cannot help with</h2>
         <p>
           <strong>Whether to apply for an issue.</strong> We are not a
-          SEBI-registered adviser, analyst or broker, and we do not give a view
-          on any IPO — not by email either. Decide from the prospectus and your
-          own circumstances, and take advice from someone registered to give
-          it.
+          SEBI-registered adviser and do not give a view on any IPO.
         </p>
         <p>
-          <strong>Your allotment.</strong> Only the registrar for that issue
-          knows, and we cannot look it up for you by email. The{" "}
-          <Link href="/allotment">allotment page</Link> checks KFin issues
-          from your own browser and lists the right registrar for the rest.
-          Write to us here if you want your account, and every PAN saved under
-          it, deleted.
+          <strong>Your allotment.</strong> Only the registrar knows — use the{" "}
+          <Link href="/allotment">allotment page</Link>. Write to us if you
+          want your account and saved PANs deleted.
         </p>
         <p>
           <strong>Your application, refund or demat account.</strong> Those sit
           with your bank, your broker and the registrar — we hold none of it.
-          The optional Google sign-in on this site is unrelated to any of them
-          and gives us only what you signed in with — a name, email and
-          avatar from Google, or just the number from a phone sign-in.
         </p>
 
         <h2>Please do not send</h2>
         <p>
           PAN numbers, application numbers, bank or demat details, or any
-          document containing them. A PAN belongs in the box on the{" "}
-          <Link href="/allotment">allotment page</Link>, where it is saved to
-          your own account and used for the check — not in an email, which we
-          cannot secure and do not want to hold. A message that arrives with
-          one gets deleted rather than answered.
+          document containing them. A message that includes one is deleted
+          unanswered.
         </p>
 
         <p className="back-row">

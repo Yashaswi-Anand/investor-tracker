@@ -178,11 +178,7 @@ export default async function AllotmentPage() {
             <section className="card card-wide">
               <h2>No issue is at allotment or recently listed</h2>
               <p className="subtitle subtitle-flush">
-                An issue appears here from the day its basis of allotment is
-                finalised, and stays while it is listed.
-                {coming.length
-                  ? " These are next:"
-                  : " No allotment is scheduled at the moment."}
+                {coming.length ? "These are next:" : "No allotment is scheduled at the moment."}
               </p>
               {coming.length ? <Coming ipos={coming} /> : null}
             </section>
@@ -194,20 +190,9 @@ export default async function AllotmentPage() {
         {issues.length > 0 && coming.length > 0 ? (
           <section className="card card-wide">
             <h2>Next allotments</h2>
-            <p className="subtitle subtitle-flush">
-              Upcoming allotments, soonest first.
-            </p>
             <Coming ipos={coming} />
           </section>
         ) : null}
-
-        <p className="disclaimer news-disclaimer">
-          The registrar is the only authority on allotment. A KFin answer here
-          is KFin&apos;s, relayed by your browser; anything you record for
-          another registrar is your own note of what you saw on their site.
-          A PAN you save is held against your account and nowhere else; the{" "}
-          <Link href="/privacy">privacy policy</Link> sets out what that means.
-        </p>
       </div>
     </>
   );

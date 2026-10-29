@@ -49,8 +49,7 @@ export default function LoginPanel() {
       <div className="card card-wide auth-card">
         <h2>Sign-in is not set up</h2>
         <p className="subtitle subtitle-flush">
-          This site has no sign-in configured. Nothing else is affected — every
-          IPO page works exactly as it always has.
+          This site has no sign-in configured.
         </p>
         <p className="back-row">
           <Link href="/">← Live dashboard</Link>
@@ -89,10 +88,6 @@ export default function LoginPanel() {
   return (
     <div className="card card-wide auth-card">
       <h2>Sign in</h2>
-      <p className="subtitle">
-        Two ways in and no password either way — nothing to choose, nothing to
-        verify by email, and we never see a password at all.
-      </p>
 
       <button
         type="button"
@@ -121,17 +116,12 @@ export default function LoginPanel() {
 
       <ul className="auth-facts">
         <li>
-          <strong>What we receive.</strong> From Google, your name, email
-          address and profile picture. From a phone sign-in, just the number.
-          Nothing else either way, and never a password.
+          <strong>What we receive.</strong> Your name, email and picture from
+          Google, or just your number from a phone sign-in.
         </li>
         <li>
-          <strong>What it changes.</strong> Nothing about the IPO data. Every
-          page on this site is public and stays public, signed in or not.
-        </li>
-        <li>
-          <strong>Leaving.</strong> Sign out any time from your account page.
-          Ask us to delete the account and it goes — see the{" "}
+          <strong>Leaving.</strong> Sign out any time, or ask us to delete your
+          account — see the{" "}
           <Link href="/privacy">privacy policy</Link>.
         </li>
       </ul>

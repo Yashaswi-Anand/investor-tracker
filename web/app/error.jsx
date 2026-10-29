@@ -86,8 +86,7 @@ export default function PageError({ error, reset }) {
       <section className="card card-wide">
         <h2>Something went wrong</h2>
         <p className="subtitle">
-          This page failed to load in your browser. The IPO data itself is
-          fine — trying again usually clears it.
+          This page failed to load. Trying again usually fixes it.
         </p>
         <div className="error-actions">
           <button type="button" className="error-btn" onClick={() => reset()}>
