@@ -4,22 +4,29 @@
  * The interactive half of the allotment page: PANs, and what each issue's
  * registrar says about them.
  *
- * SPLIT SO THAT ONLY THE PAN-DEPENDENT ROWS WAIT FOR THE BROWSER. The
- * previous version was one client component that rendered nothing until
- * localStorage had been read, which left a crawler holding a page whose only
- * heading said the site could not look anything up. Now the provider holds
- * the PANs, PanBox collects them, IssuePicker renders the chosen issue — its
- * heading, registrar and steps come out in the server HTML for the default
- * choice — and IssueRows fills in the rows once the PANs are known.
+ * TWO TABS, BECAUSE THERE ARE TWO QUESTIONS. "Check allotment" starts from an
+ * issue and needs no account at all — pick one, read how its registrar wants
+ * to be asked, go and ask. "My PAN & allotment" starts from a PAN you saved
+ * and shows where it stands across the recent issues. One scroll holding both
+ * met a signed-out reader with a PAN box before the instructions that do not
+ * need one.
  *
- * WHERE THE PANs LIVE. This browser, and nowhere else on this site. A PAN is
- * a government identifier: it is never sent to our server — no request here
- * goes there — and never put in a URL. The ONE request that carries it goes
- * from this browser straight to KFin's allotment API, for issues KFin
- * handles, because KFin's page makes exactly that request itself and their
- * API accepts it from any origin (see lib/kfin.js). Every other registrar
- * puts the answer behind a CAPTCHA, and there the last step stays the
- * reader's: open their page, paste, answer, and record what it said.
+ * THE DEFAULT TAB IS THE CRAWLABLE ONE. "Check allotment" renders on the
+ * server, so the raw HTML carries a real heading, a registrar, the steps and
+ * — in the picker and the list beneath it — every tracked company's name.
+ * The other panel is not rendered until it is chosen, which costs nothing:
+ * it is about one reader's own data and has no business in search results.
+ *
+ * WHERE THE PANs LIVE. In Firestore, under the signed-in reader's own account
+ * id, readable by them alone — see lib/pans.js, and /privacy, which sets out
+ * what that means. Nothing is stored for a reader who is not signed in. The
+ * LOOKUP is a separate matter and has not changed: the one request carrying a
+ * PAN goes from this browser straight to KFin's allotment API, for the issues
+ * KFin handles, because KFin's own page makes exactly that request and their
+ * API accepts it from any origin (see lib/kfin.js). This site's server is not
+ * on that path. Every other registrar puts the answer behind a CAPTCHA, and
+ * there the last step stays the reader's: open their page, paste, read, and
+ * record what it said.
  */
 
 import Link from "next/link";
@@ -272,173 +279,6 @@ export function AllotmentProvider({ children }) {
 
 /* ------------------------------------------------------------------------ */
 
-export function PanBox() {
-  const {
-    ready,
-    uid,
-    authLoading,
-    requireAuth,
-    pans,
-    panError,
-    clearPanError,
-    forgetPan,
-    forgetEverything,
-  } = useAllotment();
-  const [draft, setDraft] = useState("");
-  const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [modal, setModal] = useState(false);
-  // Dismissing the add-PAN prompt is remembered for the session. Someone who
-  // came to read the timetable should not be asked on every render.
-  const [prompted, setPrompted] = useState(false);
-
-  /**
-   * The prompt, and the one condition it waits for.
-   *
-   * `ready` means Firestore has actually answered. Opening on `!pans.length`
-   * before that would flash the modal at someone who has three PANs saved —
-   * the same class of bug as concluding "signed out" while auth is loading.
-   */
-  useEffect(() => {
-    if (!uid || !ready || prompted) return;
-    if (pans.length === 0) {
-      setModal(true);
-      setPrompted(true);
-    }
-  }, [uid, ready, pans.length, prompted]);
-
-  const onAdd = async (event) => {
-    event.preventDefault();
-    setError(null);
-    clearPanError();
-    // No PAN is accepted, held or sent anywhere until there is an account to
-    // attach it to. The gate opens the dialog and resolves null if closed.
-    const who = await requireAuth();
-    if (!who) return;
-    setModal(true);
-  };
-
-  const onForget = async (pan) => {
-    setBusy(true);
-    await forgetPan(pan);
-    setBusy(false);
-  };
-
-  const onEraseAll = async () => {
-    setBusy(true);
-    await forgetEverything();
-    setBusy(false);
-  };
-
-  const shown = panError || error;
-
-  return (
-    <section className="card card-wide" id="pans">
-      <div className="allot-card-head">
-        <h2>Your PANs</h2>
-        {uid && ready && pans.length ? (
-          <span className="allot-count">
-            {pans.length} of {MAX_PANS} saved
-          </span>
-        ) : null}
-      </div>
-
-      {!uid ? (
-        <>
-          <button
-            type="button"
-            className="lookup-btn lookup-btn-lg pan-signin"
-            onClick={onAdd}
-            disabled={authLoading}
-          >
-            {authLoading ? "Checking…" : "Sign in to add a PAN"}
-          </button>
-        </>
-      ) : (
-        <>
-          {!ready ? (
-            <p className="auth-status" role="status">
-              Loading your PANs…
-            </p>
-          ) : (
-            <>
-              {pans.length ? (
-                <ul className="pan-list">
-                  {pans.map((pan) => (
-                    <li key={pan} className="pan-chip">
-                      <span className="pan-value">{pan}</span>
-                      <button
-                        type="button"
-                        className="pan-remove"
-                        onClick={() => onForget(pan)}
-                        disabled={busy}
-                        aria-label={`Remove ${pan}`}
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="pan-empty">
-                  No PANs yet — add one to check an allotment.
-                </p>
-              )}
-
-              <button
-                type="button"
-                className="ghost-btn pan-add-btn"
-                onClick={() => setModal(true)}
-                disabled={busy || pans.length >= MAX_PANS}
-              >
-                {pans.length >= MAX_PANS ? `Limit is ${MAX_PANS}` : "Add a PAN"}
-              </button>
-            </>
-          )}
-        </>
-      )}
-
-      {shown ? (
-        <p className="auth-error" role="alert">
-          {shown}
-        </p>
-      ) : null}
-
-      <p className="pan-privacy">
-        {uid
-          ? "Stored in your account, never shared, deleted when you remove it"
-          : "Nothing is stored until you sign in"}{" "}
-        — <Link href="/privacy">how that works</Link>.
-        {uid && pans.length ? (
-          <>
-            {" "}
-            <button
-              type="button"
-              className="link-btn pan-erase"
-              onClick={onEraseAll}
-              disabled={busy}
-            >
-              Erase everything
-            </button>
-          </>
-        ) : null}
-      </p>
-
-      {modal && uid ? (
-        <PanModal
-          uid={uid}
-          existing={pans}
-          onClose={() => setModal(false)}
-          onAdded={() => setError(null)}
-        />
-      ) : null}
-    </section>
-  );
-}
-
-
-/* ------------------------------------------------------------------------ */
-
 function fmtWhen(ms) {
   if (!ms) return null;
   try {
@@ -560,273 +400,6 @@ function Verdict({ result }) {
 }
 
 /**
- * The rows for one issue: one per PAN.
- *
- * `direct` with a `lookup` means KFin, and the row asks KFin itself. Anything
- * else is the hand-off: copy the PAN, go, come back and record it.
- */
-export function IssueRows({
-  slug,
-  name,
-  direct,
-  lookup,
-  portal,
-  registrarShort,
-  handoff,
-}) {
-  const { ready, uid, requireAuth, pans, marks, setMarks, results, setResults } =
-    useAllotment();
-  const [busy, setBusy] = useState({});
-  const [copied, setCopied] = useState(null);
-  const [batch, setBatch] = useState(false);
-  const alive = useRef(true);
-
-  useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-    };
-  }, []);
-
-  const canDirect = Boolean(direct && lookup?.client_id && lookup?.endpoint);
-
-  const copyText = async (text, token) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(token);
-      setTimeout(() => setCopied(null), 1600);
-    } catch {
-      /* clipboard refused; everything here is on screen to read */
-    }
-  };
-
-  const mark = (pan, outcome) =>
-    setMarks((current) => {
-      const key = `${slug}|${pan}`;
-      const next = { ...current };
-      // The empty value is "not checked yet", which is an absence rather than
-      // a third answer — storing it would make the counts below wrong.
-      if (!outcome) delete next[key];
-      else next[key] = outcome;
-      return next;
-    });
-
-  const check = async (pan) => {
-    // The gate, before anything goes over the wire. Closing the dialog
-    // resolves null and we simply do not check — the page does not move.
-    if (!(await requireAuth())) return { state: "cancelled", rows: [] };
-    const key = `${slug}|${pan}`;
-    setBusy((b) => ({ ...b, [pan]: true }));
-    const result = await lookupKfin({
-      endpoint: lookup.endpoint,
-      clientId: lookup.client_id,
-      pan,
-    });
-    if (!alive.current) return result;
-    setResults((current) => ({ ...current, [key]: { ...result, at: Date.now() } }));
-    setBusy((b) => {
-      const next = { ...b };
-      delete next[pan];
-      return next;
-    });
-    return result;
-  };
-
-  const checkAll = async () => {
-    if (!(await requireAuth())) return;
-    setBatch(true);
-    for (let i = 0; i < pans.length; i += 1) {
-      if (!alive.current) break;
-      // eslint-disable-next-line no-await-in-loop
-      const result = await check(pans[i]);
-      // Their limit, respected: the rest of the batch waits for the reader.
-      if (result.state === "limited") break;
-      if (i < pans.length - 1) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((r) => setTimeout(r, BATCH_GAP_MS));
-      }
-    }
-    if (alive.current) setBatch(false);
-  };
-
-  if (!ready) {
-    return (
-      <p className="allot-rows-empty">
-        Your PANs appear here once you have added them above.
-      </p>
-    );
-  }
-  if (!pans.length) {
-    return (
-      <p className="allot-rows-empty">
-        <a href="#pans">Add a PAN above</a> to check this issue.
-      </p>
-    );
-  }
-
-  // A one-line answer for the whole issue, above the rows, so several PANs
-  // do not have to be read one at a time.
-  const summary = canDirect
-    ? (() => {
-        const seen = pans.map((p) => results[`${slug}|${p}`]).filter(Boolean);
-        if (!seen.length) return null;
-        const won = seen.filter((r) => r.state === "allotted");
-        const shares = won.reduce(
-          (sum, r) => sum + r.rows.reduce((s, x) => s + (x.allotted || 0), 0),
-          0
-        );
-        return { checked: seen.length, won: won.length, shares };
-      })()
-    : null;
-
-  const outcomeOf = (pan) => {
-    if (canDirect) {
-      const r = results[`${slug}|${pan}`];
-      return r?.state === "allotted"
-        ? "allotted"
-        : r?.state === "applied"
-          ? "none"
-          : undefined;
-    }
-    return marks[`${slug}|${pan}`];
-  };
-
-  return (
-    <>
-      <div className="allot-actions">
-        {canDirect ? (
-          pans.length > 1 ? (
-            <button
-              type="button"
-              className="lookup-btn lookup-btn-lg"
-              disabled={batch}
-              onClick={checkAll}
-            >
-              {batch ? "Checking…" : `Check all ${pans.length} PANs`}
-            </button>
-          ) : null
-        ) : (
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => copyText(handoff?.name || name, "name")}
-          >
-            {copied === "name"
-              ? "Copied — paste it in their dropdown"
-              : handoff
-                ? `Copy “${handoff.name}”`
-                : "Copy company name"}
-          </button>
-        )}
-
-        {summary ? (
-          <p className="allot-summary" role="status">
-            <strong>{summary.checked}</strong> checked
-            {summary.won > 0 ? (
-              <>
-                {" · "}
-                <span className="allot-summary-won">
-                  {summary.won} allotted, {n(summary.shares)} shares
-                </span>
-              </>
-            ) : (
-              <> · none allotted</>
-            )}
-          </p>
-        ) : null}
-      </div>
-
-      <ul className="result-rows">
-        {pans.map((pan) => {
-          const key = `${slug}|${pan}`;
-          const outcome = outcomeOf(pan);
-          return (
-            <li key={pan} className="result-row" data-outcome={outcome}>
-              <div className="result-row-main">
-                <button
-                  type="button"
-                  className="result-pan"
-                  onClick={() => copyText(pan, `pan:${pan}`)}
-                  title="Copy this PAN"
-                >
-                  {pan}
-                  <span className="result-copy">
-                    {copied === `pan:${pan}` ? "Copied" : "Copy"}
-                  </span>
-                </button>
-
-                {canDirect ? (
-                  <button
-                    type="button"
-                    className="lookup-btn"
-                    disabled={Boolean(busy[pan]) || batch}
-                    onClick={() => check(pan)}
-                  >
-                    {busy[pan]
-                      ? "Asking KFin…"
-                      : results[key]
-                        ? "Check again"
-                        : "Check"}
-                  </button>
-                ) : (
-                  <label className="result-marks">
-                    {/* As close to filling their form as a page on another
-                        origin can get: the PAN is on the clipboard before
-                        their tab opens, so the reader pastes instead of
-                        reading a PAN off one screen and typing it into
-                        another. A real href, so middle-click and ctrl-click
-                        still behave; the copy rides along on the click. */}
-                    {portal ? (
-                      <a
-                        className="result-go"
-                        href={portal}
-                        target="_blank"
-                        rel="noopener noreferrer nofollow"
-                        onClick={() => copyText(pan, `go:${pan}`)}
-                      >
-                        {copied === `go:${pan}`
-                          ? "PAN copied — paste it there"
-                          : `Copy PAN & open ${registrarShort}`}
-                      </a>
-                    ) : null}
-                    <span className="result-marks-label">
-                      What {registrarShort} showed
-                    </span>
-                    <select
-                      className="result-select"
-                      value={marks[key] || ""}
-                      data-outcome={marks[key]}
-                      onChange={(event) => mark(pan, event.target.value)}
-                    >
-                      {OUTCOMES.map((o) => (
-                        <option key={o.key || "unset"} value={o.key}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-              </div>
-
-              {canDirect ? <Verdict result={results[key]} /> : null}
-            </li>
-          );
-        })}
-      </ul>
-
-      {!canDirect && portal ? (
-        <p className="allot-rows-foot">
-          Each row opens {registrarShort} with its PAN already copied. Set the
-          row to what their page said when you come back.
-        </p>
-      ) : null}
-    </>
-  );
-}
-
-/* ------------------------------------------------------------------------ */
-
-/**
  * What to say above the hand-off steps.
  *
  * The generic line blames a CAPTCHA, which is true of every registrar here
@@ -886,35 +459,136 @@ function Rail({ issue, today }) {
   );
 }
 
-/**
- * One issue at a time, chosen from a dropdown that sits in the same card as
- * the issue it controls.
- *
- * Eighteen stacked sections was the whole list on one screen, and nobody
- * reads a page that way: you know which issue you applied for. The choice
- * rides in the URL hash — no PAN in it, nothing stored, and a link to a
- * specific issue's check is a link that works.
- *
- * The first at-allotment issue is rendered on the server, so the raw HTML
- * carries a real heading, a real registrar and the rail, and the dropdown's
- * option text carries every other company's name.
- */
-export function IssuePicker({ issues, today }) {
-  const [slug, setSlug] = useState(issues[0]?.slug || "");
+/* ------------------------------------------------------------------------ */
 
-  // On mount AND on every later hash change. Without the listener the
-  // selection ignored a hash that arrived while the page was already open —
-  // a link into a particular issue worked on a cold load and silently did
-  // nothing from anywhere on the site that already had this page rendered.
+/**
+ * The page's two halves, as tabs.
+ *
+ * They answer different questions and need different things from the reader.
+ * "Check allotment" needs no account at all: pick an issue, read how its
+ * registrar wants to be asked, go and ask. "My PAN" is the other direction —
+ * start from a PAN you saved and see where it stands across the recent
+ * issues. Putting both on one scroll meant a signed-out reader met a PAN box
+ * before the instructions that do not need one.
+ *
+ * The choice is remembered per browser, not per account: it is a view
+ * preference, not data, and a reader who always wants one tab should not have
+ * to sign in for the page to remember.
+ */
+const TAB_KEY = "ipo-allotment-tab";
+const TABS = [
+  { key: "check", label: "Check allotment" },
+  { key: "mine", label: "My PAN & allotment" },
+];
+
+export function AllotmentTabs({ issues, today }) {
+  const [tab, setTab] = useState("check");
+  const tabRefs = useRef({});
+
+  useEffect(() => {
+    const stored = read(TAB_KEY, null);
+    if (stored && TABS.some((t) => t.key === stored)) setTab(stored);
+  }, []);
+
+  const choose = (key) => {
+    setTab(key);
+    write(TAB_KEY, key);
+  };
+
+  /* A tablist is expected to move with the arrow keys; without this the
+     only way between panels is Tab through every control in the open one. */
+  const onKeyDown = (event) => {
+    const i = TABS.findIndex((t) => t.key === tab);
+    let next = null;
+    if (event.key === "ArrowRight") next = TABS[(i + 1) % TABS.length];
+    if (event.key === "ArrowLeft") next = TABS[(i - 1 + TABS.length) % TABS.length];
+    if (event.key === "Home") next = TABS[0];
+    if (event.key === "End") next = TABS[TABS.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    choose(next.key);
+    tabRefs.current[next.key]?.focus();
+  };
+
+  return (
+    <>
+      <div className="allot-tabs" role="tablist" aria-label="Allotment" onKeyDown={onKeyDown}>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            id={`tab-${t.key}`}
+            aria-selected={tab === t.key}
+            aria-controls={`panel-${t.key}`}
+            /* Only the selected tab is in the tab order; the arrows move
+               between them, which is what a tablist is supposed to do. */
+            tabIndex={tab === t.key ? 0 : -1}
+            ref={(el) => {
+              tabRefs.current[t.key] = el;
+            }}
+            className="allot-tab"
+            data-active={tab === t.key ? "true" : undefined}
+            onClick={() => choose(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div
+        role="tabpanel"
+        id="panel-check"
+        aria-labelledby="tab-check"
+        hidden={tab !== "check"}
+      >
+        {tab === "check" ? <CheckAllotmentTab issues={issues} today={today} /> : null}
+      </div>
+
+      <div
+        role="tabpanel"
+        id="panel-mine"
+        aria-labelledby="tab-mine"
+        hidden={tab !== "mine"}
+      >
+        {tab === "mine" ? <MyPanTab issues={issues} /> : null}
+      </div>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+
+/** The ten most recent, in the order the page already ranks them: issues at
+ *  allotment first, then the most recently listed. */
+function latestTen(issues) {
+  return (issues || []).slice(0, 10);
+}
+
+/**
+ * Tab one — how to check this issue, wherever it has to be checked.
+ *
+ * No PAN and no account. The reader picks an issue and gets the registrar's
+ * own steps and a link to the page those steps describe.
+ */
+function CheckAllotmentTab({ issues, today }) {
+  const list = latestTen(issues);
+  const [slug, setSlug] = useState(list[0]?.slug || "");
+
+  // A link into a particular issue still works, as it did before the tabs.
   useEffect(() => {
     const follow = () => {
       const wanted = decodeURIComponent((window.location.hash || "").slice(1));
-      if (wanted && issues.some((i) => i.slug === wanted)) setSlug(wanted);
+      if (wanted && list.some((i) => i.slug === wanted)) setSlug(wanted);
     };
     follow();
     window.addEventListener("hashchange", follow);
     return () => window.removeEventListener("hashchange", follow);
   }, [issues]);
+
+  const issue = list.find((i) => i.slug === slug) || list[0];
+  const rest = (issues || []).slice(10);
+  if (!issue) return null;
 
   const pick = (next) => {
     setSlug(next);
@@ -924,12 +598,6 @@ export function IssuePicker({ issues, today }) {
       /* history refused; the choice still stands for this page view */
     }
   };
-
-  const issue = issues.find((i) => i.slug === slug) || issues[0];
-  if (!issue) return null;
-
-  const atAllotment = issues.filter((i) => i.status === "allotment");
-  const listed = issues.filter((i) => i.status === "listed");
 
   const optionText = (i) =>
     `${i.short_name || i.name} — ${i.registrar?.short || "registrar not published"}` +
@@ -945,46 +613,19 @@ export function IssuePicker({ issues, today }) {
           <select
             className="allot-select"
             value={issue.slug}
-            onChange={(event) => pick(event.target.value)}
+            onChange={(e) => pick(e.target.value)}
           >
-            {atAllotment.length ? (
-              <optgroup label={`At allotment (${atAllotment.length})`}>
-                {atAllotment.map((i) => (
-                  <option key={i.slug} value={i.slug}>
-                    {optionText(i)}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-            {listed.length ? (
-              <optgroup label={`Listed (${listed.length})`}>
-                {listed.map((i) => (
-                  <option key={i.slug} value={i.slug}>
-                    {optionText(i)}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
+            {list.map((i) => (
+              <option key={i.slug} value={i.slug}>
+                {optionText(i)}
+              </option>
+            ))}
           </select>
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-            <path
-              d="m4 6 4 4 4-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
         </div>
       </label>
 
       <div className="allot-issue-head">
-        <span
-          className="allot-mark"
-          data-direct={issue.direct || undefined}
-          aria-hidden="true"
-        >
+        <span className="allot-mark" aria-hidden="true">
           {issue.registrar?.mark || "?"}
         </span>
         <div className="allot-issue-id">
@@ -1004,46 +645,16 @@ export function IssuePicker({ issues, today }) {
             </span>
           </p>
         </div>
-        {issue.registrar?.portal ? (
-          <a
-            className="result-open"
-            href={issue.registrar.portal}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-          >
-            Open {issue.registrar.short}
-            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-              <path
-                d="M6 3h7v7M13 3 4 12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </a>
-        ) : null}
       </div>
 
       <Rail issue={issue} today={today} />
 
-      {issue.direct ? (
-        <p className="allot-direct">
-          <span className="allot-live-pill">Live check</span>
-          Asked of KFin directly from your browser, the way their own page does
-          it — nothing passes through this site. KFin lists this issue as{" "}
-          <strong>{issue.lookup.name}</strong>.
-        </p>
-      ) : issue.registrar ? (
+      {issue.registrar ? (
         <div className="allot-handoff">
           <p className="allot-handoff-title">
-            {handoffTitle(issue.registrar)}
+            How to check {issue.short_name || issue.name} on{" "}
+            {issue.registrar.short}
           </p>
-          {/* The step that actually goes wrong is the first one. Their
-              dropdown lists this issue under their own spelling, in a list of
-              forty, and it is not what we call it. Read from the same list
-              their page loads. */}
           {issue.handoff ? (
             <p className="allot-handoff-name">
               On their page it is listed as{" "}
@@ -1054,8 +665,27 @@ export function IssuePicker({ issues, today }) {
             {issue.registrar.steps.map((step) => (
               <li key={step}>{step}</li>
             ))}
-            <li>Come back and set the row below to what it said</li>
           </ol>
+          {issue.registrar.portal ? (
+            <a
+              className="result-open allot-steps-go"
+              href={issue.registrar.portal}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+            >
+              Open {issue.registrar.short}
+              <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                <path
+                  d="M6 3h7v7M13 3 4 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </a>
+          ) : null}
         </div>
       ) : (
         <p className="allot-direct">
@@ -1064,8 +694,6 @@ export function IssuePicker({ issues, today }) {
         </p>
       )}
 
-      {/* Only for issues the exchange still holds — the scraper reads that
-          from the same list NSE's own page uses to fill its dropdown. */}
       {issue.nseBid ? (
         <p className="allot-nse">
           NSE can also answer for this issue:{" "}
@@ -1082,23 +710,33 @@ export function IssuePicker({ issues, today }) {
         </p>
       ) : null}
 
-      <IssueRows
-        key={issue.slug}
-        slug={issue.slug}
-        name={issue.name}
-        direct={issue.direct}
-        lookup={issue.lookup}
-        portal={issue.registrar?.portal || null}
-        registrarShort={issue.registrar?.short || "the registrar"}
-        handoff={issue.handoff}
-      />
-
       <p className="allot-issue-foot">
         <Link href={`/ipo/${issue.slug}`}>
           {issue.short_name || issue.name} IPO page
         </Link>{" "}
         — GMP, subscription by category, timetable and documents.
       </p>
+
+      {rest.length ? (
+        <div className="allot-rest">
+          {/* The picker holds the ten most recent, which is what someone
+              checking today wants to scroll. The rest are still at allotment
+              or recently listed and people still ask about them, so they stay
+              reachable by name rather than vanishing with the eleventh. */}
+          <h3 className="allot-rest-title">Earlier issues ({rest.length})</h3>
+          <ul className="allot-rest-list">
+            {rest.map((i) => (
+              <li key={i.slug}>
+                <Link href={`/ipo/${i.slug}`}>{i.short_name || i.name}</Link>
+                <span className="allot-rest-meta">
+                  {i.registrar?.short || "registrar not published"}
+                  {i.listing_date ? ` · listed ${fmtDate(i.listing_date)}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1106,32 +744,165 @@ export function IssuePicker({ issues, today }) {
 /* ------------------------------------------------------------------------ */
 
 /**
- * Check several issues at once, for every saved PAN.
+ * What is known about one PAN on one issue, from either of the two places an
+ * answer can come from.
  *
- * The single-issue picker above is the right shape when you know which issue
- * you applied for. On allotment day, people who apply to everything that is
- * open want one pass over all of it instead: tick the issues, press check,
- * read the verdicts. The batch reuses the same per-issue machinery — the
- * KFin request is identical, the PANs never leave this browser — and the
- * same courtesy gap, stretched across the whole batch rather than restarted
- * per issue, because KFin's limit does not reset when we move to the next
- * company.
- *
- * Issues their registrar keeps behind a CAPTCHA cannot be asked from here
- * (see the table in PROJECT_CONTEXT §8.3 for why each one is out). They are
- * still in the list — a batch that silently dropped them would read as a
- * batch that checked them — but their card is the hand-off: the registrar
- * link, the steps, and the same manual record control as the single view.
+ * A live KFin answer outranks a note the reader typed: both are about the
+ * same application, and the registrar is the one who decides. `none` from
+ * KFin is not "not allotted" — it is "no application under this PAN", which
+ * usually means they applied somewhere else or through another PAN, so it is
+ * said in those words rather than as a verdict.
  */
-export function MultiIssueChecker({ issues }) {
-  const { ready, uid, requireAuth, pans, marks, setMarks, results, setResults } =
-    useAllotment();
-  const [selected, setSelected] = useState([]);
-  const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState(null);
-  // Set by the Stop button; separate from the unmount guard so stopping one
-  // batch does not poison the next.
-  const stopRef = useRef(false);
+function statusOf(slug, pan, results, marks) {
+  const key = `${slug}|${pan}`;
+  const live = results[key];
+  if (live) {
+    if (live.state === "allotted") return { tone: "allotted", label: "Allotted", via: "KFin" };
+    if (live.state === "applied") return { tone: "none", label: "Not allotted", via: "KFin" };
+    if (live.state === "none") return { tone: "absent", label: "No application found", via: "KFin" };
+    if (live.state === "limited") return { tone: "absent", label: "KFin is rate-limiting", via: null };
+  }
+  const noted = marks[key];
+  if (noted === "allotted") return { tone: "allotted", label: "Allotted", via: "your note" };
+  if (noted === "none") return { tone: "none", label: "Not allotted", via: "your note" };
+  return null;
+}
+
+/**
+ * Tab two — the reader's own PANs, and where each one stands.
+ *
+ * The other tab starts from an issue; this one starts from a PAN, which is
+ * the question someone actually has on allotment day: "did I get any of
+ * these". Each PAN is listed against the same ten issues, so the answer is
+ * one block of rows rather than ten separate lookups.
+ */
+function MyPanTab({ issues }) {
+  const {
+    ready,
+    uid,
+    authLoading,
+    pans,
+    panError,
+    clearPanError,
+    forgetPan,
+  } = useAllotment();
+  const [modal, setModal] = useState(false);
+  const list = latestTen(issues);
+
+  if (authLoading) {
+    return (
+      <section className="card card-wide">
+        <p className="auth-status" role="status">
+          Checking your sign-in…
+        </p>
+      </section>
+    );
+  }
+
+  // Signed out. One action, and it is the only thing this tab can offer:
+  // a PAN is never stored for a reader without an account, so there is
+  // nothing to show and nothing to add until they have one.
+  if (!uid) {
+    return (
+      <section className="card card-wide mypan-signin">
+        <h2>Sign in to use your saved PANs</h2>
+        <p className="subtitle subtitle-flush">
+          A PAN is saved to your account and visible only to you. Signed out,
+          nothing is stored — so there is nothing here yet.
+        </p>
+        <Link className="lookup-btn lookup-btn-lg mypan-login" href="/login?next=/allotment">
+          Sign in
+        </Link>
+        <p className="allot-issue-foot">
+          You can still <strong>check any allotment</strong> without an
+          account — the other tab has the steps and the registrar&apos;s own
+          page.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card card-wide" id="pans">
+      <div className="allot-card-head">
+        <h2>Your PANs</h2>
+        {ready && pans.length ? (
+          <span className="allot-count">
+            {pans.length} of {MAX_PANS} saved
+          </span>
+        ) : null}
+      </div>
+
+      {!ready ? (
+        <p className="auth-status" role="status">
+          Loading your PANs…
+        </p>
+      ) : (
+        <>
+          {pans.length ? (
+            <div className="mypan-blocks">
+              {pans.map((pan) => (
+                <PanAllotments
+                  key={pan}
+                  pan={pan}
+                  issues={list}
+                  onForget={() => forgetPan(pan)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="pan-empty">
+              No PANs yet — add one and this becomes a list of where it stands.
+            </p>
+          )}
+
+          <button
+            type="button"
+            className="ghost-btn pan-add-btn"
+            onClick={() => setModal(true)}
+            disabled={pans.length >= MAX_PANS}
+          >
+            {pans.length >= MAX_PANS ? `Limit is ${MAX_PANS}` : "Add a PAN"}
+          </button>
+        </>
+      )}
+
+      {panError ? (
+        <p className="auth-error" role="alert">
+          {panError}
+        </p>
+      ) : null}
+
+      <p className="pan-privacy">
+        Stored in your account, never shared, deleted when you remove it —{" "}
+        <Link href="/privacy">how that works</Link>.
+      </p>
+
+      {modal && uid ? (
+        <PanModal
+          uid={uid}
+          existing={pans}
+          onClose={() => setModal(false)}
+          onAdded={clearPanError}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * One PAN, against the recent issues.
+ *
+ * Every issue gets a row whether or not anything is known about it, because
+ * an absent row would be indistinguishable from an issue the reader did not
+ * apply for. An unknown row says so and offers the way to find out, which is
+ * a live check where KFin can take one and the registrar's own page where it
+ * cannot.
+ */
+function PanAllotments({ pan, issues, onForget }) {
+  const { requireAuth, marks, setMarks, results, setResults } = useAllotment();
+  const [busy, setBusy] = useState({});
+  const [copied, setCopied] = useState(null);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -1141,343 +912,127 @@ export function MultiIssueChecker({ issues }) {
     };
   }, []);
 
-  const atAllotment = issues.filter((i) => i.status === "allotment");
-  const listed = issues.filter((i) => i.status === "listed");
-  const chosen = issues.filter((i) => selected.includes(i.slug));
+  const canDirect = (issue) =>
+    Boolean(issue.direct && issue.lookup?.client_id && issue.lookup?.endpoint);
 
-  const toggle = (slug) =>
-    setSelected((current) =>
-      current.includes(slug)
-        ? current.filter((s) => s !== slug)
-        : [...current, slug]
-    );
+  const check = async (issue) => {
+    if (!(await requireAuth())) return;
+    const key = `${issue.slug}|${pan}`;
+    setBusy((b) => ({ ...b, [issue.slug]: true }));
+    const result = await lookupKfin({
+      endpoint: issue.lookup.endpoint,
+      clientId: issue.lookup.client_id,
+      pan,
+    });
+    if (!alive.current) return;
+    setResults((current) => ({ ...current, [key]: { ...result, at: Date.now() } }));
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[issue.slug];
+      return next;
+    });
+  };
 
-  const mark = (slug, pan, outcome) =>
+  const mark = (slug, outcome) =>
     setMarks((current) => {
       const key = `${slug}|${pan}`;
       const next = { ...current };
+      // Empty is "not checked yet" — an absence, not a third answer.
       if (!outcome) delete next[key];
       else next[key] = outcome;
       return next;
     });
 
-  const runBatch = async () => {
-    if (!(await requireAuth())) return;
-    // Only KFin-direct issues go over the wire; the hand-off cards need no
-    // request and are already on screen for the reader to work through.
-    const queue = [];
-    for (const issue of chosen) {
-      if (!issue.direct || !issue.lookup) continue;
-      for (const pan of pans) queue.push({ issue, pan });
-    }
-    if (!queue.length) return;
-
-    stopRef.current = false;
-    setRunning(true);
-    setProgress({ done: 0, total: queue.length });
-
-    for (let i = 0; i < queue.length; i += 1) {
-      if (!alive.current || stopRef.current) break;
-      const { issue, pan } = queue[i];
-      // eslint-disable-next-line no-await-in-loop
-      const result = await lookupKfin({
-        endpoint: issue.lookup.endpoint,
-        clientId: issue.lookup.client_id,
-        pan,
-      });
-      if (!alive.current) break;
-      const key = `${issue.slug}|${pan}`;
-      setResults((current) => ({
-        ...current,
-        [key]: { ...result, at: Date.now() },
-      }));
-      // Their limit, respected across the batch: the rest waits for the
-      // reader rather than hammering through a 429.
-      if (result.state === "limited") break;
-      if (alive.current && !stopRef.current)
-        setProgress({ done: i + 1, total: queue.length });
-      if (i < queue.length - 1 && !stopRef.current) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((r) => setTimeout(r, BATCH_GAP_MS));
-      }
-    }
-    if (alive.current) {
-      setRunning(false);
-      setProgress(null);
+  const openWithPan = async (token) => {
+    try {
+      await navigator.clipboard.writeText(pan);
+      setCopied(token);
+      setTimeout(() => setCopied(null), 1600);
+    } catch {
+      /* clipboard refused; the PAN is on screen to read */
     }
   };
 
-  // Across the batch, for the summary line: an issue counts once, on any
-  // PAN allotted. Manual hand-off records are the reader's own notes, not
-  // checked answers, so they stay out of this count.
-  const summary = useMemo(() => {
-    let checked = 0;
-    let won = 0;
-    let shares = 0;
-    for (const issue of chosen) {
-      if (!issue.direct) continue;
-      let issueChecked = false;
-      let issueWon = false;
-      for (const pan of pans) {
-        const r = results[`${issue.slug}|${pan}`];
-        if (!r) continue;
-        issueChecked = true;
-        if (r.state === "allotted") {
-          issueWon = true;
-          shares += r.rows.reduce((s, x) => s + (x.allotted || 0), 0);
-        }
-      }
-      if (issueChecked) checked += 1;
-      if (issueWon) won += 1;
+  const checkable = issues.filter(canDirect);
+
+  const checkAll = async () => {
+    if (!(await requireAuth())) return;
+    for (const issue of checkable) {
+      if (!alive.current) break;
+      // eslint-disable-next-line no-await-in-loop
+      await check(issue);
     }
-    return { checked, won, shares };
-  }, [chosen, pans, results]);
-
-  if (!ready) {
-    return (
-      <section className="card card-wide" aria-busy="true">
-        <h2>Check several at once</h2>
-        <p className="subtitle subtitle-flush">Loading your PANs…</p>
-      </section>
-    );
-  }
-
-  const canRun =
-    !running && selected.length > 0 && pans.length > 0;
-
-  const groupLabel = (list, label) =>
-    list.length ? (
-      <div className="multi-group">
-        <h3 className="multi-group-title">
-          {label} ({list.length})
-        </h3>
-        <ul className="multi-pick-list">
-          {list.map((issue) => {
-            const on = selected.includes(issue.slug);
-            return (
-              <li key={issue.slug}>
-                <label className="multi-pick" data-on={on || undefined}>
-                  <input
-                    type="checkbox"
-                    className="multi-check"
-                    checked={on}
-                    onChange={() => toggle(issue.slug)}
-                    aria-label={`Select ${issue.short_name || issue.name}`}
-                  />
-                  <span className="multi-pick-main">
-                    <span className="multi-pick-name">
-                      {issue.short_name || issue.name}
-                    </span>
-                    <span className="multi-pick-meta">
-                      {issue.board ? (
-                        <span className="allot-pill">{issue.board}</span>
-                      ) : null}
-                      <span className="multi-pick-registrar">
-                        {issue.registrar?.short || "Registrar not published"}
-                      </span>
-                      {issue.direct ? (
-                        <span className="allot-live-pill">Live check</span>
-                      ) : null}
-                    </span>
-                  </span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    ) : null;
+  };
 
   return (
-    <section className="card card-wide" id="multi-check">
-      <div className="allot-card-head">
-        <h2>Check several at once</h2>
-        {selected.length ? (
-          <span className="allot-count">{selected.length} selected</span>
-        ) : null}
-      </div>
-      <p className="subtitle subtitle-flush">
-        Tick the issues you applied for, then check them all in one pass.
-        KFin issues are asked live from your browser; the rest open at their
-        registrar for you to check by hand.
-      </p>
-
-      {!pans.length ? (
-        <p className="allot-rows-empty">
-          <a href="#pans">Add a PAN above</a> before checking — there is
-          nothing to ask KFin about yet.
-        </p>
-      ) : null}
-
-      {groupLabel(atAllotment, "At allotment")}
-      {groupLabel(listed, "Listed")}
-
-      <div className="allot-actions">
-        <button
-          type="button"
-          className="lookup-btn lookup-btn-lg"
-          disabled={!canRun}
-          onClick={runBatch}
-        >
-          {running
-            ? "Checking…"
-            : selected.length
-              ? `Check ${selected.length} issue${selected.length === 1 ? "" : "s"}`
-              : "Check selected"}
-        </button>
-        {running ? (
+    <article className="mypan-block">
+      <div className="mypan-head">
+        <span className="pan-value">{pan}</span>
+        <div className="mypan-head-actions">
+          {checkable.length ? (
+            <button
+              type="button"
+              className="ghost-btn mypan-checkall"
+              onClick={checkAll}
+              disabled={Object.keys(busy).length > 0}
+            >
+              {Object.keys(busy).length
+                ? "Checking…"
+                : `Check ${checkable.length} with KFin`}
+            </button>
+          ) : null}
           <button
             type="button"
-            className="ghost-btn"
-            onClick={() => {
-              stopRef.current = true;
-            }}
+            className="pan-remove"
+            onClick={onForget}
+            aria-label={`Remove ${pan}`}
           >
-            Stop
+            ×
           </button>
-        ) : null}
-        {progress ? (
-          <p className="allot-summary" role="status">
-            Checking {progress.done} of {progress.total}…
-          </p>
-        ) : null}
-        {summary.checked > 0 && !running ? (
-          <p className="allot-summary" role="status">
-            <strong>{summary.checked}</strong> checked
-            {summary.won > 0 ? (
-              <>
-                {" · "}
-                <span className="allot-summary-won">
-                  {summary.won} allotted, {n(summary.shares)} shares
-                </span>
-              </>
-            ) : (
-              <> · none allotted</>
-            )}
-          </p>
-        ) : null}
+        </div>
       </div>
 
-      {chosen.length > 0 ? (
-        <div className="multi-results">
-          {chosen.map((issue) => (
-            <MultiIssueCard
-              key={issue.slug}
-              issue={issue}
-              pans={pans}
-              results={results}
-              marks={marks}
-              onMark={mark}
-            />
-          ))}
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-/**
- * One issue's worth of batch results.
- *
- * Direct issues show the KFin verdict per PAN, reusing the same Verdict as
- * the single-issue view so an answer reads identically in both places.
- * Hand-off issues show the registrar steps and the manual record control —
- * the batch cannot answer those, but it can keep the question and the
- * answer in one place.
- */
-function MultiIssueCard({ issue, pans, results, marks, onMark }) {
-  return (
-    <article className="multi-card" id={`multi-${issue.slug}`}>
-      <div className="allot-issue-head">
-        <span
-          className="allot-mark"
-          data-direct={issue.direct || undefined}
-          aria-hidden="true"
-        >
-          {issue.registrar?.mark || "?"}
-        </span>
-        <div className="allot-issue-id">
-          <h3 className="allot-issue-title">
-            {issue.short_name || issue.name}
-          </h3>
-          <p className="allot-issue-meta">
-            <span
-              className="allot-pill"
-              data-tone={issue.status === "allotment" ? "live" : undefined}
-            >
-              {issue.status === "allotment" ? "At allotment" : "Listed"}
-            </span>
-            <span className="allot-registrar">
-              {issue.registrar?.name || "Registrar not published"}
-            </span>
-            {issue.direct ? (
-              <span className="allot-live-pill">Live check</span>
-            ) : null}
-          </p>
-        </div>
-        {issue.registrar?.portal ? (
-          <a
-            className="result-open"
-            href={issue.registrar.portal}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-          >
-            Open {issue.registrar.short}
-            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-              <path
-                d="M6 3h7v7M13 3 4 12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </a>
-        ) : null}
-      </div>
-
-      {!issue.direct && issue.registrar ? (
-        <div className="allot-handoff">
-          <p className="allot-handoff-title">
-            {handoffTitle(issue.registrar)}
-          </p>
-          {issue.handoff ? (
-            <p className="allot-handoff-name">
-              On their page it is listed as{" "}
-              <strong>{issue.handoff.name}</strong>
-            </p>
-          ) : null}
-          <ol className="result-steps">
-            {issue.registrar.steps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-            <li>Come back and set the row below to what it said</li>
-          </ol>
-        </div>
-      ) : null}
-
-      <ul className="result-rows">
-        {pans.map((pan) => {
-          const key = `${issue.slug}|${pan}`;
+      <ul className="mypan-list">
+        {issues.map((issue) => {
+          const status = statusOf(issue.slug, pan, results, marks);
+          const live = canDirect(issue);
           return (
-            <li key={pan} className="result-row">
-              <div className="result-row-main">
-                <span className="result-pan">
-                  <span className="pan-value">{pan}</span>
+            <li key={issue.slug} className="mypan-row" data-tone={status?.tone}>
+              <div className="mypan-issue">
+                <Link href={`/ipo/${issue.slug}`} className="mypan-name">
+                  {issue.short_name || issue.name}
+                </Link>
+                <span className="mypan-reg">
+                  {issue.registrar?.short || "registrar not published"}
                 </span>
-                {!issue.direct ? (
-                  <label className="result-marks">
-                    <span className="result-marks-label">
-                      What {issue.registrar?.short || "the registrar"} showed
+              </div>
+
+              <div className="mypan-status">
+                {live ? (
+                  status ? (
+                    <>
+                      <span className="mypan-word">{status.label}</span>
+                      {status.via ? (
+                        <span className="mypan-via">from {status.via}</span>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="mypan-word mypan-unknown">Not checked</span>
+                  )
+                ) : (
+                  /* Nobody can ask this registrar for the reader, so the cell
+                     is where they put what it told them. Writing it down is
+                     the only way this row stops saying "Not checked". */
+                  <label className="mypan-mark">
+                    <span className="sr-only">
+                      What {issue.registrar?.short || "the registrar"} showed for{" "}
+                      {issue.short_name || issue.name}
                     </span>
                     <select
-                      className="result-select"
-                      value={marks[key] || ""}
-                      data-outcome={marks[key]}
-                      onChange={(event) =>
-                        onMark(issue.slug, pan, event.target.value)
-                      }
+                      className="result-select mypan-select"
+                      value={marks[`${issue.slug}|${pan}`] || ""}
+                      data-outcome={marks[`${issue.slug}|${pan}`]}
+                      onChange={(event) => mark(issue.slug, event.target.value)}
                     >
                       {OUTCOMES.map((o) => (
                         <option key={o.key || "unset"} value={o.key}>
@@ -1486,9 +1041,41 @@ function MultiIssueCard({ issue, pans, results, marks, onMark }) {
                       ))}
                     </select>
                   </label>
-                ) : null}
+                )}
               </div>
-              {issue.direct ? <Verdict result={results[key]} /> : null}
+
+              <div className="mypan-action">
+                {live ? (
+                  <button
+                    type="button"
+                    className="lookup-btn"
+                    onClick={() => check(issue)}
+                    disabled={Boolean(busy[issue.slug])}
+                  >
+                    {busy[issue.slug] ? "Asking…" : status ? "Again" : "Check"}
+                  </button>
+                ) : issue.registrar?.portal ? (
+                  <a
+                    className="result-go"
+                    href={issue.registrar.portal}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    onClick={() => openWithPan(issue.slug)}
+                  >
+                    {copied === issue.slug
+                      ? "PAN copied"
+                      : `Open ${issue.registrar.short}`}
+                  </a>
+                ) : (
+                  <span className="mypan-via">no registrar page</span>
+                )}
+              </div>
+
+              {live && results[`${issue.slug}|${pan}`] ? (
+                <div className="mypan-verdict">
+                  <Verdict result={results[`${issue.slug}|${pan}`]} />
+                </div>
+              ) : null}
             </li>
           );
         })}

@@ -4,7 +4,7 @@ import { organizationLd, SITE, webSiteLd } from "../../lib/config";
 import { getAllIpos } from "../../lib/data";
 import { fmtDate, istToday, safeJsonLd } from "../../lib/format";
 import { registrarFor } from "../../lib/registrars";
-import { AllotmentProvider, IssuePicker, MultiIssueChecker, PanBox } from "../components/Allotment";
+import { AllotmentProvider, AllotmentTabs } from "../components/Allotment";
 
 // Which issues are at allotment moves during the day, like everything else
 // here, so this is not a build-time snapshot.
@@ -171,8 +171,6 @@ export default async function AllotmentPage() {
 
       <div className="container allot-body">
         <AllotmentProvider>
-          <PanBox />
-
           {issues.length === 0 ? (
             <section className="card card-wide">
               <h2>No issue is at allotment or recently listed</h2>
@@ -186,10 +184,7 @@ export default async function AllotmentPage() {
               {coming.length ? <Coming ipos={coming} /> : null}
             </section>
           ) : (
-            <>
-              <IssuePicker issues={issues} today={today} />
-              <MultiIssueChecker issues={issues} />
-            </>
+            <AllotmentTabs issues={issues} today={today} />
           )}
         </AllotmentProvider>
 
