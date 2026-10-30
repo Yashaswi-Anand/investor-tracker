@@ -136,6 +136,35 @@ export async function getAllIpos() {
   });
 }
 
+/**
+ * One page of the IPO list, straight from the database: PostgREST does the
+ * paging (offset + limit) and reports the total in Content-Range, so only
+ * the rows on screen are ever fetched. Newest first by open date.
+ *
+ * @returns {{rows: Array, total: number}}
+ */
+export async function getIposPage(page = 1, perPage = 20) {
+  if (!isConfigured()) return { rows: [], total: 0 };
+  const offset = (Math.max(1, page) - 1) * perPage;
+  const query =
+    `select=*&order=open_date.desc.nullslast,name.asc` +
+    `&limit=${perPage}&offset=${offset}`;
+  try {
+    const res = await fetch(`${supabaseUrl("ipos")}?${query}`, {
+      headers: { ...supabaseHeaders(), Prefer: "count=exact" },
+      cache: "no-store",
+    });
+    if (!res.ok) return { rows: [], total: 0 };
+    const body = await res.json();
+    // "0-19/123" — the figure after the slash is every row, not this page.
+    const total = Number((res.headers.get("content-range") || "").split("/")[1]);
+    const rows = Array.isArray(body) ? body.map(enrich) : [];
+    return { rows, total: Number.isFinite(total) ? total : rows.length };
+  } catch {
+    return { rows: [], total: 0 };
+  }
+}
+
 export async function getIpoBySlug(slug) {
   const rows = await get(
     "ipos",

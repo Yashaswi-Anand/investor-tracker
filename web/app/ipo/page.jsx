@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { organizationLd, SITE, webSiteLd } from "../../lib/config";
-import { getAllIpos } from "../../lib/data";
+import { getIposPage } from "../../lib/data";
 import { fmtDate, fmtIssueSize, inr, priceBand, safeJsonLd } from "../../lib/format";
 
 /**
@@ -19,20 +19,37 @@ import { fmtDate, fmtIssueSize, inr, priceBand, safeJsonLd } from "../../lib/for
  * answer them: the homepage is a dashboard of what is happening now, which
  * is a different question from what has happened this year.
  *
- * Rendered on the server as plain anchors, with no filter and no
- * pagination, precisely because the point is that a crawler arriving with
- * no JavaScript still leaves holding every link.
+ * Paged on the server, twenty to a page, and fetched page by page from the
+ * database. The page numbers are plain anchors (?page=N), so a crawler
+ * arriving with no JavaScript can still walk every page and every link.
  */
+
+const PER_PAGE = 20;
+
+/** A positive whole page number from the query string, or 1. */
+function pageFrom(raw) {
+  const n = parseInt(Array.isArray(raw) ? raw[0] : raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
+const BASE = {
   title: "All IPOs — Open, Upcoming and Recently Listed in India",
   description:
     "Every Mainboard and SME IPO we track, in one list: open now, upcoming, awaiting allotment and recently listed — with price band, lot size, GMP and dates for each.",
-  alternates: { canonical: "/ipo" },
-  robots: { index: true, follow: true },
 };
+
+/** Each page is its own URL, so each is its own canonical. */
+export async function generateMetadata({ searchParams }) {
+  const page = pageFrom((await searchParams)?.page);
+  return {
+    title: page > 1 ? `${BASE.title} — Page ${page}` : BASE.title,
+    description: BASE.description,
+    alternates: { canonical: page > 1 ? `/ipo?page=${page}` : "/ipo" },
+    robots: { index: true, follow: true },
+  };
+}
 
 /** The order a reader cares about, which is not the order a database returns. */
 const GROUPS = [
@@ -89,13 +106,78 @@ function Row({ ipo }) {
   );
 }
 
-export default async function IpoIndexPage() {
-  const ipos = await getAllIpos();
+/** Page links as real anchors: first, last, and a window around the current. */
+function pageLinks(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const wanted = [...new Set([1, total, current - 1, current, current + 1])]
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
+  const out = [];
+  let previous = 0;
+  for (const p of wanted) {
+    if (p - previous > 1) out.push("gap");
+    out.push(p);
+    previous = p;
+  }
+  return out;
+}
+
+const hrefFor = (p) => (p > 1 ? `/ipo?page=${p}` : "/ipo");
+
+function IpoPager({ page, pageCount, from, to, total }) {
+  if (pageCount <= 1) return null;
+  return (
+    <nav className="ipo-pager" aria-label="IPO list pages">
+      {page > 1 ? (
+        <Link href={hrefFor(page - 1)} className="ipo-pager-btn" rel="prev" aria-label="Previous page">
+          ‹
+        </Link>
+      ) : (
+        <span className="ipo-pager-btn" aria-disabled="true">‹</span>
+      )}
+      <ol className="ipo-pager-pages">
+        {pageLinks(page, pageCount).map((p, i) =>
+          p === "gap" ? (
+            <li key={`gap-${i}`} className="ipo-pager-gap" aria-hidden="true">…</li>
+          ) : (
+            <li key={p}>
+              <Link
+                href={hrefFor(p)}
+                className="ipo-pager-btn"
+                data-active={p === page || undefined}
+                aria-current={p === page ? "page" : undefined}
+                aria-label={`Page ${p}`}
+              >
+                {p}
+              </Link>
+            </li>
+          )
+        )}
+      </ol>
+      {page < pageCount ? (
+        <Link href={hrefFor(page + 1)} className="ipo-pager-btn" rel="next" aria-label="Next page">
+          ›
+        </Link>
+      ) : (
+        <span className="ipo-pager-btn" aria-disabled="true">›</span>
+      )}
+      <p className="ipo-pager-range">
+        {from}–{to} of {total}
+      </p>
+    </nav>
+  );
+}
+
+export default async function IpoIndexPage({ searchParams }) {
+  const page = pageFrom((await searchParams)?.page);
+  const { rows: ipos, total } = await getIposPage(page, PER_PAGE);
+  const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
+  const from = total ? (page - 1) * PER_PAGE + 1 : 0;
+  const to = Math.min(page * PER_PAGE, total);
 
   const groups = GROUPS.map((group) => ({
     ...group,
-    // Newest first inside each group: within "recently listed" the useful
-    // order is by listing date, and within the rest by when they open.
+    // This page's rows only, grouped by stage; newest first inside each.
     rows: ipos
       .filter((ipo) => ipo.status === group.key)
       .sort((a, b) =>
@@ -113,9 +195,9 @@ export default async function IpoIndexPage() {
       {
         "@type": "CollectionPage",
         "@id": `${SITE.url}/ipo#webpage`,
-        url: `${SITE.url}/ipo`,
-        name: metadata.title,
-        description: metadata.description,
+        url: `${SITE.url}${hrefFor(page)}`,
+        name: BASE.title,
+        description: BASE.description,
         isPartOf: { "@id": `${SITE.url}/#website` },
       },
       {
@@ -144,15 +226,13 @@ export default async function IpoIndexPage() {
         <article className="card page-card">
           <h1>All IPOs we track</h1>
           <p className="subtitle">
-            {ipos.length} Mainboard and SME issues, grouped by stage.
+            {total} Mainboard and SME issues, newest first
+            {pageCount > 1 ? ` · page ${page} of ${pageCount}` : ""}.
           </p>
 
           {groups.map((group) => (
             <section key={group.key} className="ipo-index-group">
-              <h2>
-                {group.heading}{" "}
-                <span className="ipo-index-count">{group.rows.length}</span>
-              </h2>
+              <h2>{group.heading}</h2>
               <p className="subtitle subtitle-flush">{group.blurb}</p>
               <ul className="ipo-index-list">
                 {group.rows.map((ipo) => (
@@ -161,6 +241,14 @@ export default async function IpoIndexPage() {
               </ul>
             </section>
           ))}
+
+          {ipos.length === 0 ? (
+            <p className="subtitle">
+              Nothing on this page. <Link href="/ipo">Go to page 1</Link>
+            </p>
+          ) : null}
+
+          <IpoPager page={page} pageCount={pageCount} from={from} to={to} total={total} />
 
           <p className="back-row">
             <Link href="/">← Live dashboard</Link> ·{" "}

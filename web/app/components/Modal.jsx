@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -62,7 +63,12 @@ export default function Modal({ title, onClose, children, labelledBy }) {
     [onClose]
   );
 
-  return (
+  // Rendered on <body>, not where the caller sits: an ancestor with a
+  // transform or animation (the account cards rise in) becomes the box that
+  // position:fixed is measured against, and the dialog opened inside a card.
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className="modal-root" onKeyDown={onKeyDown}>
       <div
         className="modal-scrim"
@@ -92,6 +98,7 @@ export default function Modal({ title, onClose, children, labelledBy }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
