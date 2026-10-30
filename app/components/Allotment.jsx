@@ -984,11 +984,23 @@ function MyPanTab({ issues }) {
     <section className="card card-wide" id="pans">
       <div className="allot-card-head">
         <h2>Your PANs</h2>
-        {ready && pans.length ? (
-          <span className="allot-count">
-            {pans.length} of {MAX_PANS} saved
-          </span>
-        ) : null}
+        <div className="allot-card-tools">
+          {ready && pans.length ? (
+            <span className="allot-count">
+              {pans.length} of {MAX_PANS} saved
+            </span>
+          ) : null}
+          {ready ? (
+            <button
+              type="button"
+              className="ghost-btn pan-add-btn"
+              onClick={() => setModal(true)}
+              disabled={pans.length >= MAX_PANS}
+            >
+              {pans.length >= MAX_PANS ? `Limit is ${MAX_PANS}` : "+ Add PAN"}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {!ready ? (
@@ -1007,36 +1019,47 @@ function MyPanTab({ issues }) {
                   }).length;
                   const active = pan === selected;
                   return (
-                    <button
+                    <div
                       key={pan}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
                       className="mypan-card"
                       data-active={active || undefined}
-                      onClick={() => setPicked(pan)}
                     >
-                      <span className="pan-value">{pan}</span>
-                      <span className="mypan-card-sub">
-                        {statusReady
-                          ? allotted
-                            ? `${allotted} allotted`
-                            : "No allotment yet"
-                          : "Loading…"}
-                      </span>
-                    </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        className="mypan-card-pick"
+                        onClick={() => setPicked(pan)}
+                      >
+                        <span className="pan-value">{pan}</span>
+                        {statusReady && allotted ? (
+                          <span className="mypan-card-sub">{allotted} allotted</span>
+                        ) : null}
+                      </button>
+                      <button
+                        type="button"
+                        className="mypan-card-remove"
+                        onClick={() => forgetPan(pan)}
+                        aria-label={`Remove ${pan}`}
+                        title="Remove PAN"
+                      >
+                        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                          <path
+                            d="M4 4l8 8M12 4l-8 8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
 
               {selected ? (
                 <div className="mypan-blocks" role="tabpanel">
-                  <PanAllotments
-                    key={selected}
-                    pan={selected}
-                    issues={list}
-                    onForget={() => forgetPan(selected)}
-                  />
+                  <PanAllotments key={selected} pan={selected} issues={list} />
                 </div>
               ) : null}
             </>
@@ -1045,15 +1068,6 @@ function MyPanTab({ issues }) {
               No PANs yet.
             </p>
           )}
-
-          <button
-            type="button"
-            className="ghost-btn pan-add-btn"
-            onClick={() => setModal(true)}
-            disabled={pans.length >= MAX_PANS}
-          >
-            {pans.length >= MAX_PANS ? `Limit is ${MAX_PANS}` : "Add a PAN"}
-          </button>
         </>
       )}
 
@@ -1089,7 +1103,7 @@ function MyPanTab({ issues }) {
  * a live check where KFin can take one and the registrar's own page where it
  * cannot.
  */
-function PanAllotments({ pan, issues, onForget }) {
+function PanAllotments({ pan, issues }) {
   const { requireAuth, statusReady, marks, saveMark, results, saveResult } =
     useAllotment();
   const [busy, setBusy] = useState({});
@@ -1164,14 +1178,6 @@ function PanAllotments({ pan, issues, onForget }) {
                 : `Check ${checkable.length} with KFin`}
             </button>
           ) : null}
-          <button
-            type="button"
-            className="pan-remove"
-            onClick={onForget}
-            aria-label={`Remove ${pan}`}
-          >
-            ×
-          </button>
         </div>
       </div>
 

@@ -2733,22 +2733,6 @@ body.has-sheet .scroll-jump { display: none; }
   font-weight: 700;
   letter-spacing: 0.06em;
 }
-/* 28px, not 22. A PAN chip's remove button is a small target next to text
-   the reader may be trying to select, and 22 was under every touch-target
-   guideline there is. */
-.pan-remove {
-  width: 28px; height: 28px;
-  display: grid; place-items: center;
-  border: none;
-  border-radius: 50%;
-  background: var(--surface-3);
-  color: var(--text-2);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-}
-.pan-remove:hover { background: var(--down-soft); color: var(--down); }
-
 .result-open {
   display: inline-flex;
   align-items: center;
@@ -2811,6 +2795,7 @@ body.has-sheet .scroll-jump { display: none; }
   gap: 10px;
 }
 .allot-card-head h2 { margin-bottom: 4px; }
+.allot-card-tools { display: flex; align-items: center; gap: 10px; }
 .allot-count {
   font-size: 0.72rem;
   font-weight: 800;
@@ -3149,31 +3134,71 @@ body.has-sheet .scroll-jump { display: none; }
 }
 .mypan-card {
   flex: 0 0 auto;
-  display: grid;
-  gap: 3px;
-  min-width: 150px;
-  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
   scroll-snap-align: start;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .mypan-card:hover { border-color: var(--border-strong); }
-.mypan-card:focus-visible { outline: none; box-shadow: var(--ring); }
+.mypan-card-pick {
+  display: grid;
+  gap: 3px;
+  min-width: 120px;
+  padding: 12px 4px 12px 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mypan-card-pick:focus-visible { outline: none; box-shadow: var(--ring); }
 .mypan-card[data-active] {
   border-color: var(--primary);
   background: var(--primary-soft);
   box-shadow: inset 0 0 0 1px var(--primary);
 }
+/* Remove: a quiet round control that turns red only when aimed at. 32px
+   keeps it a fair touch target without crowding the PAN. */
+.mypan-card-remove {
+  flex: 0 0 auto;
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.mypan-card-remove svg { transition: transform 0.2s ease; }
+.mypan-card-remove:hover {
+  background: var(--down-soft);
+  border-color: var(--down);
+  color: var(--down);
+  transform: scale(1.06);
+}
+.mypan-card-remove:hover svg { transform: rotate(90deg); }
+.mypan-card-remove:active { transform: scale(0.94); }
+.mypan-card-remove:focus-visible { outline: none; box-shadow: var(--ring); }
+.mypan-card[data-active] .mypan-card-remove { background: var(--surface); }
+.mypan-card[data-active] .mypan-card-remove:hover { background: var(--down-soft); }
 .mypan-card-sub { font-size: 0.74rem; color: var(--text-muted); font-weight: 600; }
 .mypan-card[data-active] .mypan-card-sub { color: var(--primary); }
 @media (prefers-reduced-motion: reduce) {
-  .mypan-card { transition: none; }
+  .mypan-card,
+  .mypan-card-remove,
+  .mypan-card-remove svg { transition: none; }
+  .mypan-card-remove:hover,
+  .mypan-card-remove:active,
+  .mypan-card-remove:hover svg { transform: none; }
 }
 .mypan-block {
   border: 1px solid var(--border);
@@ -3928,7 +3953,7 @@ body.has-sheet .scroll-jump { display: none; }
 #recaptcha-host { position: fixed; bottom: 0; left: 0; width: 0; height: 0; overflow: hidden; }
 
 .pan-signin { margin-top: 16px; }
-.pan-add-btn { margin-top: 14px; }
+.pan-add-btn { min-height: 36px; padding: 7px 14px; font-size: 0.78rem; }
 
 @media (max-width: 560px) {
   .modal-root { padding: 12px; align-items: end; }
