@@ -19,6 +19,38 @@ const nextConfig = {
     ];
   },
 
+  // Firebase's sign-in handler, served from this domain instead of
+  // investor-ipo-tracker.firebaseapp.com.
+  //
+  // Google's account chooser names the domain the OAuth handshake runs
+  // through, so with the handler on firebaseapp.com every reader was asked to
+  // "continue to investor-ipo-tracker.firebaseapp.com" — a domain they have
+  // never heard of, on the screen where they are deciding whether to trust us
+  // with their Google account. This is the proxy Firebase documents for
+  // exactly that (and for browsers that block third-party storage, where a
+  // redirect sign-in through another domain fails outright).
+  //
+  // It does nothing until NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN is switched to
+  // investor.socialriser.com, and that must not happen before
+  // https://investor.socialriser.com/__/auth/handler is an authorised
+  // redirect URI on the OAuth client, or Google sign-in fails with
+  // redirect_uri_mismatch. Order: deploy this, add the URI, then flip the var.
+  async rewrites() {
+    return [
+      {
+        source: "/__/auth/:path*",
+        destination: "https://investor-ipo-tracker.firebaseapp.com/__/auth/:path*",
+      },
+      {
+        // handler.js asks for this at runtime. It 404s on firebaseapp.com
+        // too; proxying it keeps the behaviour identical rather than
+        // answering with this site's own 404 page.
+        source: "/__/firebase/:path*",
+        destination: "https://investor-ipo-tracker.firebaseapp.com/__/firebase/:path*",
+      },
+    ];
+  },
+
   async headers() {
     return [
       // Everything, first, so the more specific entries below still win.
