@@ -19,8 +19,8 @@ export const metadata = {
 export default function AccountPage() {
   return (
     <div className="container page-pad">
-      <div className="auth-wrap">
-        <h1 className="auth-h1">Your account</h1>
+      {/* The panel carries the h1: the reader's own name is the heading. */}
+      <div className="auth-wrap account-wrap">
         <AccountPanel />
       </div>
     </div>
