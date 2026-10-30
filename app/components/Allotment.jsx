@@ -41,6 +41,12 @@ import {
 } from "react";
 import { fmtDate } from "../../lib/format";
 import { lookupKfin } from "../../lib/kfin";
+import {
+  removeAllotments,
+  saveMark as storeMark,
+  saveResult as storeResult,
+  watchAllotments,
+} from "../../lib/allotments";
 import { NSE_BID_CHECK } from "../../lib/registrars";
 import {
   clearLocalPanTraces,
@@ -58,10 +64,10 @@ import PanModal from "./PanModal";
 // PAN-shaped behind on the device — which is the requirement, and is
 // stricter than what this page did before.
 //
-// What still lives locally is the reader's own notes: which rows they have
-// marked, and what KFin answered. Both are keyed by `slug|PAN`, so the key
-// itself carries a PAN — which is why they are namespaced per uid and wiped
-// the moment the session ends. See clearLocalPanTraces().
+// Where each PAN stands — KFin's answers and the reader's own notes — lives
+// in Firestore too (lib/allotments.js). The localStorage keys below are only
+// read once, to carry notes saved before that move up to the account, and
+// are then removed. See clearLocalPanTraces().
 const MARK_KEY = "ipo-allotment-marks";
 const RESULT_KEY = "ipo-allotment-results";
 // Written by older versions of this page. Removed on load rather than left
@@ -139,8 +145,11 @@ export function AllotmentProvider({ children }) {
   const uid = user?.uid || null;
 
   const [pans, setPans] = useState([]);
-  const [marks, setMarks] = useState({});
-  const [results, setResults] = useState({});
+  // Stored statuses from Firestore, plus answers that are about the call
+  // rather than the PAN (rate-limited, no reply) and so are never stored.
+  const [stored, setStored] = useState({ results: {}, marks: {} });
+  const [transient, setTransient] = useState({});
+  const [statusReady, setStatusReady] = useState(false);
   const [panError, setPanError] = useState(null);
   // True once we KNOW the PAN list — either Firestore has answered, or there
   // is no session and the answer is "none". Distinct from authLoading, and
@@ -155,8 +164,9 @@ export function AllotmentProvider({ children }) {
     if (!uid) {
       // Signed out: no PANs, and nothing PAN-shaped left on the device.
       setPans([]);
-      setMarks({});
-      setResults({});
+      setStored({ results: {}, marks: {} });
+      setTransient({});
+      setStatusReady(true);
       clearLocalPanTraces();
       setPanError(null);
       setReady(true);
@@ -196,36 +206,114 @@ export function AllotmentProvider({ children }) {
     };
   }, [uid, authLoading]);
 
-  /* ---- notes: local, per-uid, and never for a signed-out reader ------ */
+  /* ---- statuses: Firestore, and only while signed in ------------------ */
   useEffect(() => {
     for (const key of LEGACY_KEYS) remove(key);
-    if (!uid) return;
-    setMarks(read(scoped(MARK_KEY, uid), {}));
-    setResults(read(scoped(RESULT_KEY, uid), {}));
-  }, [uid]);
+    if (authLoading || !uid) return undefined;
 
-  useEffect(() => {
-    if (uid && ready) write(scoped(MARK_KEY, uid), marks);
-  }, [uid, ready, marks]);
-  useEffect(() => {
-    if (uid && ready) write(scoped(RESULT_KEY, uid), results);
-  }, [uid, ready, results]);
+    let cancelled = false;
+    let unsubscribe = () => {};
+    setStatusReady(false);
+
+    (async () => {
+      // Notes saved on this device before statuses moved to the account go
+      // up once, then the local copies are removed.
+      const oldMarks = read(scoped(MARK_KEY, uid), {});
+      const oldResults = read(scoped(RESULT_KEY, uid), {});
+      try {
+        for (const [key, outcome] of Object.entries(oldMarks)) {
+          const [slug, pan] = key.split("|");
+          await storeMark(uid, slug, pan, outcome);
+        }
+        for (const [key, result] of Object.entries(oldResults)) {
+          const [slug, pan] = key.split("|");
+          await storeResult(uid, slug, pan, result);
+        }
+        remove(scoped(MARK_KEY, uid));
+        remove(scoped(RESULT_KEY, uid));
+      } catch {
+        /* left in place; the next visit tries again */
+      }
+
+      try {
+        unsubscribe = await watchAllotments(
+          uid,
+          (next) => {
+            if (cancelled) return;
+            setStored(next);
+            setStatusReady(true);
+          },
+          () => {
+            if (cancelled) return;
+            setPanError("Could not load your allotment status.");
+            setStatusReady(true);
+          }
+        );
+      } catch {
+        if (!cancelled) {
+          setPanError("Could not load your allotment status.");
+          setStatusReady(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [uid, authLoading]);
+
+  const results = useMemo(
+    () => ({ ...stored.results, ...transient }),
+    [stored.results, transient]
+  );
+  const marks = stored.marks;
+
+  /** KFin's answer: stored when it is about the PAN, held here when not. */
+  const saveResult = useCallback(
+    async (slug, pan, result) => {
+      const key = `${slug}|${pan}`;
+      const answer = { ...result, at: Date.now() };
+      let saved = false;
+      try {
+        saved = await storeResult(uid, slug, pan, answer);
+      } catch {
+        setPanError("Could not save that result to your account.");
+      }
+      setTransient((current) => {
+        const next = { ...current };
+        if (saved) delete next[key];
+        else next[key] = answer;
+        return next;
+      });
+    },
+    [uid]
+  );
+
+  const saveMark = useCallback(
+    async (slug, pan, outcome) => {
+      try {
+        await storeMark(uid, slug, pan, outcome);
+      } catch {
+        setPanError("Could not save that to your account.");
+      }
+    },
+    [uid]
+  );
 
   const forgetPan = useCallback(
     async (pan) => {
       if (!uid) return;
       const result = await removePan(uid, pan);
       if (!result.ok) setPanError(result.reason);
-      // The snapshot listener updates `pans`; the notes for that PAN go too,
-      // because a note about a PAN nobody holds is just a stored PAN.
-      setMarks((current) => {
-        const next = {};
-        for (const [key, value] of Object.entries(current)) {
-          if (!key.endsWith(`|${pan}`)) next[key] = value;
-        }
-        return next;
-      });
-      setResults((current) => {
+      // The snapshot listener updates `pans`; the statuses for that PAN go
+      // too, because a status about a PAN nobody holds is just a stored PAN.
+      try {
+        await removeAllotments(uid, [pan]);
+      } catch {
+        setPanError("Could not remove that PAN's allotment status.");
+      }
+      setTransient((current) => {
         const next = {};
         for (const [key, value] of Object.entries(current)) {
           if (!key.endsWith(`|${pan}`)) next[key] = value;
@@ -240,8 +328,12 @@ export function AllotmentProvider({ children }) {
     if (!uid) return;
     const result = await removeAllPans(uid, pans);
     if (!result.ok) setPanError(result.reason);
-    setMarks({});
-    setResults({});
+    try {
+      await removeAllotments(uid, pans);
+    } catch {
+      setPanError("Could not remove your allotment status.");
+    }
+    setTransient({});
     clearLocalPanTraces();
   }, [uid, pans]);
 
@@ -256,10 +348,11 @@ export function AllotmentProvider({ children }) {
       clearPanError: () => setPanError(null),
       forgetPan,
       forgetEverything,
+      statusReady,
       marks,
-      setMarks,
+      saveMark,
       results,
-      setResults,
+      saveResult,
     }),
     [
       ready,
@@ -270,8 +363,11 @@ export function AllotmentProvider({ children }) {
       panError,
       forgetPan,
       forgetEverything,
+      statusReady,
       marks,
+      saveMark,
       results,
+      saveResult,
     ]
   );
 
@@ -754,8 +850,8 @@ function statusOf(slug, pan, results, marks) {
  *
  * The other tab starts from an issue; this one starts from a PAN, which is
  * the question someone actually has on allotment day: "did I get any of
- * these". Each PAN is listed against the same ten issues, so the answer is
- * one block of rows rather than ten separate lookups.
+ * these". The saved PANs sit in one horizontal row; picking one shows that
+ * PAN alone against the same ten issues, from what the account has stored.
  */
 function MyPanTab({ issues }) {
   const {
@@ -767,12 +863,18 @@ function MyPanTab({ issues }) {
     clearPanError,
     forgetPan,
     requireAuth,
+    statusReady,
+    results,
+    marks,
   } = useAllotment();
+  const [picked, setPicked] = useState(null);
   // The card's Google button goes straight to Google: routing it through the
   // popup asked the reader the same question twice.
   const { busy: authBusy, error: authError, signInWithGoogle } = useAuth();
   const [modal, setModal] = useState(false);
   const list = latestTen(issues);
+  // The picked PAN, or the first one when it was removed or none was picked.
+  const selected = pans.includes(picked) ? picked : pans[0] || null;
 
   if (authLoading) {
     return (
@@ -896,16 +998,48 @@ function MyPanTab({ issues }) {
       ) : (
         <>
           {pans.length ? (
-            <div className="mypan-blocks">
-              {pans.map((pan) => (
-                <PanAllotments
-                  key={pan}
-                  pan={pan}
-                  issues={list}
-                  onForget={() => forgetPan(pan)}
-                />
-              ))}
-            </div>
+            <>
+              <div className="mypan-cards" role="tablist" aria-label="Saved PANs">
+                {pans.map((pan) => {
+                  const allotted = list.filter((issue) => {
+                    const status = statusOf(issue.slug, pan, results, marks);
+                    return status?.tone === "allotted";
+                  }).length;
+                  const active = pan === selected;
+                  return (
+                    <button
+                      key={pan}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className="mypan-card"
+                      data-active={active || undefined}
+                      onClick={() => setPicked(pan)}
+                    >
+                      <span className="pan-value">{pan}</span>
+                      <span className="mypan-card-sub">
+                        {statusReady
+                          ? allotted
+                            ? `${allotted} allotted`
+                            : "No allotment yet"
+                          : "Loading…"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {selected ? (
+                <div className="mypan-blocks" role="tabpanel">
+                  <PanAllotments
+                    key={selected}
+                    pan={selected}
+                    issues={list}
+                    onForget={() => forgetPan(selected)}
+                  />
+                </div>
+              ) : null}
+            </>
           ) : (
             <p className="pan-empty">
               No PANs yet.
@@ -956,7 +1090,8 @@ function MyPanTab({ issues }) {
  * cannot.
  */
 function PanAllotments({ pan, issues, onForget }) {
-  const { requireAuth, marks, setMarks, results, setResults } = useAllotment();
+  const { requireAuth, statusReady, marks, saveMark, results, saveResult } =
+    useAllotment();
   const [busy, setBusy] = useState({});
   const [copied, setCopied] = useState(null);
   const alive = useRef(true);
@@ -973,7 +1108,6 @@ function PanAllotments({ pan, issues, onForget }) {
 
   const check = async (issue) => {
     if (!(await requireAuth())) return;
-    const key = `${issue.slug}|${pan}`;
     setBusy((b) => ({ ...b, [issue.slug]: true }));
     const result = await lookupKfin({
       endpoint: issue.lookup.endpoint,
@@ -981,7 +1115,7 @@ function PanAllotments({ pan, issues, onForget }) {
       pan,
     });
     if (!alive.current) return;
-    setResults((current) => ({ ...current, [key]: { ...result, at: Date.now() } }));
+    await saveResult(issue.slug, pan, result);
     setBusy((b) => {
       const next = { ...b };
       delete next[issue.slug];
@@ -989,15 +1123,8 @@ function PanAllotments({ pan, issues, onForget }) {
     });
   };
 
-  const mark = (slug, outcome) =>
-    setMarks((current) => {
-      const key = `${slug}|${pan}`;
-      const next = { ...current };
-      // Empty is "not checked yet" — an absence, not a third answer.
-      if (!outcome) delete next[key];
-      else next[key] = outcome;
-      return next;
-    });
+  // Empty is "not checked yet" — an absence, not a third answer.
+  const mark = (slug, outcome) => saveMark(slug, pan, outcome);
 
   const openWithPan = async (token) => {
     try {
@@ -1064,7 +1191,9 @@ function PanAllotments({ pan, issues, onForget }) {
               </div>
 
               <div className="mypan-status">
-                {live ? (
+                {!statusReady ? (
+                  <span className="mypan-word mypan-unknown">Loading…</span>
+                ) : live ? (
                   status ? (
                     <>
                       <span className="mypan-word">{status.label}</span>
